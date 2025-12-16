@@ -41,7 +41,7 @@ export default function Footer() {
             </DialogClose>
             <Button
               onClick={() =>
-                window.open("https://insigh.to/b/jomsolat", "_blank")
+                window.open("https://insigh.to/b/marisolat", "_blank")
               }
             >
               Open Feedback Board

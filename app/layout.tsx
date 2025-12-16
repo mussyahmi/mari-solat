@@ -16,24 +16,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JomSolat - Waktu Solat Malaysia",
+  title: "MariSolat - Waktu Solat Malaysia",
   description:
-    "Pantau waktu solat harian di Malaysia termasuk tarikh Miladi & Hijri, jadual lengkap solat untuk semua zon dengan JomSolat.",
-  keywords: ["JomSolat", "Waktu Solat", "Malaysia", "Hijri", "Prayer Times", "Islamic Schedule"],
-  authors: [{ name: "JomSolat Team" }],
-  creator: "JomSolat",
+    "Pantau waktu solat harian di Malaysia termasuk tarikh Miladi & Hijri, jadual lengkap solat untuk semua zon dengan MariSolat.",
+  keywords: ["MariSolat", "Waktu Solat", "Malaysia", "Hijri", "Prayer Times", "Islamic Schedule"],
+  authors: [{ name: "MariSolat Team" }],
+  creator: "MariSolat",
   openGraph: {
-    title: "JomSolat - Waktu Solat Malaysia",
+    title: "MariSolat - Waktu Solat Malaysia",
     description:
-      "Jadual lengkap waktu solat harian di Malaysia beserta tarikh Miladi & Hijri dengan JomSolat.",
-    url: "https://jomsolat.com",
-    siteName: "JomSolat",
+      "Jadual lengkap waktu solat harian di Malaysia beserta tarikh Miladi & Hijri dengan MariSolat.",
+    url: "https://marisolat.com",
+    siteName: "MariSolat",
     // images: [
     //   {
-    //     url: "https://jomsolat.com/og-image.png",
+    //     url: "https://marisolat.com/og-image.png",
     //     width: 1200,
     //     height: 630,
-    //     alt: "JomSolat - Waktu Solat Malaysia",
+    //     alt: "MariSolat - Waktu Solat Malaysia",
     //   },
     // ],
     locale: "ms_MY",
@@ -41,11 +41,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "JomSolat - Waktu Solat Malaysia",
+    title: "MariSolat - Waktu Solat Malaysia",
     description:
-      "Jadual lengkap waktu solat harian di Malaysia beserta tarikh Miladi & Hijri dengan JomSolat.",
-    // images: ["https://jomsolat.com/og-image.png"],
-    creator: "@jomsolat",
+      "Jadual lengkap waktu solat harian di Malaysia beserta tarikh Miladi & Hijri dengan MariSolat.",
+    // images: ["https://marisolat.com/og-image.png"],
+    creator: "@marisolat",
   },
 };
 

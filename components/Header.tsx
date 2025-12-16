@@ -16,7 +16,7 @@ export default function Header() {
 
   return (
     <header className="flex w-full items-center justify-between p-5 sticky top-0 bg-zinc-50 dark:bg-zinc-900 z-50">
-      <Link className="text-xl font-bold text-black dark:text-zinc-50" href={"/"}>JomSolat</Link>
+      <Link className="text-xl font-bold text-black dark:text-zinc-50" href={"/"}>MariSolat</Link>
       <div className='flex items-center justify-center gap-2'>
         {!mounted ?
           <Button size={"sm"}><Loader2Icon className='animate-spin' /></Button>
