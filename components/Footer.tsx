@@ -11,15 +11,14 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Separator } from "./ui/separator";
 
 export default function Footer() {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   return (
-    <footer className="flex justify-center bg-zinc-50 dark:bg-zinc-900 space-x-3 items-center">
+    <div className="flex flex-col">
       {/* Feedback Button & Dialog */}
-      <Button variant="ghost" onClick={() => setShowFeedbackDialog(true)}>
+      <Button variant="link" className="p-0" onClick={() => setShowFeedbackDialog(true)}>
         Give Feedback
       </Button>
 
@@ -50,17 +49,16 @@ export default function Footer() {
         </DialogContent>
       </Dialog>
 
-      <span>|</span>
-
       {/* Buy Me a Coffee Button */}
       <Button
-        variant="ghost"
+        variant="link"
+        className="p-0"
         onClick={() =>
           window.open("https://buymeacoffee.com/mustafasyahmi", "_blank")
         }
       >
         Buy Me a Coffee
       </Button>
-    </footer>
+    </div>
   );
 }

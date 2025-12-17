@@ -137,9 +137,6 @@ export default function HomePage() {
           />
         ))}
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }
@@ -202,9 +199,9 @@ function formatCountdown(target: Date) {
   const seconds = Math.floor(diff / 1000);
 
   let parts: string[] = [];
-  if (hours > 0) parts.push(`${hours.toString().padStart(2, "0")} jam`);
-  if (minutes > 0) parts.push(`${minutes.toString().padStart(2, "0")} minit`);
-  parts.push(`${seconds.toString().padStart(2, "0")} saat`);
+  if (hours > 0) parts.push(`${hours.toString()} jam`);
+  if (minutes > 0) parts.push(`${minutes.toString()} minit`);
+  parts.push(`${seconds.toString()} saat`);
 
   return parts.join(" ");
 }
