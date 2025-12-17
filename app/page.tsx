@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { formatPrayerDates, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 type PrayerTimes = {
   subuh: string;
@@ -17,22 +19,31 @@ type PrayerTimes = {
   hijriDate: string;
 };
 
+type PrayerDataByDay = {
+  yesterday?: PrayerTimes;
+  today?: PrayerTimes;
+  tomorrow?: PrayerTimes;
+};
+
 export default function HomePage() {
   const [zone, setZone] = useState<string | null>(null);
-  const [times, setTimes] = useState<PrayerTimes | null>(null);
+  const [allTimes, setAllTimes] = useState<PrayerDataByDay>({});
+  const [selectedDay, setSelectedDay] = useState<"yesterday" | "today" | "tomorrow">("today");
   const [nextPrayer, setNextPrayer] = useState<keyof PrayerTimes | null>(null);
   const [countdown, setCountdown] = useState("");
 
+  // Fetch location and prayers once
   useEffect(() => {
     requestLocation();
   }, []);
 
+  // Update countdown every second (only for today)
   useEffect(() => {
-    if (!times) return;
+    if (!allTimes.today) return;
     updateNextPrayer();
     const interval = setInterval(updateNextPrayer, 1000);
     return () => clearInterval(interval);
-  }, [times]);
+  }, [allTimes]);
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -53,43 +64,50 @@ export default function HomePage() {
 
           setZone(`${zoneData.zone} · ${zoneData.district}`);
 
-          // --- Fetch today first ---
-          let baseDate = new Date();
-          let solatData = await fetchSolat(zoneData.zone, baseDate);
+          // Fetch prayers for all three days
+          const days: ("yesterday" | "today" | "tomorrow")[] = ["yesterday", "today", "tomorrow"];
+          const timesByDay: PrayerDataByDay = {};
 
-          // --- If already after Isyak, use tomorrow ---
-          if (isAfterIsyak(formatTime(solatData.prayerTime.isha))) {
-            baseDate = new Date();
-            baseDate.setDate(baseDate.getDate() + 1);
-            solatData = await fetchSolat(zoneData.zone, baseDate);
+          for (const day of days) {
+            const date = new Date();
+            if (day === "yesterday") date.setDate(date.getDate() - 1);
+            if (day === "tomorrow") date.setDate(date.getDate() + 1);
+
+            const solatData = await fetchSolat(zoneData.zone, date);
+
+            timesByDay[day] = {
+              subuh: formatTime(solatData.prayerTime.fajr),
+              syuruk: formatTime(solatData.prayerTime.syuruk),
+              zohor: formatTime(solatData.prayerTime.dhuhr),
+              asar: formatTime(solatData.prayerTime.asr),
+              maghrib: formatTime(solatData.prayerTime.maghrib),
+              isyak: formatTime(solatData.prayerTime.isha),
+              gregorianDate: solatData.prayerTime.date,
+              hijriDate: solatData.prayerTime.hijri,
+            };
           }
 
-          setTimes({
-            subuh: formatTime(solatData.prayerTime.fajr),
-            syuruk: formatTime(solatData.prayerTime.syuruk),
-            zohor: formatTime(solatData.prayerTime.dhuhr),
-            asar: formatTime(solatData.prayerTime.asr),
-            maghrib: formatTime(solatData.prayerTime.maghrib),
-            isyak: formatTime(solatData.prayerTime.isha),
-            gregorianDate: solatData.prayerTime.date,
-            hijriDate: solatData.prayerTime.hijri,
-          });
-
+          setAllTimes(timesByDay);
           toast.success("Waktu solat dimuatkan.");
         } catch {
           toast.error("Tiada zon ditemui untuk lokasi semasa anda.");
         }
       },
       () => {
-        toast.error(
-          "Tidak dapat mengakses lokasi. Benarkan lokasi dan cuba semula."
-        );
+        toast.error("Tidak dapat mengakses lokasi. Benarkan lokasi dan cuba semula.");
       },
       { enableHighAccuracy: true }
     );
   };
 
   const updateNextPrayer = () => {
+    if (selectedDay == "yesterday") {
+      setNextPrayer(null);
+      setCountdown("");
+      return;
+    }
+
+    const times = allTimes.today;
     if (!times) return;
 
     const now = new Date();
@@ -114,15 +132,30 @@ export default function HomePage() {
       }
     }
 
+    // If all prayers passed, default to next day's subuh
     if (!next) {
       next = "subuh";
-      targetTime = parseTime(times.subuh);
+      targetTime = parseTime(allTimes.today!.subuh);
       targetTime.setDate(targetTime.getDate() + 1);
+
+      if (selectedDay == "today") {
+        setNextPrayer(null);
+        setCountdown("");
+        return;
+      }
+    } else {
+      if (selectedDay == "tomorrow") {
+        setNextPrayer(null);
+        setCountdown("");
+        return;
+      }
     }
 
     setNextPrayer(next);
     if (targetTime) setCountdown(formatCountdown(targetTime));
   };
+
+  const currentTimes = allTimes[selectedDay];
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 space-y-6">
@@ -131,14 +164,31 @@ export default function HomePage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {zone ?? <Skeleton className="h-6 w-64" />}
         </h1>
-        {times ? (
+        {currentTimes ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {formatPrayerDates(times.gregorianDate, times.hijriDate)}
+            {formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}
           </p>
         ) : (
           <Skeleton className="h-4 w-64 mt-1" />
         )}
       </div>
+
+      {/* Day Selector Buttons */}
+      <ButtonGroup>
+        {["yesterday", "today", "tomorrow"].map((day) => (
+          <Button
+            key={day}
+            variant={selectedDay === day ? "default" : "outline"}
+            onClick={() => setSelectedDay(day as "yesterday" | "today" | "tomorrow")}
+          >
+            {day === "yesterday"
+              ? "Semalam"
+              : day === "today"
+                ? "Hari Ini"
+                : "Esok"}
+          </Button>
+        ))}
+      </ButtonGroup>
 
       {/* Prayer List */}
       <div className="w-full max-w-md space-y-3">
@@ -146,9 +196,9 @@ export default function HomePage() {
           <PrayerRow
             key={label}
             label={capitalize(label)}
-            value={times ? times[label as keyof PrayerTimes] : undefined}
-            highlight={nextPrayer === label}
-            countdown={nextPrayer === label ? countdown : undefined}
+            value={currentTimes ? currentTimes[label as keyof PrayerTimes] : undefined}
+            highlight={selectedDay === "today" && nextPrayer === label}
+            countdown={selectedDay === "today" && nextPrayer === label ? countdown : undefined}
           />
         ))}
       </div>
@@ -172,8 +222,8 @@ function PrayerRow({
   return (
     <Card
       className={`flex flex-row justify-between items-center p-4 rounded-lg shadow-sm transition ${highlight
-          ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
-          : ""
+        ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
+        : ""
         }`}
     >
       <div className="flex flex-col">
@@ -184,9 +234,7 @@ function PrayerRow({
           </span>
         )}
       </div>
-      <span>
-        {value ?? <Skeleton className="h-4 w-16 dark:bg-zinc-700" />}
-      </span>
+      <span>{value ?? <Skeleton className="h-4 w-16 dark:bg-zinc-700" />}</span>
     </Card>
   );
 }
@@ -195,18 +243,11 @@ function PrayerRow({
 
 async function fetchSolat(zone: string, date: Date) {
   const res = await fetch(
-    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1
-    }`
+    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1}`
   );
   const data = await res.json();
   if (!res.ok || data.status !== "OK!") throw new Error();
   return data;
-}
-
-function isAfterIsyak(ishaTime: string) {
-  const now = new Date();
-  const isyakDate = parseTime(ishaTime);
-  return now > isyakDate;
 }
 
 function parseTime(time: string) {
