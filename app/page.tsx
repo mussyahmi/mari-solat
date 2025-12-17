@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { formatPrayerDates, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import Footer from "@/components/Footer";
+import { Card } from "@/components/ui/card";
 
 type PrayerTimes = {
   subuh: string;
@@ -114,7 +115,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center p-4 space-y-6">
+    <div className="min-h-screen flex flex-col items-center p-4 space-y-6">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{zone ?? <Skeleton className="h-6 w-64" />}</h1>
@@ -154,10 +155,10 @@ function PrayerRow({
   countdown?: string;
 }) {
   return (
-    <div
-      className={`flex justify-between items-center p-4 rounded-lg shadow-sm transition ${highlight
+    <Card
+      className={`flex flex-row justify-between items-center p-4 rounded-lg shadow-sm transition ${highlight
         ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
-        : "bg-white dark:bg-zinc-800"
+        : ""
         }`}
     >
       <div className="flex flex-col">
@@ -169,7 +170,7 @@ function PrayerRow({
         )}
       </div>
       <span>{value ?? <Skeleton className="h-4 w-16 dark:bg-zinc-700" />}</span>
-    </div>
+    </Card>
   );
 }
 

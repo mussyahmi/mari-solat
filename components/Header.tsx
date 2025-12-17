@@ -19,7 +19,7 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="flex w-full items-center justify-between p-5 sticky top-0 bg-zinc-50 dark:bg-zinc-900 z-50">
+    <header className="flex w-full items-center justify-between p-5 sticky top-0 z-50">
       <div className="flex items-center gap-2">
         <Sheet>
           <SheetTrigger asChild>
