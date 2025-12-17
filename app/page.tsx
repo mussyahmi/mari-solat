@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatPrayerDates, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 
 type PrayerTimes = {
@@ -30,6 +29,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!times) return;
+    updateNextPrayer();
     const interval = setInterval(updateNextPrayer, 1000);
     return () => clearInterval(interval);
   }, [times]);
@@ -40,43 +40,53 @@ export default function HomePage() {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      try {
-        const { latitude, longitude } = coords;
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const { latitude, longitude } = coords;
 
-        const zoneRes = await fetch(
-          `https://api.waktusolat.app/zones/${latitude}/${longitude}`
+          const zoneRes = await fetch(
+            `https://api.waktusolat.app/zones/${latitude}/${longitude}`
+          );
+          const zoneData = await zoneRes.json();
+          if (!zoneRes.ok || "error" in zoneData) throw new Error();
+
+          setZone(`${zoneData.zone} · ${zoneData.district}`);
+
+          // --- Fetch today first ---
+          let baseDate = new Date();
+          let solatData = await fetchSolat(zoneData.zone, baseDate);
+
+          // --- If already after Isyak, use tomorrow ---
+          if (isAfterIsyak(formatTime(solatData.prayerTime.isha))) {
+            baseDate = new Date();
+            baseDate.setDate(baseDate.getDate() + 1);
+            solatData = await fetchSolat(zoneData.zone, baseDate);
+          }
+
+          setTimes({
+            subuh: formatTime(solatData.prayerTime.fajr),
+            syuruk: formatTime(solatData.prayerTime.syuruk),
+            zohor: formatTime(solatData.prayerTime.dhuhr),
+            asar: formatTime(solatData.prayerTime.asr),
+            maghrib: formatTime(solatData.prayerTime.maghrib),
+            isyak: formatTime(solatData.prayerTime.isha),
+            gregorianDate: solatData.prayerTime.date,
+            hijriDate: solatData.prayerTime.hijri,
+          });
+
+          toast.success("Waktu solat dimuatkan.");
+        } catch {
+          toast.error("Tiada zon ditemui untuk lokasi semasa anda.");
+        }
+      },
+      () => {
+        toast.error(
+          "Tidak dapat mengakses lokasi. Benarkan lokasi dan cuba semula."
         );
-        const zoneData = await zoneRes.json();
-        if (!zoneRes.ok || "error" in zoneData) throw new Error();
-
-        setZone(`${zoneData.zone} · ${zoneData.district}`);
-
-        const now = new Date();
-        const solatRes = await fetch(
-          `https://api.waktusolat.app/solat/${zoneData.zone}/${now.getDate()}?year=${now.getFullYear()}&month=${now.getMonth() + 1}`
-        );
-        const solatData = await solatRes.json();
-        if (!solatRes.ok || solatData.status !== "OK!") throw new Error();
-
-        setTimes({
-          subuh: formatTime(solatData.prayerTime.fajr),
-          syuruk: formatTime(solatData.prayerTime.syuruk),
-          zohor: formatTime(solatData.prayerTime.dhuhr),
-          asar: formatTime(solatData.prayerTime.asr),
-          maghrib: formatTime(solatData.prayerTime.maghrib),
-          isyak: formatTime(solatData.prayerTime.isha),
-          gregorianDate: solatData.prayerTime.date,
-          hijriDate: solatData.prayerTime.hijri,
-        });
-
-        toast.success("Waktu solat dimuatkan.");
-      } catch {
-        toast.error("Tiada zon ditemui untuk lokasi semasa anda.");
-      }
-    }, () => {
-      toast.error("Tidak dapat mengakses lokasi. Benarkan lokasi dan cuba semula.");
-    }, { enableHighAccuracy: true });
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
   const updateNextPrayer = () => {
@@ -118,12 +128,16 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col items-center p-4 space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{zone ?? <Skeleton className="h-6 w-64" />}</h1>
-        {times != null ? (
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          {zone ?? <Skeleton className="h-6 w-64" />}
+        </h1>
+        {times ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {formatPrayerDates(times.gregorianDate, times.hijriDate)}
           </p>
-        ) : <Skeleton className="h-4 w-64 mt-1" />}
+        ) : (
+          <Skeleton className="h-4 w-64 mt-1" />
+        )}
       </div>
 
       {/* Prayer List */}
@@ -132,7 +146,7 @@ export default function HomePage() {
           <PrayerRow
             key={label}
             label={capitalize(label)}
-            value={times != null ? times[label as keyof PrayerTimes] : undefined}
+            value={times ? times[label as keyof PrayerTimes] : undefined}
             highlight={nextPrayer === label}
             countdown={nextPrayer === label ? countdown : undefined}
           />
@@ -142,7 +156,8 @@ export default function HomePage() {
   );
 }
 
-// Prayer row
+/* ---------------- Components ---------------- */
+
 function PrayerRow({
   label,
   value,
@@ -157,8 +172,8 @@ function PrayerRow({
   return (
     <Card
       className={`flex flex-row justify-between items-center p-4 rounded-lg shadow-sm transition ${highlight
-        ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
-        : ""
+          ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
+          : ""
         }`}
     >
       <div className="flex flex-col">
@@ -169,19 +184,40 @@ function PrayerRow({
           </span>
         )}
       </div>
-      <span>{value ?? <Skeleton className="h-4 w-16 dark:bg-zinc-700" />}</span>
+      <span>
+        {value ?? <Skeleton className="h-4 w-16 dark:bg-zinc-700" />}
+      </span>
     </Card>
   );
 }
 
-// Helpers
+/* ---------------- Helpers ---------------- */
+
+async function fetchSolat(zone: string, date: Date) {
+  const res = await fetch(
+    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1
+    }`
+  );
+  const data = await res.json();
+  if (!res.ok || data.status !== "OK!") throw new Error();
+  return data;
+}
+
+function isAfterIsyak(ishaTime: string) {
+  const now = new Date();
+  const isyakDate = parseTime(ishaTime);
+  return now > isyakDate;
+}
+
 function parseTime(time: string) {
   const [hourStr, minuteStr] = time.split(":");
   let hour = Number(hourStr);
   const minute = Number(minuteStr.split(" ")[0]);
   const period = time.split(" ")[1];
+
   if (period === "PM" && hour !== 12) hour += 12;
   if (period === "AM" && hour === 12) hour = 0;
+
   const date = new Date();
   date.setHours(hour, minute, 0, 0);
   return date;
@@ -199,10 +235,10 @@ function formatCountdown(target: Date) {
 
   const seconds = Math.floor(diff / 1000);
 
-  let parts: string[] = [];
-  if (hours > 0) parts.push(`${hours.toString()} jam`);
-  if (minutes > 0) parts.push(`${minutes.toString()} minit`);
-  parts.push(`${seconds.toString()} saat`);
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours} jam`);
+  if (minutes > 0) parts.push(`${minutes} minit`);
+  parts.push(`${seconds} saat`);
 
   return parts.join(" ");
 }
