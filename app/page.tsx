@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatPrayerDates, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 type PrayerTimes = {
   subuh: string;
@@ -32,12 +41,10 @@ export default function HomePage() {
   const [nextPrayer, setNextPrayer] = useState<keyof PrayerTimes | null>(null);
   const [countdown, setCountdown] = useState("");
 
-  // Fetch location and prayers once
   useEffect(() => {
     requestLocation();
   }, []);
 
-  // Update countdown every second (only for today)
   useEffect(() => {
     if (!allTimes.today) return;
     updateNextPrayer();
@@ -64,8 +71,11 @@ export default function HomePage() {
 
           setZone(`${zoneData.zone} · ${zoneData.district}`);
 
-          // Fetch prayers for all three days
-          const days: ("yesterday" | "today" | "tomorrow")[] = ["yesterday", "today", "tomorrow"];
+          const days: ("yesterday" | "today" | "tomorrow")[] = [
+            "yesterday",
+            "today",
+            "tomorrow",
+          ];
           const timesByDay: PrayerDataByDay = {};
 
           for (const day of days) {
@@ -132,7 +142,6 @@ export default function HomePage() {
       }
     }
 
-    // If all prayers passed, default to next day's subuh
     if (!next) {
       next = "subuh";
       targetTime = parseTime(allTimes.today!.subuh);
@@ -156,6 +165,34 @@ export default function HomePage() {
   };
 
   const currentTimes = allTimes[selectedDay];
+
+  const getLastThirdOfNight = () => {
+    const todayTimes = allTimes.today;
+    if (!todayTimes) return { start: "", end: "", duration: 0 };
+
+    const maghrib = parseTime(selectedDay == 'today' ? allTimes.yesterday!.maghrib : todayTimes!.maghrib);
+    let subuh = parseTime(selectedDay == 'today' ? todayTimes.subuh : allTimes.tomorrow!.subuh);
+    subuh.setDate(subuh.getDate() + 1);
+
+    let nightDuration = subuh.getTime() - maghrib.getTime();
+
+    const thirdNight = nightDuration / 3;
+    const start = new Date(subuh.getTime() - thirdNight);
+    const end = subuh;
+
+    return {
+      start: `${start.getHours()}:${String(start.getMinutes()).padStart(2, "0")}`,
+      end: `${end.getHours()}:${String(end.getMinutes()).padStart(2, "0")}`,
+      duration: thirdNight / 60000, // in minutes
+      maghrib,
+      subuh,
+      thirdNightMs: thirdNight,
+      startDate: start,
+      endDate: end,
+    };
+  };
+
+  const lastThird = getLastThirdOfNight();
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 space-y-6">
@@ -202,12 +239,72 @@ export default function HomePage() {
           />
         ))}
       </div>
+
+      {/* Satu Pertiga Malam Section */}
+      {allTimes.today && selectedDay != 'yesterday' && (
+        <div className="w-full max-w-md">
+          <Card className="p-4">
+            <CardContent className="text-center">
+              <p className="font-semibold">Satu Pertiga Malam Terakhir</p>
+              <p className="text-2xl font-bold text-gray-500 dark:text-gray-400">
+                {lastThird.start} AM - {lastThird.end} AM
+              </p>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" size="sm" className="mt-4">
+                    Cara Kiraan
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Cara Kiraan Satu Pertiga Malam Terakhir</DialogTitle>
+                    <DialogDescription>
+                      <ol className="list-decimal list-inside space-y-2 text-sm">
+                        <li>
+                          <strong>Kenal pasti masa Maghrib ({selectedDay == 'today' ? 'Semalam' : 'Hari Ini'}) dan Subuh ({selectedDay == 'today' ? 'Hari Ini' : 'Esok'}):</strong>
+                          <br />
+                          Maghrib {allTimes.today?.maghrib} dan Subuh {allTimes.today?.subuh}.
+                        </li>
+                        <li>
+                          <strong>Kira tempoh malam:</strong>
+                          <br />
+                          Subuh - Maghrib = {(lastThird.subuh!.getTime() - lastThird.maghrib!.getTime()) / 60000} minit (~{Math.floor((lastThird.subuh!.getTime() - lastThird.maghrib!.getTime()) / 60 / 60000)} jam {Math.floor(((lastThird.subuh!.getTime() - lastThird.maghrib!.getTime()) / 60000) % 60)} minit).
+                        </li>
+                        <li>
+                          <strong>Bahagikan malam kepada 3 bahagian sama rata:</strong>
+                          <br />
+                          {(lastThird.thirdNightMs! / 60000).toFixed(0)} minit (~{Math.floor((lastThird.thirdNightMs! / 60000) / 60)} jam {Math.floor((lastThird.thirdNightMs! / 60000) % 60)} minit) setiap bahagian.
+                        </li>
+                        <li>
+                          <strong>Satu pertiga malam yang terakhir:</strong>
+                          <br />
+                          Tolak tempoh 1/3 malam dari Subuh: 6:02 AM - {(lastThird.thirdNightMs! / 60000).toFixed(0)} minit (~{Math.floor((lastThird.thirdNightMs! / 60000) / 60)} jam {Math.floor((lastThird.thirdNightMs! / 60000) % 60)} minit) ≈ {lastThird.start} AM.
+                        </li>
+                        <li>
+                          <strong>Formula ringkas:</strong>
+                          <br />
+                          (Subuh - Maghrib) ÷ 3 = tempoh 1/3 malam
+                          <br />
+                          1/3 malam terakhir = Subuh - tempoh 1/3 malam
+                        </li>
+                      </ol>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogClose asChild>
+                    <Button className="mt-4">Tutup</Button>
+                  </DialogClose>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ---------------- Components ---------------- */
-
 function PrayerRow({
   label,
   value,
@@ -240,10 +337,10 @@ function PrayerRow({
 }
 
 /* ---------------- Helpers ---------------- */
-
 async function fetchSolat(zone: string, date: Date) {
   const res = await fetch(
-    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1}`
+    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1
+    }`
   );
   const data = await res.json();
   if (!res.ok || data.status !== "OK!") throw new Error();

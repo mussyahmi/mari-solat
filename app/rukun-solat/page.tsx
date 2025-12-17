@@ -124,13 +124,13 @@ export default function RukunSolatPage() {
               Hantar Jawapan
             </Button>
           ) : (
-            <Card>
-              <CardContent className="p-4 space-y-2 text-center">
+            <Card className="p-4">
+              <CardContent className="text-center">
                 <p className="font-semibold">Markah Anda</p>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold text-gray-500 dark:text-gray-400">
                   {result} / {RUKUN_SOLAT.length}
                 </p>
-                <Button variant="outline" onClick={() => setQuizMode(false)}>
+                <Button variant="secondary" onClick={() => setQuizMode(false)} className="mt-4">
                   Kembali
                 </Button>
               </CardContent>
