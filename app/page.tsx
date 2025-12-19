@@ -220,8 +220,8 @@ export default function HomePage() {
 
     let waktuCategory = "Waktu Jawaz";
 
-    if (elapsed <= fadhilat) waktuCategory = "Waktu Fadhilat";
     if (elapsed <= total / 2) waktuCategory = "Waktu Ikhtiar";
+    if (elapsed <= fadhilat) waktuCategory = "Waktu Fadhilat";
     if (remaining <= karahah) waktuCategory = "Waktu Karahah (waktu makruh)";
     if (remaining <= tahrim) waktuCategory = "Waktu Tahrim (waktu haram)";
 
