@@ -281,11 +281,11 @@ export default function HomePage() {
               {coords && (
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span>Latitude</span>
+                    <span>Latitud</span>
                     <span className="font-mono">{coords.lat.toFixed(6)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Longitude</span>
+                    <span>Longitud</span>
                     <span className="font-mono">{coords.lng.toFixed(6)}</span>
                   </div>
                 </div>
