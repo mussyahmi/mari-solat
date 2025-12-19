@@ -42,12 +42,12 @@ type PrayerDataByDay = {
   tomorrow?: PrayerTimes;
 };
 
-type SolatCategory = {
+type WaktuCategory = {
   title: string;
   description: string;
 };
 
-const KATEGORI_SOLAT: SolatCategory[] = [
+const KATEGORI_SOLAT: WaktuCategory[] = [
   { title: 'Waktu Fadhilat', description: 'Waktu paling awal lepas azan paling banyak pahala.' },
   { title: 'Waktu Ikhtiar', description: '15 minit selepas azan waktu yang kita boleh pilih.' },
   { title: 'Waktu Jawaz', description: 'Waktu yang harus kita sembahyang. Contoh, solat Zuhur pada 3.30, waktu harus bukan haram.' },
@@ -62,7 +62,7 @@ export default function HomePage() {
   const [countdown, setCountdown] = useState("");
   const [currentPrayer, setCurrentPrayer] = useState<Prayer>({ label: null, time: null });
   const [nextPrayer, setNextPrayer] = useState<Prayer>({ label: null, time: null });
-  const [currentSolatCategory, setCurrentSolatCategory] = useState("");
+  const [currentWaktuCategory, setCurrentWaktuCategory] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
@@ -194,12 +194,12 @@ export default function HomePage() {
 
     setNextPrayer({ label: nextLabel, time: nextTime });
     setCurrentPrayer({ label: currentLabel!, time: currentTime! });
-    updateCurrentSolatCategory(currentTime!, nextTime!);
+    updateCurrentWaktuCategory(currentLabel!, currentTime!, nextTime!);
 
     if (nextTime) setCountdown(formatCountdown(nextTime));
   };
 
-  const updateCurrentSolatCategory = (start: Date, end: Date) => {
+  const updateCurrentWaktuCategory = (currentLabel: string, start: Date, end: Date) => {
     const now = new Date();
 
     const total = end.getTime() - start.getTime();
@@ -210,14 +210,14 @@ export default function HomePage() {
     const karahah = 15 * 60 * 1000;
     const tahrim = 5 * 60 * 1000;
 
-    let solatCategory = "Waktu Jawaz";
+    let waktuCategory = "Waktu Jawaz";
 
-    if (elapsed <= fadhilat) solatCategory = "Waktu Fadhilat";
-    if (remaining <= tahrim) solatCategory = "Waktu Tahrim";
-    if (remaining <= karahah) solatCategory = "Waktu Karahah";
-    if (elapsed <= total / 2) solatCategory = "Waktu Ikhtiar";
+    if (elapsed <= fadhilat) waktuCategory = "Waktu Fadhilat";
+    if (remaining <= tahrim) waktuCategory = "Waktu Tahrim";
+    if (remaining <= karahah) waktuCategory = "Waktu Karahah";
+    if (elapsed <= total / 2) waktuCategory = "Waktu Ikhtiar";
 
-    setCurrentSolatCategory(solatCategory)
+    setCurrentWaktuCategory(currentLabel == "syuruk" ? "" : waktuCategory)
   }
 
   const currentTimes = allTimes[selectedDay];
@@ -349,24 +349,30 @@ export default function HomePage() {
         <Separator />
       </div>
 
-      {/* Solat Category */}
+      {/* Waktu Category */}
       <div className="w-full max-w-md text-sm text-gray-600 dark:text-gray-300 text-center">
-        Anda kini berada dalam waktu solat:
-        <div className="font-semibold flex justify-center items-center">
-          {currentPrayer.label ? capitalize(currentPrayer.label) : <Skeleton className="h-4 w-16" />}
-        </div>
-        Kategori waktu sekarang adalah seperti di bawah.
+        {currentPrayer.label && currentPrayer.label != 'syuruk' ? (
+          <>
+            Anda kini berada dalam waktu solat:
+            <div className="font-semibold flex justify-center items-center">
+              {capitalize(currentPrayer.label)}
+            </div>
+            Kategori waktu sekarang adalah seperti di bawah.
+          </>
+        ) : (
+          <>Berikut ialah 5 kategori waktu solat.</>
+        )}
       </div>
 
       <div className="w-full max-w-md space-y-3">
         {KATEGORI_SOLAT.map((item) => (
-          <Card key={item.title} className={`${currentSolatCategory == item.title
+          <Card key={item.title} className={`${currentWaktuCategory == item.title
             ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
             : ""
             }`}>
             <CardHeader>
               <CardTitle>{item.title}</CardTitle>
-              <CardDescription className={`${currentSolatCategory == item.title ? "text-yellow-700 dark:text-yellow-300" : ""}`}>{item.description}</CardDescription>
+              <CardDescription className={`${currentWaktuCategory == item.title ? "text-yellow-700 dark:text-yellow-300" : ""}`}>{item.description}</CardDescription>
             </CardHeader>
           </Card>
         ))}
