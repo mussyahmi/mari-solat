@@ -14,12 +14,12 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, SearchIcon } from "lucide-react";
 import next from "next";
+import QiblaCard from "@/components/QiblaCard";
 
 type Prayer = {
   label: keyof PrayerTimes | null;
@@ -461,6 +461,16 @@ export default function HomePage() {
               </Dialog>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      <div className="w-full max-w-md">
+        <Separator />
+      </div>
+
+      {coords && (
+        <div className="w-full max-w-md">
+          <QiblaCard lat={coords.lat} lng={coords.lng} />
         </div>
       )}
     </div>
