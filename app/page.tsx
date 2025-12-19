@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { MapPin } from "lucide-react";
+import { MapPin, SearchIcon } from "lucide-react";
 import next from "next";
 
 type Prayer = {
@@ -79,7 +79,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!allTimes.tomorrow) return;
-    if (nextPrayer.label == 'subuh' && nextPrayer.time == parseTime(allTimes.tomorrow.subuh) || true) {
+    if (nextPrayer.label == 'subuh' && nextPrayer.time == parseTime(allTimes.tomorrow.subuh)) {
       setSelectedDay("tomorrow");
     }
   }, [nextPrayer.label]);
@@ -322,26 +322,42 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Day Selector Buttons */}
-      <ButtonGroup>
-        {["yesterday", "today", "tomorrow"].map((day) => (
+      <div className="flex justify-between w-full max-w-md">
+        {/* Day Selector Buttons */}
+        <ButtonGroup>
+          {["yesterday", "today", "tomorrow"].map((day) => (
+            <Button
+              key={day}
+              variant={selectedDay === day ? "default" : "outline"}
+              onClick={() => setSelectedDay(day as "yesterday" | "today" | "tomorrow")}
+              size={"sm"}
+            >
+              {day === "yesterday"
+                ? "Semalam"
+                : day === "today"
+                  ? "Hari Ini"
+                  : "Esok"}
+            </Button>
+          ))}
+        </ButtonGroup>
+
+        {coords ? (
           <Button
-            key={day}
-            variant={selectedDay === day ? "default" : "outline"}
-            onClick={() => setSelectedDay(day as "yesterday" | "today" | "tomorrow")}
-            size={"sm"}
+            variant="link"
+            size="sm"
+            onClick={() => {
+              window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, "_blank");
+            }}
           >
-            {day === "yesterday"
-              ? "Semalam"
-              : day === "today"
-                ? "Hari Ini"
-                : "Esok"}
+            <SearchIcon /> Masjid
           </Button>
-        ))}
-      </ButtonGroup>
+        ) : (
+          <Skeleton className="h-6 w-40" />
+        )}
+      </div>
 
       {/* Prayer List */}
-      <div className="w-full max-w-md space-y-3 flex flex-col items-center">
+      <div className="w-full max-w-md space-y-3">
         {["subuh", "syuruk", "zohor", "asar", "maghrib", "isyak"].map((label) => (
           <PrayerRow
             key={label}
@@ -351,20 +367,6 @@ export default function HomePage() {
             countdown={selectedDay === "today" && nextPrayer.label === label ? countdown : undefined}
           />
         ))}
-
-        {coords ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, "_blank");
-            }}
-          >
-            Cari Masjid Terdekat
-          </Button>
-        ) : (
-          <Skeleton className="h-6 w-40" />
-        )}
       </div>
 
       <div className="w-full max-w-md">
@@ -479,7 +481,7 @@ function PrayerRow({
 }) {
   return (
     <Card
-      className={`flex flex-row justify-between items-center p-4 w-full transition ${highlight
+      className={`flex flex-row justify-between items-center p-4 transition ${highlight
         ? "bg-yellow-100 dark:bg-yellow-700 font-semibold border-l-4 border-yellow-500 dark:border-yellow-300"
         : ""
         }`}
