@@ -406,6 +406,16 @@ export default function HomePage() {
         <Separator />
       </div>
 
+      {coords && (
+        <div className="w-full max-w-md">
+          <QiblaCard lat={coords.lat} lng={coords.lng} />
+        </div>
+      )}
+
+      <div className="w-full max-w-md">
+        <Separator />
+      </div>
+
       {/* Satu Pertiga Malam Section */}
       {selectedDay != 'yesterday' && (
         <div className="w-full max-w-md">
@@ -461,16 +471,6 @@ export default function HomePage() {
               </Dialog>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      <div className="w-full max-w-md">
-        <Separator />
-      </div>
-
-      {coords && (
-        <div className="w-full max-w-md">
-          <QiblaCard lat={coords.lat} lng={coords.lng} />
         </div>
       )}
     </div>
