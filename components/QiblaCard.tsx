@@ -234,7 +234,7 @@ export default function QiblaCard({ lat, lng }: QiblaCardProps) {
 
           {isAligned && (
             <div className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold mt-1">
-              ✔ Menghadap Kiblat ({heading !== null ? Math.round(((heading % 360) + 360) % 360) : 0}°)
+              Menghadap Kiblat ({heading !== null ? Math.round(((heading % 360) + 360) % 360) : 0}°)
             </div>
           )}
         </div>
