@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, SearchIcon } from "lucide-react";
+import { MapPinIcon, SearchIcon } from "lucide-react";
 import QiblaCard from "@/components/QiblaCard";
 
 type Prayer = {
@@ -303,22 +303,20 @@ export default function HomePage() {
       {/* Header */}
       <div className="text-center flex flex-col items-center gap-2">
         <div className="flex items-center">
-          <Dialog>
-            <DialogTrigger asChild>
-              {coords && (
+          {coords && (
+            <Dialog>
+              <DialogTrigger asChild>
                 <Button variant="ghost" size={"sm"}>
-                  <MapPin />
+                  <MapPinIcon />
                 </Button>
-              )}
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Koordinat Lokasi Anda</DialogTitle>
-                <DialogDescription>
-                  Digunakan untuk menentukan zon waktu solat.
-                </DialogDescription>
-              </DialogHeader>
-              {coords && (
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Koordinat Lokasi Anda</DialogTitle>
+                  <DialogDescription>
+                    Digunakan untuk menentukan zon waktu solat.
+                  </DialogDescription>
+                </DialogHeader>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span>Latitud</span>
@@ -329,9 +327,7 @@ export default function HomePage() {
                     <span className="font-mono">{coords.lng.toFixed(6)}</span>
                   </div>
                 </div>
-              )}
-              <DialogFooter>
-                {coords && (
+                <DialogFooter>
                   <Button
                     size="sm"
                     onClick={() => {
@@ -343,10 +339,10 @@ export default function HomePage() {
                   >
                     Salin Koordinat
                   </Button>
-                )}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
 
           <Dialog open={showZoneSelector} onOpenChange={setShowZoneSelector}>
             <DialogTrigger asChild>
@@ -410,6 +406,15 @@ export default function HomePage() {
                   </>
                 )}
               </div>
+              <DialogFooter>
+                <Button
+                  variant="default"
+                  onClick={requestLocation}
+                  className="w-full justify-center"
+                >
+                  Guna Lokasi Semasa
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -529,9 +534,11 @@ export default function HomePage() {
 
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="secondary" size="sm" className="mt-4">
-                    Cara Kiraan
-                  </Button>
+                  {coords && (
+                    <Button variant="secondary" size="sm" className="mt-4">
+                      Cara Kiraan
+                    </Button>
+                  )}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
