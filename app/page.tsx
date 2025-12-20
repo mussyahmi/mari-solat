@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, SearchIcon } from "lucide-react";
-import next from "next";
 import QiblaCard from "@/components/QiblaCard";
 
 type Prayer = {
@@ -65,9 +64,14 @@ export default function HomePage() {
   const [nextPrayer, setNextPrayer] = useState<Prayer>({ label: null, time: null });
   const [currentWaktuCategory, setCurrentWaktuCategory] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [allZones, setAllZones] = useState<any[]>([]);
+  const [showZoneSelector, setShowZoneSelector] = useState(false);
+  const [selectedNegeri, setSelectedNegeri] = useState("");
+  const [isManualMode, setIsManualMode] = useState(false);
 
   useEffect(() => {
     requestLocation();
+    fetchAllZones();
   }, []);
 
   useEffect(() => {
@@ -87,11 +91,18 @@ export default function HomePage() {
   const requestLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolokasi tidak disokong oleh pelayar anda.");
+      setIsManualMode(true);
       return;
     }
 
+    const timeoutId = setTimeout(() => {
+      setIsManualMode(true);
+      setShowZoneSelector(true);
+    }, 10000); // 10 second timeout
+
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
+        clearTimeout(timeoutId);
         try {
           const { latitude, longitude } = coords;
 
@@ -106,45 +117,74 @@ export default function HomePage() {
           const zoneData = await zoneRes.json();
           if (!zoneRes.ok || "error" in zoneData) throw new Error();
 
-          setZone(`${zoneData.zone} · ${zoneData.district}`);
-
-          const days: ("yesterday" | "today" | "tomorrow")[] = [
-            "yesterday",
-            "today",
-            "tomorrow",
-          ];
-          const timesByDay: PrayerDataByDay = {};
-
-          for (const day of days) {
-            const date = new Date();
-            if (day === "yesterday") date.setDate(date.getDate() - 1);
-            if (day === "tomorrow") date.setDate(date.getDate() + 1);
-
-            const solatData = await fetchSolat(zoneData.zone, date);
-
-            timesByDay[day] = {
-              subuh: formatTime(solatData.prayerTime.fajr),
-              syuruk: formatTime(solatData.prayerTime.syuruk),
-              zohor: formatTime(solatData.prayerTime.dhuhr),
-              asar: formatTime(solatData.prayerTime.asr),
-              maghrib: formatTime(solatData.prayerTime.maghrib),
-              isyak: formatTime(solatData.prayerTime.isha),
-              gregorianDate: solatData.prayerTime.date,
-              hijriDate: solatData.prayerTime.hijri,
-            };
-          }
-
-          setAllTimes(timesByDay);
-          toast.success("Waktu solat dimuatkan.");
+          await loadZoneData(zoneData.zone, `${zoneData.zone} · ${zoneData.district}`);
         } catch {
           toast.error("Tiada zon ditemui untuk lokasi semasa anda.");
+          setIsManualMode(true);
+          setShowZoneSelector(true);
         }
       },
       () => {
-        toast.error("Tidak dapat mengakses lokasi. Benarkan lokasi dan cuba semula.");
+        clearTimeout(timeoutId);
+        toast.error("Tidak dapat mengakses lokasi. Sila pilih zon secara manual.");
+        setIsManualMode(true);
+        setShowZoneSelector(true);
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  const fetchAllZones = async () => {
+    try {
+      const res = await fetch("https://api.waktusolat.app/zones");
+      const data = await res.json();
+      setAllZones(data);
+    } catch {
+      toast.error("Gagal memuatkan senarai zon.");
+    }
+  };
+
+  const loadZoneData = async (zoneCode: string, zoneName: string) => {
+    try {
+      setZone(zoneName);
+
+      const days: ("yesterday" | "today" | "tomorrow")[] = [
+        "yesterday",
+        "today",
+        "tomorrow",
+      ];
+      const timesByDay: PrayerDataByDay = {};
+
+      for (const day of days) {
+        const date = new Date();
+        if (day === "yesterday") date.setDate(date.getDate() - 1);
+        if (day === "tomorrow") date.setDate(date.getDate() + 1);
+
+        const solatData = await fetchSolat(zoneCode, date);
+
+        timesByDay[day] = {
+          subuh: formatTime(solatData.prayerTime.fajr),
+          syuruk: formatTime(solatData.prayerTime.syuruk),
+          zohor: formatTime(solatData.prayerTime.dhuhr),
+          asar: formatTime(solatData.prayerTime.asr),
+          maghrib: formatTime(solatData.prayerTime.maghrib),
+          isyak: formatTime(solatData.prayerTime.isha),
+          gregorianDate: solatData.prayerTime.date,
+          hijriDate: solatData.prayerTime.hijri,
+        };
+      }
+
+      setAllTimes(timesByDay);
+      toast.success("Waktu solat dimuatkan.");
+      setShowZoneSelector(false);
+    } catch {
+      toast.error("Gagal memuatkan waktu solat untuk zon ini.");
+    }
+  };
+
+  const handleZoneSelect = async (zoneData: any) => {
+    setCoords(null); // Clear coords in manual mode
+    await loadZoneData(zoneData.jakimCode, `${zoneData.jakimCode} · ${zoneData.daerah}`);
   };
 
   const updateNextPrayer = () => {
@@ -265,7 +305,7 @@ export default function HomePage() {
         <div className="flex items-center">
           <Dialog>
             <DialogTrigger asChild>
-              {zone && (
+              {coords && (
                 <Button variant="ghost" size={"sm"}>
                   <MapPin />
                 </Button>
@@ -308,9 +348,70 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {zone ?? <Skeleton className="h-6 w-64" />}
-          </h1>
+          <Dialog open={showZoneSelector} onOpenChange={setShowZoneSelector}>
+            <DialogTrigger asChild>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition w-full max-w-md">
+                {zone ?? (isManualMode ? <Button variant="default" size="sm">Pilih Zon Waktu Solat</Button> : <Skeleton className="h-6 w-64" />)}
+              </h1>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Pilih Zon Waktu Solat</DialogTitle>
+                <DialogDescription>
+                  Pilih negeri dahulu, kemudian pilih zon anda.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto space-y-4">
+                {!selectedNegeri ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {Array.from(new Set(allZones.map((z) => z.negeri))).map((negeri) => (
+                      <Button
+                        key={negeri}
+                        variant="outline"
+                        onClick={() => setSelectedNegeri(negeri)}
+                        className="h-auto py-3"
+                      >
+                        {negeri}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{selectedNegeri}</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedNegeri("")}
+                      >
+                        ← Kembali
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {allZones
+                        .filter((z) => z.negeri === selectedNegeri)
+                        .map((zone) => (
+                          <Button
+                            key={zone.jakimCode}
+                            variant="outline"
+                            onClick={() => handleZoneSelect(zone)}
+                            className="w-full justify-start h-auto py-3 text-left"
+                          >
+                            <div>
+                              <div className="font-semibold">{zone.jakimCode}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 break-words whitespace-normal">
+                                {zone.daerah}
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {currentTimes ? (
@@ -341,7 +442,7 @@ export default function HomePage() {
           ))}
         </ButtonGroup>
 
-        {coords ? (
+        {coords && (
           <Button
             variant="link"
             size="sm"
@@ -351,8 +452,6 @@ export default function HomePage() {
           >
             <SearchIcon /> Masjid
           </Button>
-        ) : (
-          <Skeleton className="h-7 w-24" />
         )}
       </div>
 
@@ -402,14 +501,16 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="w-full max-w-md">
-        <Separator />
-      </div>
-
       {coords && (
-        <div className="w-full max-w-md">
-          <QiblaCard lat={coords.lat} lng={coords.lng} />
-        </div>
+        <>
+          <div className="w-full max-w-md">
+            <Separator />
+          </div>
+
+          <div className="w-full max-w-md">
+            <QiblaCard lat={coords.lat} lng={coords.lng} />
+          </div>
+        </>
       )}
 
       <div className="w-full max-w-md">
