@@ -19,7 +19,7 @@ export default function Footer() {
     <div className="flex flex-col">
       {/* Feedback Button & Dialog */}
       <Button variant="link" className="p-0" onClick={() => setShowFeedbackDialog(true)}>
-        Give Feedback
+        Beri Maklum Balas
       </Button>
 
       <Dialog
@@ -28,22 +28,23 @@ export default function Footer() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Before You Continue</DialogTitle>
+            <DialogTitle>Sebelum Anda Teruskan</DialogTitle>
             <DialogDescription>
-              Posts on Insighto cannot be edited after they are published.
-              If you want to give feedback or request improvements, you can do so below.
+              Siaran di Insighto tidak boleh diedit selepas diterbitkan.
+              Jika anda ingin memberi maklum balas atau mencadangkan penambahbaikan,
+              anda boleh melakukannya di bawah.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-end space-x-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">Batal</Button>
             </DialogClose>
             <Button
               onClick={() =>
                 window.open("https://insigh.to/b/marisolat", "_blank")
               }
             >
-              Open Feedback Board
+              Buka Papan Maklum Balas
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -57,7 +58,7 @@ export default function Footer() {
           window.open("https://buymeacoffee.com/mustafasyahmi", "_blank")
         }
       >
-        Buy Me a Coffee
+        Belanja Saya Kopi
       </Button>
     </div>
   );
