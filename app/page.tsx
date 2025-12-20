@@ -194,16 +194,17 @@ export default function HomePage() {
   };
 
   const updateNextPrayer = () => {
-    if (selectedDay == "yesterday") {
+    const times = allTimes.today;
+    if (!times) return;
+
+    const now = new Date();
+
+    if (selectedDay == "yesterday" || selectedDay == 'tomorrow' && now < parseTime(times.isyak)) {
       setNextPrayer({ label: null, time: null });
       setCountdown("");
       return;
     }
 
-    const times = selectedDay === "today" ? allTimes.today : allTimes.tomorrow;
-    if (!times) return;
-
-    const now = new Date();
     const prayers: { label: keyof PrayerTimes; time: string }[] = [
       { label: "subuh", time: times.subuh },
       { label: "syuruk", time: times.syuruk },
@@ -245,7 +246,12 @@ export default function HomePage() {
 
     if (!currentLabel || !currentTime) {
       currentLabel = 'isyak' as keyof PrayerTimes;
-      currentTime = parseTime(allTimes.yesterday!.isyak);
+      currentTime = parseTime(allTimes.today!.isyak);
+
+      if (selectedDay == 'today' && nextTime >= parseTime(allTimes.today!.subuh)) {
+        currentTime = parseTime(allTimes.yesterday!.isyak);
+        currentTime.setDate(currentTime.getDate() - 1);
+      }
     }
 
     setNextPrayer({ label: nextLabel, time: nextTime });
