@@ -68,6 +68,7 @@ export default function HomePage() {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
   const [selectedNegeri, setSelectedNegeri] = useState("");
   const [isManualMode, setIsManualMode] = useState(false);
+  const [isInitialize, setIsInitialize] = useState(false);
 
   useEffect(() => {
     requestLocation();
@@ -79,14 +80,19 @@ export default function HomePage() {
     updateNextPrayer();
     const interval = setInterval(updateNextPrayer, 1000);
     return () => clearInterval(interval);
-  }, [allTimes]);
+  }, [allTimes, selectedDay]);
 
   useEffect(() => {
-    if (!allTimes.tomorrow) return;
-    if (nextPrayer.label == 'subuh' && nextPrayer.time == parseTime(allTimes.tomorrow.subuh)) {
+    if (!allTimes.today || isInitialize || selectedDay != "today") return;
+
+    const t = parseTime(allTimes.tomorrow!.subuh);
+    t.setDate(t.getDate() + 1);
+
+    if (nextPrayer.time != null && nextPrayer.time >= t) {
       setSelectedDay("tomorrow");
+      setIsInitialize(true);
     }
-  }, [nextPrayer.label]);
+  }, [allTimes, selectedDay, nextPrayer.time]);
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -194,7 +200,7 @@ export default function HomePage() {
       return;
     }
 
-    const times = allTimes.today;
+    const times = selectedDay === "today" ? allTimes.today : allTimes.tomorrow;
     if (!times) return;
 
     const now = new Date();
@@ -212,6 +218,11 @@ export default function HomePage() {
 
     for (const p of prayers) {
       const t = parseTime(p.time);
+
+      if (selectedDay == 'tomorrow') {
+        t.setDate(t.getDate() + 1);
+      }
+
       if (t > now) {
         nextLabel = p.label;
         nextTime = t;
@@ -222,29 +233,25 @@ export default function HomePage() {
       currentTime = t;
     }
 
-    if (!nextLabel) {
-      nextLabel = "subuh";
-      nextTime = parseTime(allTimes.today!.subuh);
-      nextTime.setDate(nextTime.getDate() + 1);
+    if (!nextTime) {
+      const t = parseTime(allTimes.tomorrow!.subuh);
+      t.setDate(t.getDate() + 1);
 
-      if (selectedDay == "today") {
-        setNextPrayer({ label: null, time: null });
-        setCountdown("");
-        return;
-      }
-    } else {
-      if (selectedDay == "tomorrow") {
-        setNextPrayer({ label: null, time: null });
-        setCountdown("");
-        return;
-      }
+      setNextPrayer({ label: null, time: t });
+      setCountdown("");
+
+      return;
+    }
+
+    if (!currentLabel || !currentTime) {
+      currentLabel = 'isyak' as keyof PrayerTimes;
+      currentTime = parseTime(allTimes.yesterday!.isyak);
     }
 
     setNextPrayer({ label: nextLabel, time: nextTime });
-    setCurrentPrayer({ label: currentLabel!, time: currentTime! });
-    updateCurrentWaktuCategory(currentLabel!, currentTime!, nextTime!);
-
-    if (nextTime) setCountdown(formatCountdown(nextTime));
+    setCurrentPrayer({ label: currentLabel, time: currentTime });
+    updateCurrentWaktuCategory(currentLabel, currentTime!, nextTime);
+    setCountdown(formatCountdown(nextTime));
   };
 
   const updateCurrentWaktuCategory = (currentLabel: string, start: Date, end: Date) => {
@@ -471,8 +478,8 @@ export default function HomePage() {
             key={label}
             label={capitalize(label)}
             value={currentTimes ? currentTimes[label as keyof PrayerTimes] : undefined}
-            highlight={selectedDay === "today" && nextPrayer.label === label}
-            countdown={selectedDay === "today" && nextPrayer.label === label ? countdown : undefined}
+            highlight={nextPrayer.label === label}
+            countdown={nextPrayer.label === label ? countdown : undefined}
           />
         ))}
       </div>
