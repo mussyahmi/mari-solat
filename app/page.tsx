@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { MapPinIcon, SearchIcon } from "lucide-react";
 import QiblaCard from "@/components/QiblaCard";
+import { Badge } from "@/components/ui/badge";
 
 type Prayer = {
   label: keyof PrayerTimes | null;
@@ -59,7 +60,8 @@ export default function HomePage() {
   const [zone, setZone] = useState<string | null>(null);
   const [allTimes, setAllTimes] = useState<PrayerDataByDay>({});
   const [selectedDay, setSelectedDay] = useState<"yesterday" | "today" | "tomorrow">("today");
-  const [countdown, setCountdown] = useState("");
+  const [countdownPrayer, setCountdownPrayer] = useState("");
+  const [countdownWaktuCategory, setCountdownWaktuCategory] = useState("");
   const [currentPrayer, setCurrentPrayer] = useState<Prayer>({ label: null, time: null });
   const [nextPrayer, setNextPrayer] = useState<Prayer>({ label: null, time: null });
   const [currentWaktuCategory, setCurrentWaktuCategory] = useState("");
@@ -69,6 +71,7 @@ export default function HomePage() {
   const [selectedNegeri, setSelectedNegeri] = useState("");
   const [isManualMode, setIsManualMode] = useState(false);
   const [isInitialize, setIsInitialize] = useState(false);
+  const [timeRangeWaktuCategory, setTimeRangeWaktuCategory] = useState<{ title: string, timeRange: string }[]>([]);
 
   useEffect(() => {
     requestLocation();
@@ -201,7 +204,7 @@ export default function HomePage() {
 
     if (selectedDay == "yesterday" || selectedDay == 'tomorrow' && now < parseTime(times.isyak)) {
       setNextPrayer({ label: null, time: null });
-      setCountdown("");
+      setCountdownPrayer("");
       return;
     }
 
@@ -239,7 +242,7 @@ export default function HomePage() {
       t.setDate(t.getDate() + 1);
 
       setNextPrayer({ label: null, time: t });
-      setCountdown("");
+      setCountdownPrayer("");
 
       return;
     }
@@ -256,8 +259,8 @@ export default function HomePage() {
 
     setNextPrayer({ label: nextLabel, time: nextTime });
     setCurrentPrayer({ label: currentLabel, time: currentTime });
-    updateCurrentWaktuCategory(currentLabel, currentTime!, nextTime);
-    setCountdown(formatCountdown(nextTime));
+    updateCurrentWaktuCategory(currentLabel, currentTime!, currentLabel === 'subuh' ? parseTime(times.syuruk) : nextTime);
+    setCountdownPrayer(formatCountdown(nextTime));
   };
 
   const updateCurrentWaktuCategory = (currentLabel: string, start: Date, end: Date) => {
@@ -272,13 +275,31 @@ export default function HomePage() {
     const tahrim = 5 * 60 * 1000;
 
     let waktuCategory = "Waktu Jawaz";
+    let target = new Date(end.getTime() - karahah);
 
-    if (elapsed <= total / 2) waktuCategory = "Waktu Ikhtiar";
-    if (elapsed <= fadhilat) waktuCategory = "Waktu Fadhilat";
-    if (remaining <= karahah) waktuCategory = "Waktu Karahah (waktu makruh)";
-    if (remaining <= tahrim) waktuCategory = "Waktu Tahrim (waktu haram)";
+    if (elapsed <= total / 2) {
+      waktuCategory = "Waktu Ikhtiar";
+      target = new Date(start.getTime() + total / 2);
+    } else if (elapsed <= fadhilat) {
+      waktuCategory = "Waktu Fadhilat";
+      target = new Date(start.getTime() + fadhilat);
+    } else if (remaining <= karahah) {
+      waktuCategory = "Waktu Karahah (waktu makruh)";
+      target = new Date(end.getTime() - tahrim);
+    } else if (remaining <= tahrim) {
+      waktuCategory = "Waktu Tahrim (waktu haram)";
+      target = new Date(end.getTime());
+    }
 
-    setCurrentWaktuCategory(currentLabel == "syuruk" ? "" : waktuCategory)
+    setTimeRangeWaktuCategory([
+      { title: "Waktu Fadhilat", timeRange: `${formatTime(new Date(start.getTime()).getHours() + ':' + String(new Date(start.getTime()).getMinutes()).padStart(2, '0'))} - ${formatTime(new Date(start.getTime() + fadhilat).getHours() + ':' + String(new Date(start.getTime() + fadhilat).getMinutes()).padStart(2, '0'))}` },
+      { title: "Waktu Ikhtiar", timeRange: `${formatTime(new Date(start.getTime() + fadhilat).getHours() + ':' + String(new Date(start.getTime() + fadhilat).getMinutes()).padStart(2, '0'))} - ${formatTime(new Date(start.getTime() + total / 2).getHours() + ':' + String(new Date(start.getTime() + total / 2).getMinutes()).padStart(2, '0'))}` },
+      { title: "Waktu Jawaz", timeRange: `${formatTime(new Date(start.getTime() + total / 2).getHours() + ':' + String(new Date(start.getTime() + total / 2).getMinutes()).padStart(2, '0'))} - ${formatTime(new Date(end.getTime() - karahah).getHours() + ':' + String(new Date(end.getTime() - karahah).getMinutes()).padStart(2, '0'))}` },
+      { title: "Waktu Karahah (waktu makruh)", timeRange: `${formatTime(new Date(end.getTime() - karahah).getHours() + ':' + String(new Date(end.getTime() - karahah).getMinutes()).padStart(2, '0'))} - ${formatTime(new Date(end.getTime() - tahrim).getHours() + ':' + String(new Date(end.getTime() - tahrim).getMinutes()).padStart(2, '0'))}` },
+      { title: "Waktu Tahrim (waktu haram)", timeRange: `${formatTime(new Date(end.getTime() - tahrim).getHours() + ':' + String(new Date(end.getTime() - tahrim).getMinutes()).padStart(2, '0'))} - ${formatTime(new Date(end.getTime()).getHours() + ':' + String(new Date(end.getTime()).getMinutes()).padStart(2, '0'))}` },
+    ]);
+    setCurrentWaktuCategory(currentLabel == "syuruk" ? "" : waktuCategory);
+    setCountdownWaktuCategory(`${formatCountdown(target)} lagi.`);
   }
 
   const currentTimes = allTimes[selectedDay];
@@ -485,7 +506,7 @@ export default function HomePage() {
             label={capitalize(label)}
             value={currentTimes ? currentTimes[label as keyof PrayerTimes] : undefined}
             highlight={nextPrayer.label === label}
-            countdown={nextPrayer.label === label ? countdown : undefined}
+            countdownPrayer={nextPrayer.label === label ? countdownPrayer : undefined}
           />
         ))}
       </div>
@@ -517,8 +538,22 @@ export default function HomePage() {
             }`}>
             <CardHeader>
               <CardTitle>{item.title}</CardTitle>
-              <CardDescription className={`${currentWaktuCategory == item.title ? "text-yellow-700 dark:text-yellow-300" : ""}`}>{item.description}</CardDescription>
+              <CardDescription className={`${currentWaktuCategory == item.title ? "dark:text-yellow-100" : ""}`}>{item.description}</CardDescription>
             </CardHeader>
+            {coords && currentPrayer.label != 'syuruk' && (
+              <>
+                <CardContent className="flex items-center">
+                  <Badge variant={`${currentWaktuCategory == item.title ? "default" : "secondary"}`}>
+                    {timeRangeWaktuCategory.find(t => t.title == item.title)?.timeRange ?? "--:-- - --:--"}
+                  </Badge>
+                  {currentWaktuCategory == item.title && (
+                    <span className="ml-auto text-xs text-yellow-700 dark:text-yellow-300">
+                      {countdownWaktuCategory}
+                    </span>
+                  )}
+                </CardContent>
+              </>
+            )}
           </Card>
         ))}
       </div>
@@ -611,12 +646,12 @@ function PrayerRow({
   label,
   value,
   highlight = false,
-  countdown,
+  countdownPrayer,
 }: {
   label: string;
   value?: string;
   highlight?: boolean;
-  countdown?: string;
+  countdownPrayer?: string;
 }) {
   return (
     <Card
@@ -627,9 +662,9 @@ function PrayerRow({
     >
       <div className="flex flex-col">
         <span>{label}</span>
-        {highlight && countdown && (
+        {highlight && countdownPrayer && (
           <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-            {countdown} lagi
+            {countdownPrayer} lagi
           </span>
         )}
       </div>
