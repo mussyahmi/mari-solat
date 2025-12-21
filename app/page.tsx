@@ -546,19 +546,17 @@ export default function HomePage() {
               <CardTitle>{item.title}</CardTitle>
               <CardDescription className={`${currentWaktuCategory == item.title ? "dark:text-yellow-100" : ""}`}>{item.description}</CardDescription>
             </CardHeader>
-            {coords && currentPrayer.label != 'syuruk' && (
-              <>
-                <CardContent className="flex items-center">
-                  <Badge variant={`${currentWaktuCategory == item.title ? "default" : "secondary"}`}>
-                    {timeRangeWaktuCategory.find(t => t.title == item.title)?.timeRange ?? "--:-- - --:--"}
-                  </Badge>
-                  {currentWaktuCategory == item.title && (
-                    <span className="ml-auto text-xs text-yellow-700 dark:text-yellow-300">
-                      {countdownWaktuCategory}
-                    </span>
-                  )}
-                </CardContent>
-              </>
+            {countdownWaktuCategory != "" && currentPrayer.label != 'syuruk' && (
+              <CardContent className="flex items-center">
+                <Badge variant={`${currentWaktuCategory == item.title ? "default" : "secondary"}`}>
+                  {timeRangeWaktuCategory.find(t => t.title == item.title)?.timeRange ?? "--:-- - --:--"}
+                </Badge>
+                {currentWaktuCategory == item.title && (
+                  <span className="ml-auto text-xs text-yellow-700 dark:text-yellow-300">
+                    {countdownWaktuCategory}
+                  </span>
+                )}
+              </CardContent>
             )}
           </Card>
         ))}
