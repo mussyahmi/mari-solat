@@ -280,13 +280,19 @@ export default function HomePage() {
     if (elapsed <= total / 2) {
       waktuCategory = "Waktu Ikhtiar";
       target = new Date(start.getTime() + total / 2);
-    } else if (elapsed <= fadhilat) {
+    }
+
+    if (elapsed <= fadhilat) {
       waktuCategory = "Waktu Fadhilat";
       target = new Date(start.getTime() + fadhilat);
-    } else if (remaining <= karahah) {
+    }
+
+    if (remaining <= karahah) {
       waktuCategory = "Waktu Karahah (waktu makruh)";
       target = new Date(end.getTime() - tahrim);
-    } else if (remaining <= tahrim) {
+    }
+
+    if (remaining <= tahrim) {
       waktuCategory = "Waktu Tahrim (waktu haram)";
       target = new Date(end.getTime());
     }
