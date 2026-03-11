@@ -191,6 +191,8 @@ export default function HomePage() {
 
   const currentTimes = allTimes[selectedDay];
   const isToday = selectedDay === "today";
+  const isAutoTomorrow = selectedDay === "tomorrow" && isInitialize;
+  const showNextPrayerHero = (isToday || isAutoTomorrow) && !!nextPrayer.label;
 
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden">
@@ -247,14 +249,14 @@ export default function HomePage() {
 
         {/* Hero — next prayer */}
         <div className="flex-1 flex flex-col justify-center px-4 lg:px-10 py-10">
-          {isToday && nextPrayer.label ? (
+          {showNextPrayerHero ? (
             <>
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4 text-center lg:text-left">Waktu Seterusnya</p>
               <div className="flex flex-col items-center lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-6">
                 <div className="text-center lg:text-left">
-                  <p className="text-lg font-medium text-muted-foreground mb-1">{capitalize(nextPrayer.label)}</p>
+                  <p className="text-lg font-medium text-muted-foreground mb-1">{capitalize(nextPrayer.label!)}</p>
                   <p className="text-6xl lg:text-8xl font-bold tabular-nums tracking-tight leading-none">
-                    {currentTimes ? currentTimes[nextPrayer.label] : <Skeleton className="h-20 w-52 inline-block" />}
+                    {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-20 w-52 inline-block" />}
                   </p>
                 </div>
                 <div className="text-center lg:text-right pb-1">
@@ -271,12 +273,12 @@ export default function HomePage() {
               </div>
             </>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
-            <>
-              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">Semua Solat Selesai</p>
-              <p className="text-2xl font-semibold text-muted-foreground">
-                Subuh esok · {allTimes.tomorrow?.subuh}
+            <div className="text-center lg:text-left">
+              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">Waktu Hari Ini</p>
+              <p className="text-4xl lg:text-5xl font-bold text-muted-foreground/20 tabular-nums">
+                {formatShortDate(dayDates.today)}
               </p>
-            </>
+            </div>
           ) : !allTimes.today ? (
             isManualMode ? (
               <div className="text-center lg:text-left">
@@ -306,7 +308,7 @@ export default function HomePage() {
         <div className="border-t border-border/40 shrink-0">
           <div className="grid grid-cols-3 lg:grid-cols-6">
             {PRAYERS.map((label, i) => {
-              const isNext = nextPrayer.label === label && isToday;
+              const isNext = nextPrayer.label === label && (isToday || isAutoTomorrow);
               const col = i % 3;
               const isFirstRow = i < 3;
               return (
