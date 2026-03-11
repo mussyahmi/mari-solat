@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "site": "mari-solat",
+    "public": "public",
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "https://marisolat.web.app",
+        "type": 301
+      }
+    ]
+  }
+}

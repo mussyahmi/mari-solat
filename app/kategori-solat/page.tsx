@@ -152,7 +152,7 @@ export default function KategoriSolatPage() {
           ) : noZone ? (
             <p className="text-sm text-muted-foreground">
               Tiada zon dipilih.{' '}
-              <Link href="/tetapan" className="text-primary">Tetapan →</Link>
+              <Link href="/tetapan" className="text-primary">Pergi ke Tetapan →</Link>
             </p>
           ) : error ? (
             <p className="text-sm text-muted-foreground">Gagal memuatkan data.</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTime } from '@/utils/format';
 import Sidebar from '@/components/Sidebar';
@@ -45,6 +46,7 @@ function formatCountdown(ms: number) {
 
 export default function SatuPertigaMalamPage() {
   const [loading, setLoading] = useState(true);
+  const [noZone, setNoZone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
 
@@ -64,7 +66,7 @@ export default function SatuPertigaMalamPage() {
   useEffect(() => {
     const zoneCode = localStorage.getItem('msolat_zone_code');
     if (!zoneCode) {
-      setError('Tiada zon dipilih. Sila tetapkan zon di halaman Tetapan.');
+      setNoZone(true);
       setLoading(false);
       return;
     }
@@ -141,6 +143,11 @@ export default function SatuPertigaMalamPage() {
             <Skeleton className="h-14 w-64" />
             <Skeleton className="h-4 w-48" />
           </div>
+        ) : noZone ? (
+          <p className="text-sm text-muted-foreground">
+            Tiada zon dipilih.{' '}
+            <Link href="/tetapan" className="text-primary">Pergi ke Tetapan →</Link>
+          </p>
         ) : error ? (
           <p className="text-sm text-muted-foreground">{error}</p>
         ) : (

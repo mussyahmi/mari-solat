@@ -209,9 +209,7 @@ export default function HomePage() {
               ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
               {zone
                 ? <p className="text-sm font-medium mt-0.5">{zone}</p>
-                : isManualMode
-                  ? <Link href="/tetapan" className="text-sm text-primary mt-0.5 block">Pilih zon →</Link>
-                  : <Skeleton className="h-4 w-32 mt-1 mx-auto lg:mx-0" />
+                : <Skeleton className="h-4 w-32 mt-1 mx-auto lg:mx-0" />
               }
             </div>
             <div className="hidden lg:block shrink-0">
@@ -286,9 +284,10 @@ export default function HomePage() {
                 <Link href="/tetapan" className="text-sm text-primary">Pergi ke Tetapan →</Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-20 w-64" />
+              <div className="flex flex-col items-center lg:items-start space-y-4">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-16 w-52 lg:h-20 lg:w-64" />
               </div>
             )
           ) : (
