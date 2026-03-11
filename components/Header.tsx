@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { APP_VERSION } from "@/lib/version";
 import Footer from "./Footer";
@@ -29,21 +30,38 @@ export default function Header() {
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <SheetHeader>
-              <SheetTitle>MariSolat</SheetTitle>
-              <SheetDescription>
-                Pantau waktu solat harian di Malaysia termasuk tarikh Miladi & Hijri, jadual lengkap solat untuk semua zon dengan MariSolat.
-              </SheetDescription>
+              <SheetTitle asChild>
+                <Link href="/">
+                  <Image src="/logo-stacked.png" alt="MariSolat" width={80} height={80} className="object-contain rounded-md mx-auto" />
+                </Link>
+              </SheetTitle>
+              <SheetDescription className="sr-only">MariSolat — Waktu Solat Malaysia</SheetDescription>
             </SheetHeader>
-            <nav className="grid flex-1 auto-rows-min gap-3 px-4">
-              <Link href="/" className="text-sm text-muted-foreground">Waktu Solat</Link>
-              <Link href="/arah-kiblat" className="text-sm text-muted-foreground">Arah Kiblat</Link>
-              <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground">Satu Pertiga Malam</Link>
-              <Link href="/kategori-solat" className="text-sm text-muted-foreground">Kategori Waktu</Link>
-              <Link href="/rukun-solat" className="text-sm text-muted-foreground">Rukun Solat</Link>
-              <Link href="/syarat-wajib-solat" className="text-sm text-muted-foreground">Syarat Wajib Solat</Link>
-              <Link href="/syarat-sah-solat" className="text-sm text-muted-foreground">Syarat Sah Solat</Link>
-              <Link href="/pembatal-solat" className="text-sm text-muted-foreground">Pembatal Solat</Link>
-              <Link href="/tetapan" className="text-sm text-muted-foreground">Tetapan</Link>
+            <nav className="flex flex-col gap-5 px-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">Waktu</p>
+                <div className="flex flex-col gap-3">
+                  <Link href="/" className="text-sm text-muted-foreground">Waktu Solat</Link>
+                  <Link href="/arah-kiblat" className="text-sm text-muted-foreground">Arah Kiblat</Link>
+                  <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground">Satu Pertiga Malam</Link>
+                  <Link href="/kategori-solat" className="text-sm text-muted-foreground">Kategori Waktu</Link>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">Ilmu Solat</p>
+                <div className="flex flex-col gap-3">
+                  <Link href="/rukun-solat" className="text-sm text-muted-foreground">Rukun Solat</Link>
+                  <Link href="/syarat-wajib-solat" className="text-sm text-muted-foreground">Syarat Wajib Solat</Link>
+                  <Link href="/syarat-sah-solat" className="text-sm text-muted-foreground">Syarat Sah Solat</Link>
+                  <Link href="/pembatal-solat" className="text-sm text-muted-foreground">Pembatal Solat</Link>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">Lain-lain</p>
+                <div className="flex flex-col gap-3">
+                  <Link href="/tetapan" className="text-sm text-muted-foreground">Tetapan</Link>
+                </div>
+              </div>
             </nav>
             <SheetFooter>
               <Separator />
@@ -54,7 +72,9 @@ export default function Header() {
             </SheetFooter>
           </SheetContent>
         </Sheet>
-        <Link className="text-xl font-bold text-black dark:text-zinc-50" href={"/"}>MariSolat</Link>
+        <Link href="/">
+          <Image src="/logo-horizontal.png" alt="MariSolat" width={120} height={32} className="object-contain rounded-sm" />
+        </Link>
       </div>
 
       <div className='flex items-center justify-center'>

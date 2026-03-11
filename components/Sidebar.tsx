@@ -2,22 +2,38 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { ChevronLeft, ChevronRight, Loader2Icon, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { APP_VERSION } from '@/lib/version';
 
-const NAV_LINKS = [
-  { href: '/', label: 'Waktu Solat' },
-  { href: '/arah-kiblat', label: 'Arah Kiblat' },
-  { href: '/satu-pertiga-malam', label: 'Satu Pertiga Malam' },
-  { href: '/kategori-solat', label: 'Kategori Waktu' },
-  { href: '/rukun-solat', label: 'Rukun Solat' },
-  { href: '/syarat-wajib-solat', label: 'Syarat Wajib Solat' },
-  { href: '/syarat-sah-solat', label: 'Syarat Sah Solat' },
-  { href: '/pembatal-solat', label: 'Pembatal Solat' },
-  { href: '/tetapan', label: 'Tetapan' },
+const NAV_GROUPS = [
+  {
+    label: 'Waktu',
+    links: [
+      { href: '/', label: 'Waktu Solat' },
+      { href: '/arah-kiblat', label: 'Arah Kiblat' },
+      { href: '/satu-pertiga-malam', label: 'Satu Pertiga Malam' },
+      { href: '/kategori-solat', label: 'Kategori Waktu' },
+    ],
+  },
+  {
+    label: 'Ilmu Solat',
+    links: [
+      { href: '/rukun-solat', label: 'Rukun Solat' },
+      { href: '/syarat-wajib-solat', label: 'Syarat Wajib Solat' },
+      { href: '/syarat-sah-solat', label: 'Syarat Sah Solat' },
+      { href: '/pembatal-solat', label: 'Pembatal Solat' },
+    ],
+  },
+  {
+    label: 'Lain-lain',
+    links: [
+      { href: '/tetapan', label: 'Tetapan' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -45,7 +61,7 @@ export default function Sidebar() {
       }`}
     >
       {collapsed ? (
-        <div className="flex flex-col items-center pt-5">
+        <div className="flex flex-col items-center pt-5 gap-3">
           <button
             onClick={toggle}
             className="p-2 rounded-md hover:bg-muted transition text-muted-foreground hover:text-foreground"
@@ -53,11 +69,16 @@ export default function Sidebar() {
           >
             <ChevronRight className="size-4" />
           </button>
+          <Link href="/">
+            <Image src="/logo-icon.png" alt="MariSolat" width={28} height={28} className="object-contain rounded-sm" />
+          </Link>
         </div>
       ) : (
         <div className="flex flex-col h-full p-6 min-w-[260px]">
           <div className="flex items-center justify-between mb-8">
-            <Link href="/" className="text-xl font-bold">MariSolat</Link>
+            <Link href="/">
+              <Image src="/logo-horizontal.png" alt="MariSolat" width={120} height={40} className="object-contain rounded-sm" />
+            </Link>
             <div className="flex items-center gap-0.5">
               {!mounted ? (
                 <Button variant="ghost" size="sm"><Loader2Icon className="animate-spin" /></Button>
@@ -72,15 +93,22 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <nav className="flex flex-col gap-1.5 mb-6">
-            {NAV_LINKS.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground transition"
-              >
-                {link.label}
-              </Link>
+          <nav className="flex flex-col gap-5 mb-6">
+            {NAV_GROUPS.map(group => (
+              <div key={group.label}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">{group.label}</p>
+                <div className="flex flex-col gap-1">
+                  {group.links.map(link => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="text-sm text-muted-foreground hover:text-foreground transition"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
 

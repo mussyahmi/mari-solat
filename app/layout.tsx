@@ -47,6 +47,11 @@ export const metadata: Metadata = {
     // images: ["https://marisolat.com/og-image.png"],
     creator: "@marisolat",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MariSolat",
+  },
 };
 
 export default function RootLayout({
