@@ -279,7 +279,7 @@ export default function HomePage() {
             </>
           ) : !allTimes.today ? (
             isManualMode ? (
-              <div>
+              <div className="text-center lg:text-left">
                 <p className="text-muted-foreground text-sm mb-3">Tiada zon dipilih.</p>
                 <Link href="/tetapan" className="text-sm text-primary">Pergi ke Tetapan →</Link>
               </div>
