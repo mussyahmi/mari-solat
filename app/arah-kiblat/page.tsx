@@ -54,9 +54,9 @@ export default function ArahKiblatPage() {
       const ev = e as any;
       let h: number | null = null;
       if (ev.webkitCompassHeading !== undefined) {
-        h = ev.webkitCompassHeading;
+        h = ev.webkitCompassHeading; // iOS: clockwise from north, correct
       } else if (e.alpha !== null) {
-        h = e.alpha;
+        h = (360 - e.alpha) % 360; // Android: alpha is CCW, invert to CW
       }
       if (h === null) return;
       h = ((h % 360) + 360) % 360;
