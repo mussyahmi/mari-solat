@@ -11,6 +11,8 @@ function getOrCreateUUID(): string {
 
 export async function trackVisit(lat: number, lng: number, zone: string) {
   if (!SCRIPT_URL) return;
+  const lastZone = localStorage.getItem('msolat_last_tracked_zone');
+  if (lastZone === zone) return;
   try {
     const uid = getOrCreateUUID();
     await fetch(SCRIPT_URL, {
@@ -24,6 +26,7 @@ export async function trackVisit(lat: number, lng: number, zone: string) {
         ua: navigator.userAgent,
       }),
     });
+    localStorage.setItem('msolat_last_tracked_zone', zone);
   } catch { /* silent */ }
 }
 
