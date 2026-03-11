@@ -248,34 +248,28 @@ export default function HomePage() {
         </div>
 
         {/* Hero — next prayer */}
-        <div className="flex-1 flex flex-col justify-center px-4 lg:px-10 py-10">
+        <div className="flex-1 flex flex-col justify-center items-center lg:items-start px-4 lg:px-10 py-10">
           {showNextPrayerHero ? (
-            <>
-              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4 text-center lg:text-left">Waktu Seterusnya</p>
-              <div className="flex flex-col items-center lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-6">
-                <div className="text-center lg:text-left">
-                  <p className="text-lg font-medium text-muted-foreground mb-1">{capitalize(nextPrayer.label!)}</p>
-                  <p className="text-6xl lg:text-8xl font-bold tabular-nums tracking-tight leading-none">
-                    {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-20 w-52 inline-block" />}
-                  </p>
-                </div>
-                <div className="text-center lg:text-right pb-1">
-                  <p className="text-base text-muted-foreground tabular-nums">{countdownPrayer} lagi</p>
-                  {!isManualMode && coords && (
-                    <button
-                      onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, "_blank")}
-                      className="text-xs text-muted-foreground/30 mt-2 hover:text-muted-foreground transition flex items-center gap-1 mx-auto lg:ml-auto lg:mr-0"
-                    >
-                      <SearchIcon className="size-3" /> Cari Masjid
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
+            <div className="w-full flex flex-col items-center lg:items-start">
+              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-3">Waktu Seterusnya</p>
+              <p className="text-3xl lg:text-5xl font-semibold text-muted-foreground/60 mb-2">{capitalize(nextPrayer.label!)}</p>
+              <p className="text-[5rem] lg:text-[10rem] font-bold tabular-nums tracking-tight leading-none">
+                {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-24 w-64 lg:h-36 lg:w-96 inline-block" />}
+              </p>
+              <p className="text-xl lg:text-3xl text-muted-foreground tabular-nums mt-5">{countdownPrayer} lagi</p>
+              {!isManualMode && coords && (
+                <button
+                  onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, "_blank")}
+                  className="text-xs text-muted-foreground/30 mt-4 hover:text-muted-foreground transition flex items-center gap-1"
+                >
+                  <SearchIcon className="size-3" /> Cari Masjid
+                </button>
+              )}
+            </div>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
             <div className="text-center lg:text-left">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">Waktu Hari Ini</p>
-              <p className="text-4xl lg:text-5xl font-bold text-muted-foreground/20 tabular-nums">
+              <p className="text-5xl lg:text-8xl font-bold text-muted-foreground/20 tabular-nums">
                 {formatShortDate(dayDates.today)}
               </p>
             </div>
@@ -289,7 +283,7 @@ export default function HomePage() {
               <div className="flex flex-col items-center lg:items-start space-y-4">
                 <Skeleton className="h-3 w-28" />
                 <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-16 w-52 lg:h-20 lg:w-64" />
+                <Skeleton className="h-20 w-64 lg:h-36 lg:w-96" />
               </div>
             )
           ) : (
@@ -297,7 +291,7 @@ export default function HomePage() {
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">
                 {selectedDay === "yesterday" ? "Waktu Semalam" : "Waktu Esok"}
               </p>
-              <p className="text-4xl lg:text-5xl font-bold text-muted-foreground/20 tabular-nums">
+              <p className="text-5xl lg:text-8xl font-bold text-muted-foreground/20 tabular-nums">
                 {selectedDay === "yesterday" ? formatShortDate(dayDates.yesterday) : formatShortDate(dayDates.tomorrow)}
               </p>
             </div>
