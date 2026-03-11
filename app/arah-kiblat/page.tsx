@@ -68,8 +68,13 @@ export default function ArahKiblatPage() {
       lastHeadingRef.current = h;
       setHeading(h);
     };
-    window.addEventListener('deviceorientation', handler, true);
-    return () => window.removeEventListener('deviceorientation', handler, true);
+    // Use deviceorientationabsolute on Android (gives north-referenced alpha)
+    // Fall back to deviceorientation for iOS (uses webkitCompassHeading)
+    const eventName = ('ondeviceorientationabsolute' in window)
+      ? 'deviceorientationabsolute'
+      : 'deviceorientation';
+    window.addEventListener(eventName, handler, true);
+    return () => window.removeEventListener(eventName, handler, true);
   }, [motionGranted]);
 
   // Auto-grant for non-iOS
