@@ -221,7 +221,7 @@ export default function HomePage() {
         {/* Top bar */}
         {!isFocusMode && <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
           <div className="flex items-center justify-between py-3 gap-3">
-            <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
+            <Link href="/tetapan" className="min-w-0 flex-1 text-center">
               {currentTimes ? (
                 <p className="text-xs text-muted-foreground/50">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
               ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
@@ -264,7 +264,7 @@ export default function HomePage() {
         </div>}
 
         {/* Hero — next prayer */}
-        <div className="flex-1 flex flex-col justify-center items-center lg:items-start px-4 lg:px-10 py-10 relative">
+        <div className="flex-1 flex flex-col justify-center items-center px-4 lg:px-10 py-10 relative">
           <div className="absolute top-4 right-4 flex items-center gap-3">
             <button
               onClick={() => window.location.reload()}
@@ -280,7 +280,7 @@ export default function HomePage() {
             </button>
           </div>
           {showNextPrayerHero ? (
-            <div className="w-full flex flex-col items-center lg:items-start">
+            <div className="w-full flex flex-col items-center">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-3">Waktu Seterusnya</p>
               <p className="text-3xl lg:text-5xl font-semibold text-muted-foreground/60 mb-2">{capitalize(nextPrayer.label!)}</p>
               <p className="text-[5rem] lg:text-[10rem] font-bold tabular-nums tracking-tight leading-none">
@@ -297,7 +297,7 @@ export default function HomePage() {
               )}
             </div>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
-            <div className="text-center lg:text-left">
+            <div className="text-center">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">Waktu Hari Ini</p>
               <p className="text-5xl lg:text-8xl font-bold text-muted-foreground/20 tabular-nums">
                 {formatShortDate(dayDates.today)}
@@ -305,19 +305,19 @@ export default function HomePage() {
             </div>
           ) : !allTimes.today ? (
             isManualMode ? (
-              <div className="text-center lg:text-left">
+              <div className="text-center">
                 <p className="text-muted-foreground text-sm mb-3">Tiada zon dipilih.</p>
                 <Link href="/tetapan" className="text-sm text-primary">Pergi ke Tetapan →</Link>
               </div>
             ) : (
-              <div className="flex flex-col items-center lg:items-start space-y-4">
+              <div className="flex flex-col items-center space-y-4">
                 <Skeleton className="h-3 w-28" />
                 <Skeleton className="h-5 w-20" />
                 <Skeleton className="h-20 w-64 lg:h-36 lg:w-96" />
               </div>
             )
           ) : (
-            <div className="text-center lg:text-left">
+            <div className="text-center">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">
                 {selectedDay === "yesterday" ? "Waktu Semalam" : "Waktu Esok"}
               </p>
