@@ -32,9 +32,18 @@ export async function trackVisit(lat: number, lng: number, zone: string) {
   } catch { /* silent */ }
 }
 
-export async function fetchVisits(): Promise<any[]> {
-  if (!SCRIPT_URL) return [];
-  const res = await fetch(`${SCRIPT_URL}?action=read`);
-  const data = await res.json();
-  return data.rows ?? [];
+export function fetchVisits(): Promise<any[]> {
+  if (!SCRIPT_URL) return Promise.resolve([]);
+  return new Promise((resolve) => {
+    const callbackName = `__msolat_cb_${Date.now()}`;
+    const script = document.createElement('script');
+    (window as any)[callbackName] = (data: any) => {
+      delete (window as any)[callbackName];
+      document.head.removeChild(script);
+      resolve(data.rows ?? []);
+    };
+    script.src = `${SCRIPT_URL}?action=read&callback=${callbackName}`;
+    script.onerror = () => { document.head.removeChild(script); resolve([]); };
+    document.head.appendChild(script);
+  });
 }
