@@ -291,14 +291,14 @@ export default function HomePage() {
               </div>
             )
           ) : (
-            <>
+            <div className="text-center lg:text-left">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">
                 {selectedDay === "yesterday" ? "Waktu Semalam" : "Waktu Esok"}
               </p>
               <p className="text-4xl lg:text-5xl font-bold text-muted-foreground/20 tabular-nums">
                 {selectedDay === "yesterday" ? formatShortDate(dayDates.yesterday) : formatShortDate(dayDates.tomorrow)}
               </p>
-            </>
+            </div>
           )}
         </div>
 
