@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "target": "marisolat",
     "source": ".",
     "ignore": [
       "firebase.json",

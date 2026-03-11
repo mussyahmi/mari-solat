@@ -1,5 +1,12 @@
 {
   "projects": {
     "default": "mari-solat"
+  },
+  "targets": {
+    "mari-solat": {
+      "hosting": {
+        "marisolat": ["marisolat"]
+      }
+    }
   }
 }
