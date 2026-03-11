@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { fetchVisits } from '@/lib/track';
+
+const VisitorMap = dynamic(() => import('@/components/VisitorMap'), { ssr: false });
 
 type Visit = {
   uuid: string;
@@ -46,6 +49,11 @@ export default function PantauPage() {
           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Pengguna Unik</p>
           <p className="text-3xl font-bold">{uniqueUsers}</p>
         </div>
+      </div>
+
+      <div className="mb-10">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peta Pelawat</p>
+        <VisitorMap rows={rows} />
       </div>
 
       <div className="mb-10">
