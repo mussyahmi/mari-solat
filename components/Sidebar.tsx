@@ -28,23 +28,25 @@ const NAV_GROUPS = [
       { href: '/pembatal-solat', label: 'Pembatal Solat' },
     ],
   },
-  {
-    label: 'Lain-lain',
-    links: [
-      { href: '/tetapan', label: 'Tetapan' },
-    ],
-  },
 ];
 
 export default function Sidebar() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
     if (localStorage.getItem('msolat_sidebar_collapsed') === 'true') {
       setCollapsed(true);
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => setCoords({ lat: coords.latitude, lng: coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
     }
   }, []);
 
@@ -110,11 +112,25 @@ export default function Sidebar() {
                 </div>
               </div>
             ))}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">Lain-lain</p>
+              <div className="flex flex-col gap-1">
+                <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition">Tetapan</Link>
+              </div>
+            </div>
           </nav>
 
-          <div className="mt-auto pt-4 border-t border-border space-y-1">
+          <div className="mt-auto border-t border-border pt-4 space-y-2">
+            {coords && (
+              <button
+                onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank')}
+                className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+              >
+                Cari Masjid Berdekatan
+              </button>
+            )}
             <Footer />
-            <p className="text-xs text-muted-foreground text-center pt-2">v{APP_VERSION}</p>
+            <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
           </div>
         </div>
       )}

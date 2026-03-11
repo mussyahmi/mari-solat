@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
+import { setManualZone } from '@/lib/zoneState';
 
 export default function TetapanPage() {
   const [zone, setZone] = useState<string | null>(null);
@@ -31,14 +32,15 @@ export default function TetapanPage() {
       .catch(() => toast.error('Gagal memuatkan senarai zon.'));
   }, []);
 
-  const saveZone = (code: string, name: string) => {
+  const saveZone = (code: string, name: string, manual: boolean) => {
     localStorage.setItem('msolat_zone_code', code);
     localStorage.setItem('msolat_zone_name', name);
+    setManualZone(manual);
     setZone(name);
   };
 
   const handleZoneSelect = (zoneData: any) => {
-    saveZone(zoneData.jakimCode, `${zoneData.jakimCode} · ${zoneData.daerah}`);
+    saveZone(zoneData.jakimCode, `${zoneData.jakimCode} · ${zoneData.daerah}`, true);
     setShowZoneSelector(false);
     setSelectedNegeri('');
     toast.success('Zon dikemaskini.');
@@ -57,7 +59,7 @@ export default function TetapanPage() {
           const res = await fetch(`https://api.waktusolat.app/zones/${c.latitude}/${c.longitude}`);
           const data = await res.json();
           if (!res.ok || 'error' in data) throw new Error();
-          saveZone(data.zone, `${data.zone} · ${data.district}`);
+          saveZone(data.zone, `${data.zone} · ${data.district}`, false);
           toast.success('Zon dikesan daripada lokasi anda.');
         } catch {
           toast.error('Tiada zon ditemui untuk lokasi ini.');

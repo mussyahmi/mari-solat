@@ -14,9 +14,17 @@ import { Separator } from "./ui/separator";
 export default function Header() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => setCoords({ lat: coords.latitude, lng: coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
   }, []);
 
   return (
@@ -65,9 +73,17 @@ export default function Header() {
             </nav>
             <SheetFooter>
               <Separator />
-              <Footer />
-              <div className="text-xs opacity-60 text-center">
-                v{APP_VERSION}
+              <div className="space-y-2">
+                {coords && (
+                  <button
+                    onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank')}
+                    className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+                  >
+                    Cari Masjid Berdekatan
+                  </button>
+                )}
+                <Footer />
+                <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
               </div>
             </SheetFooter>
           </SheetContent>

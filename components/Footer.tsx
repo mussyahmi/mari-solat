@@ -17,17 +17,16 @@ export default function Footer() {
 
   return (
     <>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2">
         <button
           onClick={() => setShowFeedbackDialog(true)}
-          className="text-sm text-muted-foreground hover:text-foreground transition"
+          className="text-sm text-muted-foreground hover:text-foreground transition text-left"
         >
-          Maklum Balas
+          Beri Maklum Balas
         </button>
-        <span className="text-muted-foreground/30 text-xs">·</span>
         <button
           onClick={() => setShowSupportDialog(true)}
-          className="text-sm text-muted-foreground hover:text-foreground transition"
+          className="text-sm text-muted-foreground hover:text-foreground transition text-left"
         >
           Belanja Kopi
         </button>

@@ -6,9 +6,11 @@ import { formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Maximize2, Minimize2, RefreshCw, SearchIcon } from "lucide-react";
+import { Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import { isManualZone } from "@/lib/zoneState";
+import { trackVisit } from "@/lib/track";
 
 type Prayer = {
   label: keyof PrayerTimes | null;
@@ -40,7 +42,6 @@ export default function HomePage() {
   const [selectedDay, setSelectedDay] = useState<"yesterday" | "today" | "tomorrow">("today");
   const [countdownPrayer, setCountdownPrayer] = useState("");
   const [nextPrayer, setNextPrayer] = useState<Prayer>({ label: null, time: null });
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isManualMode, setIsManualMode] = useState(false);
   const [isInitialize, setIsInitialize] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -66,19 +67,30 @@ export default function HomePage() {
     const savedName = localStorage.getItem('msolat_zone_name');
     if (savedCode && savedName) {
       loadZoneData(savedCode, savedName);
+      // Silently check if user is in a different zone (only if not manually set)
+      const isManual = isManualZone();
+      if (!isManual && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async ({ coords }) => {
+            try {
+              const { latitude, longitude } = coords;
+              const res = await fetch(`https://api.waktusolat.app/zones/${latitude}/${longitude}`);
+              const data = await res.json();
+              if (res.ok && !('error' in data)) {
+                trackVisit(latitude, longitude, data.zone);
+                if (data.zone !== savedCode) {
+                  await loadZoneData(data.zone, `${data.zone} · ${data.district}`);
+                }
+              }
+            } catch { /* silent */ }
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      }
     } else {
       requestLocation();
     }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'msolat_zone_code' || e.key === 'msolat_zone_name') {
-        const code = localStorage.getItem('msolat_zone_code');
-        const name = localStorage.getItem('msolat_zone_name');
-        if (code && name) loadZoneData(code, name);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   useEffect(() => {
@@ -112,10 +124,10 @@ export default function HomePage() {
         setIsManualMode(false);
         try {
           const { latitude, longitude } = coords;
-          setCoords({ lat: latitude, lng: longitude });
           const zoneRes = await fetch(`https://api.waktusolat.app/zones/${latitude}/${longitude}`);
           const zoneData = await zoneRes.json();
           if (!zoneRes.ok || "error" in zoneData) throw new Error();
+          trackVisit(latitude, longitude, zoneData.zone);
           await loadZoneData(zoneData.zone, `${zoneData.zone} · ${zoneData.district}`);
         } catch {
           toast.error("Tiada zon ditemui. Sila tetapkan zon di halaman Tetapan.");
@@ -287,14 +299,6 @@ export default function HomePage() {
                 {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-24 w-64 lg:h-36 lg:w-96 inline-block" />}
               </p>
               <p className="text-xl lg:text-3xl text-muted-foreground tabular-nums mt-5">{countdownPrayer} lagi</p>
-              {!isManualMode && coords && (
-                <button
-                  onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, "_blank")}
-                  className="text-xs text-muted-foreground/30 mt-4 hover:text-muted-foreground transition flex items-center gap-1"
-                >
-                  <SearchIcon className="size-3" /> Cari Masjid
-                </button>
-              )}
             </div>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
             <div className="text-center">
