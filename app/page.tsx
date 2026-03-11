@@ -205,7 +205,7 @@ export default function HomePage() {
         {/* Top bar */}
         <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
           <div className="flex items-center justify-between py-3 gap-3">
-            <div className="min-w-0 flex-1 text-center lg:text-left">
+            <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
               {currentTimes ? (
                 <p className="text-xs text-muted-foreground/50">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
               ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
@@ -213,7 +213,7 @@ export default function HomePage() {
                 ? <p className="text-sm font-medium mt-0.5">{zone}</p>
                 : <Skeleton className="h-4 w-32 mt-1 mx-auto lg:mx-0" />
               }
-            </div>
+            </Link>
             <div className="hidden lg:block shrink-0">
               <ButtonGroup>
                 {(["yesterday", "today", "tomorrow"] as const).map((day) => (
