@@ -64,6 +64,16 @@ export default function HomePage() {
     } else {
       requestLocation();
     }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'msolat_zone_code' || e.key === 'msolat_zone_name') {
+        const code = localStorage.getItem('msolat_zone_code');
+        const name = localStorage.getItem('msolat_zone_name');
+        if (code && name) loadZoneData(code, name);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   useEffect(() => {
@@ -94,6 +104,7 @@ export default function HomePage() {
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         clearTimeout(timeoutId);
+        setIsManualMode(false);
         try {
           const { latitude, longitude } = coords;
           setCoords({ lat: latitude, lng: longitude });
