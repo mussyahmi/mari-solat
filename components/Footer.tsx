@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,58 +9,83 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 export default function Footer() {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
 
   return (
-    <div className="flex flex-col">
-      {/* Feedback Button & Dialog */}
-      <Button variant="link" className="p-0" onClick={() => setShowFeedbackDialog(true)}>
-        Beri Maklum Balas
-      </Button>
+    <>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setShowFeedbackDialog(true)}
+          className="text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          Maklum Balas
+        </button>
+        <span className="text-muted-foreground/30 text-xs">·</span>
+        <button
+          onClick={() => setShowSupportDialog(true)}
+          className="text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          Belanja Kopi
+        </button>
+      </div>
 
-      <Dialog
-        open={showFeedbackDialog}
-        onOpenChange={setShowFeedbackDialog}
-      >
-        <DialogContent>
+      {/* Feedback dialog */}
+      <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Sebelum Anda Teruskan</DialogTitle>
+            <DialogTitle>Kongsi Maklum Balas Anda</DialogTitle>
             <DialogDescription>
-              Siaran di Insighto tidak boleh diedit selepas diterbitkan.
-              Jika anda ingin memberi maklum balas atau mencadangkan penambahbaikan,
-              anda boleh melakukannya di bawah.
+              Bantu kami menambah baik MariSolat! Maklum balas dan cadangan anda
+              amat kami hargai. Klik butang di bawah untuk membuka papan maklum
+              balas di mana anda boleh berkongsi pendapat, melaporkan isu,
+              atau mencadangkan ciri baharu.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex justify-end space-x-2">
-            <DialogClose asChild>
-              <Button variant="outline">Batal</Button>
-            </DialogClose>
-            <Button
-              onClick={() =>
-                window.open("https://insigh.to/b/marisolat", "_blank")
-              }
-            >
-              Buka Papan Maklum Balas
-            </Button>
-          </DialogFooter>
+          <Button
+            onClick={() => {
+              window.open("https://insigh.to/b/marisolat", "_blank");
+              setShowFeedbackDialog(false);
+            }}
+          >
+            Buka Papan Maklum Balas
+          </Button>
         </DialogContent>
       </Dialog>
 
-      {/* Buy Me a Coffee Button */}
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() =>
-          window.open("https://buymeacoffee.com/mustafasyahmi", "_blank")
-        }
-      >
-        Belanja Saya Kopi
-      </Button>
-    </div>
+      {/* Support dialog */}
+      <Dialog open={showSupportDialog} onOpenChange={setShowSupportDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Belanja Kopi</DialogTitle>
+            <DialogDescription>
+              Terima kasih kerana menyokong MariSolat! Imbas mana-mana kod QR di bawah.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* DuitNow */}
+            <div className="flex flex-col items-center gap-2 border rounded-xl p-3">
+              <p className="text-xs font-semibold">DuitNow QR</p>
+              <div className="relative w-48 sm:w-full aspect-square">
+                <Image src="/duitnow-qr.png" alt="DuitNow QR" fill className="object-contain rounded-lg" />
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">Mana-mana aplikasi bank</p>
+            </div>
+
+            {/* Buy Me a Coffee */}
+            <div className="flex flex-col items-center gap-2 border rounded-xl p-3">
+              <p className="text-xs font-semibold">Buy Me a Coffee</p>
+              <div className="relative w-48 sm:w-full aspect-square">
+                <Image src="/buymeacoffee-qr.png" alt="Buy Me a Coffee QR" fill className="object-contain rounded-lg" />
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">Imbas atau klik <a href="https://buymeacoffee.com/mustafasyahmi" target="_blank" rel="noopener noreferrer" className="text-primary underline">di sini</a></p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

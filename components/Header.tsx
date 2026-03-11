@@ -19,7 +19,7 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="flex w-full items-center justify-between p-5 sticky top-0 bg-white dark:bg-zinc-950 z-50">
+    <header className="flex w-full items-center justify-between px-4 py-3 sticky top-0 bg-background border-b border-border z-50 lg:hidden">
       <div className="flex items-center gap-2">
         <Sheet>
           <SheetTrigger asChild>
@@ -35,8 +35,15 @@ export default function Header() {
               </SheetDescription>
             </SheetHeader>
             <nav className="grid flex-1 auto-rows-min gap-3 px-4">
-              <Link href="/">Waktu Solat</Link>
-              <Link href="/rukun-solat">Rukun Solat</Link>
+              <Link href="/" className="text-sm text-muted-foreground">Waktu Solat</Link>
+              <Link href="/arah-kiblat" className="text-sm text-muted-foreground">Arah Kiblat</Link>
+              <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground">Satu Pertiga Malam</Link>
+              <Link href="/kategori-solat" className="text-sm text-muted-foreground">Kategori Waktu</Link>
+              <Link href="/rukun-solat" className="text-sm text-muted-foreground">Rukun Solat</Link>
+              <Link href="/syarat-wajib-solat" className="text-sm text-muted-foreground">Syarat Wajib Solat</Link>
+              <Link href="/syarat-sah-solat" className="text-sm text-muted-foreground">Syarat Sah Solat</Link>
+              <Link href="/pembatal-solat" className="text-sm text-muted-foreground">Pembatal Solat</Link>
+              <Link href="/tetapan" className="text-sm text-muted-foreground">Tetapan</Link>
             </nav>
             <SheetFooter>
               <Separator />
@@ -52,9 +59,9 @@ export default function Header() {
 
       <div className='flex items-center justify-center'>
         {!mounted ?
-          <Button variant={"outline"} size={"sm"}><Loader2Icon className='animate-spin' /></Button>
+          <Button variant={"ghost"} size={"sm"}><Loader2Icon className='animate-spin' /></Button>
           :
-          <Button variant={"outline"} size={"sm"} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>{resolvedTheme === "dark" ? <Sun /> : <Moon />}</Button>
+          <Button variant={"ghost"} size={"sm"} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>{resolvedTheme === "dark" ? <Sun /> : <Moon />}</Button>
         }
       </div>
     </header>

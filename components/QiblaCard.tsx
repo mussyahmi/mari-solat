@@ -1,272 +1,101 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-
-/* ---------------- Helpers ---------------- */
-function getQiblaBearing(lat: number, lng: number) {
-  const kaabaLat = 21.422487;
-  const kaabaLng = 39.826206;
-
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const toDeg = (r: number) => (r * 180) / Math.PI;
-
-  const φ1 = toRad(lat);
-  const φ2 = toRad(kaabaLat);
-  const Δλ = toRad(kaabaLng - lng);
-
-  const y = Math.sin(Δλ);
-  const x = Math.cos(φ1) * Math.tan(φ2) - Math.sin(φ1) * Math.cos(Δλ);
-
-  let θ = toDeg(Math.atan2(y, x));
-  return (θ + 360) % 360;
-}
-
-function useCompassHeading() {
-  const [heading, setHeading] = useState<number | null>(null);
-  const lastHeadingRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const handler = (e: DeviceOrientationEvent) => {
-      // Use webkitCompassHeading for iOS, alpha for Android
-      const event = e as any;
-      let newHeading: number | null = null;
-
-      if (event.webkitCompassHeading !== undefined) {
-        newHeading = event.webkitCompassHeading;
-      } else if (e.alpha !== null) {
-        // For non-iOS devices, adjust alpha to get compass heading
-        newHeading = e.alpha;
-      }
-
-      if (newHeading !== null) {
-        // Normalize to 0-360
-        newHeading = ((newHeading % 360) + 360) % 360;
-
-        // Handle wrapping around 0/360 to prevent spinning
-        if (lastHeadingRef.current !== null) {
-          const diff = newHeading - lastHeadingRef.current;
-
-          // If difference is > 180, we crossed the 0/360 boundary
-          if (diff > 180) {
-            newHeading -= 360;
-          } else if (diff < -180) {
-            newHeading += 360;
-          }
-        }
-
-        lastHeadingRef.current = newHeading;
-        setHeading(newHeading);
-      }
-    };
-
-    window.addEventListener("deviceorientation", handler, true);
-
-    return () => {
-      window.removeEventListener("deviceorientation", handler, true);
-    };
-  }, []);
-
-  return heading;
-}
-
-function requestMotionPermission(setGranted: (v: boolean) => void) {
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof (DeviceOrientationEvent as any).requestPermission === "function"
-  ) {
-    (DeviceOrientationEvent as any).requestPermission()
-      .then((res: string) => {
-        if (res === "granted") {
-          setGranted(true);
-        }
-      })
-      .catch((err: Error) => {
-        console.error("Permission denied:", err);
-        setGranted(false);
-      });
-  } else {
-    // For Android or browsers that don't require permission
-    setGranted(true);
-  }
-}
-
-/* ---------------- Component ---------------- */
-type QiblaCardProps = {
-  lat: number;
-  lng: number;
+type Props = {
+  qibla: number;
+  heading: number | null;
+  isAligned: boolean;
 };
 
-export default function QiblaCard({ lat, lng }: QiblaCardProps) {
-  const heading = useCompassHeading();
-  const [motionGranted, setMotionGranted] = useState(false);
-  const alignedRef = useRef(false);
-  const isAndroid =
-    typeof navigator !== "undefined" &&
-    /Android/i.test(navigator.userAgent);
+const CX = 150, CY = 150, R = 118;
 
+function px(angle: number, radius: number) {
+  return CX + Math.cos(((angle - 90) * Math.PI) / 180) * radius;
+}
+function py(angle: number, radius: number) {
+  return CY + Math.sin(((angle - 90) * Math.PI) / 180) * radius;
+}
 
-  const qibla = getQiblaBearing(lat, lng);
+const TICKS = Array.from({ length: 12 }, (_, i) => ({ angle: i * 30, major: i % 3 === 0 }));
+const CARDINALS = [
+  { label: 'U', angle: 0 },
+  { label: 'T', angle: 90 },
+  { label: 'S', angle: 180 },
+  { label: 'B', angle: 270 },
+];
 
-  useEffect(() => {
-    if (heading !== null) {
-      setMotionGranted(true);
-    }
-  }, [heading]);
-
-  const rotation = heading !== null ? (qibla - heading + 360) % 360 : 0;
-
-  const alignmentError =
-    heading !== null
-      ? Math.min(Math.abs(rotation), Math.abs(rotation - 360))
-      : null;
-
-  const isAligned = alignmentError !== null && alignmentError <= 5;
-
-  /* Haptic feedback – trigger once per alignment */
-  useEffect(() => {
-    if (isAligned && !alignedRef.current) {
-      alignedRef.current = true;
-
-      if ("vibrate" in navigator) {
-        navigator.vibrate(40);
-      }
-    }
-
-    if (!isAligned) {
-      alignedRef.current = false;
-    }
-  }, [isAligned]);
+export default function QiblaCard({ qibla, heading, isAligned }: Props) {
+  const needleAngle = heading !== null ? (qibla - heading + 360) % 360 : qibla;
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle>Arah Kiblat</CardTitle>
-        <CardDescription>Kompas berorientasikan Kaabah</CardDescription>
-      </CardHeader>
+    <svg
+      viewBox="0 0 300 300"
+      className="w-56 h-56 sm:w-64 sm:h-64 lg:w-72 lg:h-72"
+      aria-label="Kompas Kiblat"
+    >
+      {/* Alignment glow */}
+      {isAligned && (
+        <circle cx={CX} cy={CY} r={R + 8} fill="none" strokeWidth={14}
+          className="stroke-emerald-400/15" />
+      )}
 
-      <CardContent className="flex flex-col items-center gap-5">
-        {/* Compass */}
-        <div className="relative w-56 h-56">
-          {/* Rotating compass face */}
-          <div
-            className={`
-              absolute inset-0 rounded-full
-              bg-gradient-to-b
-              from-zinc-100 to-zinc-200
-              dark:from-zinc-800 dark:to-zinc-900
-              border-4
-              ${isAligned
-                ? "border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.6)]"
-                : "border-zinc-300 dark:border-zinc-700"
-              }
-              shadow-inner
-              transition-all duration-700 ease-out
-            `}
-            style={{ transform: `rotate(${heading !== null ? -heading : 0}deg)` }}
-          >
-            {/* Cardinal directions */}
-            {[
-              { label: "U", angle: 0 },
-              { label: "T", angle: 90 },
-              { label: "S", angle: 180 },
-              { label: "B", angle: 270 },
-            ].map((d) => (
-              <span
-                key={d.label}
-                className="absolute text-xs font-bold text-zinc-600 dark:text-zinc-300 transition-transform duration-700 ease-out"
-                style={{
-                  top: "50%",
-                  left: "50%",
-                  transform: `translate(-50%, -50%) rotate(${d.angle}deg) translateY(-100px)`,
-                }}
-              >
-                {d.label}
-              </span>
-            ))}
+      {/* Main ring */}
+      <circle cx={CX} cy={CY} r={R} fill="none"
+        strokeWidth={isAligned ? 1.5 : 1}
+        className={isAligned ? "stroke-emerald-400" : "stroke-border"}
+        style={{ transition: 'stroke 0.5s ease' }}
+      />
 
-            {/* Line from center to Qibla - rotates with compass */}
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                transform: `rotate(${qibla}deg)`,
-              }}
-            >
-              <div
-                className="absolute w-1 bg-emerald-500 dark:bg-emerald-400 opacity-60 rounded-full"
-                style={{
-                  height: '104px',
-                  top: '50%',
-                  transform: 'translateY(-100%)',
-                  transformOrigin: 'bottom center'
-                }}
-              />
-            </div>
-          </div>
+      {/* Tick marks */}
+      {TICKS.map(({ angle, major }) => (
+        <line key={angle}
+          x1={px(angle, R - (major ? 14 : 7))} y1={py(angle, R - (major ? 14 : 7))}
+          x2={px(angle, R)} y2={py(angle, R)}
+          strokeWidth={major ? 1.5 : 1} strokeLinecap="round"
+          className={major ? "stroke-foreground/20" : "stroke-foreground/10"}
+        />
+      ))}
 
-          {/* Arrow - points to Qibla when inactive, points up when active */}
-          <div
-            className="absolute inset-0 flex items-center justify-center transition-all duration-700 ease-out"
-            style={{
-              transform: `rotate(${heading !== null ? 0 : qibla}deg)`,
-              opacity: 1
-            }}
-          >
-            {/* Arrow tip */}
-            <div
-              className="
-                w-0 h-0
-                border-l-[14px] border-r-[14px] border-b-[36px]
-                border-l-transparent border-r-transparent
-                border-b-emerald-600 dark:border-b-emerald-400
-                drop-shadow-lg
-              "
-            />
-          </div>
+      {/* Cardinal labels */}
+      {CARDINALS.map(({ label, angle }) => (
+        <text key={label}
+          x={px(angle, R - 30)} y={py(angle, R - 30)}
+          textAnchor="middle" dominantBaseline="middle"
+          fontSize="11" fontWeight="600"
+          className="fill-muted-foreground/40"
+        >
+          {label}
+        </text>
+      ))}
 
-          {/* Center */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-2.5 h-2.5 rounded-full bg-zinc-500 dark:bg-zinc-400" />
-          </div>
-        </div>
+      {/* Rotating needle */}
+      <g style={{
+        transformOrigin: `${CX}px ${CY}px`,
+        transform: `rotate(${needleAngle}deg)`,
+        transition: 'transform 0.15s ease-out',
+      }}>
+        {/* Upper arm — Qibla */}
+        <line x1={CX} y1={CY - 10} x2={CX} y2={CY - (R - 28)}
+          strokeWidth={2} strokeLinecap="round"
+          className={isAligned ? "stroke-emerald-400" : "stroke-emerald-500"}
+          style={{ transition: 'stroke 0.5s ease' }}
+        />
+        {/* Arrowhead */}
+        <polygon
+          points={`${CX},${CY - (R - 12)} ${CX - 6},${CY - (R - 30)} ${CX + 6},${CY - (R - 30)}`}
+          className={isAligned ? "fill-emerald-400" : "fill-emerald-500"}
+          style={{ transition: 'fill 0.5s ease' }}
+        />
+        {/* Lower arm — back */}
+        <line x1={CX} y1={CY + 10} x2={CX} y2={CY + (R - 52)}
+          strokeWidth={1.5} strokeLinecap="round"
+          className="stroke-foreground/15"
+        />
+      </g>
 
-        {/* Degree */}
-        <div className="text-center">
-          <div className="text-2xl font-bold">{Math.round(qibla)}°</div>
-          <div className="text-sm text-muted-foreground">Dari arah Utara</div>
-
-          {isAligned && (
-            <div className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold mt-1">
-              Menghadap Kiblat ({heading !== null ? Math.round(((heading % 360) + 360) % 360) : 0}°)
-            </div>
-          )}
-        </div>
-
-        {isAndroid && (
-          <div className="text-xs text-amber-600 dark:text-amber-400 text-center max-w-xs">
-            Nota: Sesetengah peranti Android mungkin mengalami isu ketepatan kompas.
-            Kami sedang dalam proses membaikinya.
-          </div>
-        )}
-
-        {/* Permission */}
-        {!motionGranted && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => requestMotionPermission(setMotionGranted)}
-          >
-            Aktifkan Kompas
-          </Button>
-        )}
-
-        {heading === null && motionGranted && (
-          <div className="text-xs text-muted-foreground text-center">
-            Peranti ini tidak menyokong sensor kompas.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Center dot */}
+      <circle cx={CX} cy={CY} r={5} strokeWidth={1.5}
+        className="fill-background stroke-border/60"
+      />
+    </svg>
   );
 }

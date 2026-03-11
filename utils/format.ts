@@ -24,6 +24,27 @@ export function formatPrayerDates(gregorian: string, hijri: string) {
   return `${gDay} ${gMonth} ${gYear} Miladi | ${hDay} ${hMonth} ${hYear} Hijri`;
 }
 
+export function formatGregorianDate(gregorian: string) {
+  const gDate = new Date(gregorian);
+  const gDay = gDate.getDate();
+  const gMonth = gregorianMonthsBM[gDate.getMonth()];
+  const gYear = gDate.getFullYear();
+  return `${gDay} ${gMonth} ${gYear} Miladi`;
+}
+
+export function formatHijriDate(hijri: string) {
+  const [hYear, hMonthStr, hDayStr] = hijri.split("-");
+  const hMonth = hijriMonthsBM[Number(hMonthStr) - 1];
+  const hDay = Number(hDayStr);
+  return `${hDay} ${hMonth} ${hYear} Hijri`;
+}
+
+const shortMonthsBM = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogs","Sep","Okt","Nov","Dis"];
+
+export function formatShortDate(date: Date) {
+  return `${date.getDate()} ${shortMonthsBM[date.getMonth()]}`;
+}
+
 export function formatTime(time: string) {
   if (!time) return "-";
 
