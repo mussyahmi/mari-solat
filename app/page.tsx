@@ -6,7 +6,7 @@ import { formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { SearchIcon } from "lucide-react";
+import { Maximize2, Minimize2, RefreshCw, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 
@@ -43,6 +43,11 @@ export default function HomePage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isManualMode, setIsManualMode] = useState(false);
   const [isInitialize, setIsInitialize] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  useEffect(() => {
+    document.body.classList.toggle('focus-mode', isFocusMode);
+    return () => document.body.classList.remove('focus-mode');
+  }, [isFocusMode]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -208,13 +213,13 @@ export default function HomePage() {
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden">
 
-      <Sidebar />
+      {!isFocusMode && <Sidebar />}
 
       {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 
         {/* Top bar */}
-        <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
+        {!isFocusMode && <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
           <div className="flex items-center justify-between py-3 gap-3">
             <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
               {currentTimes ? (
@@ -256,10 +261,24 @@ export default function HomePage() {
               ))}
             </ButtonGroup>
           </div>
-        </div>
+        </div>}
 
         {/* Hero — next prayer */}
-        <div className="flex-1 flex flex-col justify-center items-center lg:items-start px-4 lg:px-10 py-10">
+        <div className="flex-1 flex flex-col justify-center items-center lg:items-start px-4 lg:px-10 py-10 relative">
+          <div className="absolute top-4 right-4 flex items-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-muted-foreground/30 hover:text-muted-foreground transition"
+            >
+              <RefreshCw className="size-4" />
+            </button>
+            <button
+              onClick={() => setIsFocusMode(f => !f)}
+              className="text-muted-foreground/30 hover:text-muted-foreground transition"
+            >
+              {isFocusMode ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+          </div>
           {showNextPrayerHero ? (
             <div className="w-full flex flex-col items-center lg:items-start">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-3">Waktu Seterusnya</p>
