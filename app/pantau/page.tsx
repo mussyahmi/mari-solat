@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { fetchVisits } from '@/lib/track';
+import Sidebar from '@/components/Sidebar';
 
 const VisitorMap = dynamic(() => import('@/components/VisitorMap'), { ssr: false });
 
@@ -32,11 +33,13 @@ export default function PantauPage() {
   for (const r of rows) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
   const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  if (loading) return <div className="p-10 text-sm text-muted-foreground">Memuatkan...</div>;
-  if (error) return <div className="p-10 text-sm text-destructive">{error}</div>;
+  if (loading) return <div className="min-h-screen lg:flex"><Sidebar /><div className="p-10 text-sm text-muted-foreground">Memuatkan...</div></div>;
+  if (error) return <div className="min-h-screen lg:flex"><Sidebar /><div className="p-10 text-sm text-destructive">{error}</div></div>;
 
   return (
-    <div className="min-h-screen px-6 py-10 max-w-5xl mx-auto">
+    <div className="min-h-screen lg:flex">
+      <Sidebar />
+      <main className="flex-1 min-w-0 px-6 py-10 max-w-5xl mx-auto lg:mx-0 lg:max-w-none">
       <h1 className="text-2xl font-bold mb-1">Pantau</h1>
       <p className="text-sm text-muted-foreground mb-8">Data pelawat MariSolat</p>
 
@@ -97,6 +100,7 @@ export default function PantauPage() {
           </table>
         </div>
       </div>
+      </main>
     </div>
   );
 }
