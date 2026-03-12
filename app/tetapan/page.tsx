@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,12 @@ import {
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { setManualZone } from '@/lib/zoneState';
+import {
+  AZAN_PRAYERS, PRAYER_LABELS,
+  isGlobalAzanOn, setGlobalAzanOn,
+  isAzanEnabled, setAzanEnabled,
+  requestNotifPermission,
+} from '@/lib/azan';
 
 export default function TetapanPage() {
   const [zone, setZone] = useState<string | null>(null);
@@ -21,6 +28,9 @@ export default function TetapanPage() {
   const [selectedNegeri, setSelectedNegeri] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [azanOn, setAzanOn] = useState(false);
+  const [prayerToggles, setPrayerToggles] = useState<Record<string, boolean>>({});
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     const savedName = localStorage.getItem('msolat_zone_name');
@@ -30,6 +40,10 @@ export default function TetapanPage() {
       .then(r => r.json())
       .then(setAllZones)
       .catch(() => toast.error('Gagal memuatkan senarai zon.'));
+
+    setAzanOn(isGlobalAzanOn());
+    setPrayerToggles(Object.fromEntries(AZAN_PRAYERS.map(p => [p, isAzanEnabled(p)])));
+    if ('Notification' in window) setNotifPermission(Notification.permission);
   }, []);
 
   const saveZone = (code: string, name: string, manual: boolean) => {
@@ -73,6 +87,18 @@ export default function TetapanPage() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  const handleRequestNotif = async () => {
+    const result = await requestNotifPermission();
+    setNotifPermission(result);
+    if (result === 'granted') toast.success('Notifikasi dibenarkan.');
+    else toast.error('Notifikasi tidak dibenarkan.');
+  };
+
+  const togglePrayer = (prayer: string, value: boolean) => {
+    setAzanEnabled(prayer, value);
+    setPrayerToggles(prev => ({ ...prev, [prayer]: value }));
   };
 
   const negeriList = Array.from(new Set(allZones.map(z => z.negeri)));
@@ -121,6 +147,37 @@ export default function TetapanPage() {
               </Button>
             </div>
           </div>
+
+          {/* Azan global toggle */}
+          <div className="py-4">
+            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm">Mainkan azan waktu solat</p>
+                <Switch checked={azanOn} onCheckedChange={v => { setGlobalAzanOn(v); setAzanOn(v); }} />
+              </div>
+              {notifPermission !== 'granted' && (
+                <Button variant="outline" size="sm" onClick={handleRequestNotif}>
+                  Benarkan Notifikasi Pelayar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Per-prayer azan toggles */}
+          {azanOn && (
+            <div className="py-4">
+              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan Setiap Solat</p>
+              <div className="space-y-3">
+                {AZAN_PRAYERS.map(prayer => (
+                  <div key={prayer} className="flex items-center justify-between">
+                    <p className="text-sm">{PRAYER_LABELS[prayer]}</p>
+                    <Switch checked={prayerToggles[prayer] ?? true} onCheckedChange={v => togglePrayer(prayer, v)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </main>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import { isManualZone } from "@/lib/zoneState";
 import { trackVisit } from "@/lib/track";
+import { AZAN_PRAYERS, isGlobalAzanOn, isAzanEnabled, triggerAzan } from "@/lib/azan";
 
 type Prayer = {
   label: keyof PrayerTimes | null;
@@ -55,6 +56,23 @@ export default function HomePage() {
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const lastTriggered = useRef('');
+  useEffect(() => {
+    if (!allTimes.today) return;
+    const times = allTimes.today;
+    const key = now.toDateString();
+    const hhmm = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+    for (const prayer of AZAN_PRAYERS) {
+      const t = parseTime(times[prayer as keyof PrayerTimes] as string);
+      const tHHMM = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+      const triggerId = `${prayer}-${key}-${tHHMM}`;
+      if (hhmm === tHHMM && lastTriggered.current !== triggerId && isGlobalAzanOn() && isAzanEnabled(prayer)) {
+        lastTriggered.current = triggerId;
+        triggerAzan(prayer);
+      }
+    }
+  }, [now, allTimes]);
 
   const dayDates = {
     yesterday: new Date(now.getTime() - 86400000),
@@ -233,7 +251,7 @@ export default function HomePage() {
         {/* Top bar */}
         {!isFocusMode && <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
           <div className="flex items-center justify-between py-3 gap-3">
-            <Link href="/tetapan" className="min-w-0 flex-1 text-center">
+            <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
               {currentTimes ? (
                 <p className="text-xs text-muted-foreground/50">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
               ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
@@ -333,7 +351,7 @@ export default function HomePage() {
         </div>
 
         {/* Prayer strip — bottom */}
-        <div className="border-t border-border/40 shrink-0">
+        <div className="border-t border-border/40 shrink-0 text-center">
           <div className="grid grid-cols-3 lg:grid-cols-6">
             {PRAYERS.map((label, i) => {
               const isNext = nextPrayer.label === label && (isToday || isAutoTomorrow);

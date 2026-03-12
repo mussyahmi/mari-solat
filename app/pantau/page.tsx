@@ -45,12 +45,12 @@ export default function PantauPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
         <div className="border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Jumlah Kunjungan</p>
-          <p className="text-3xl font-bold">{rows.length}</p>
-        </div>
-        <div className="border border-border rounded-xl p-4">
           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Pengguna Unik</p>
           <p className="text-3xl font-bold">{uniqueUsers}</p>
+        </div>
+        <div className="border border-border rounded-xl p-4">
+          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Zon Berbeza</p>
+          <p className="text-3xl font-bold">{Object.keys(zoneCount).length}</p>
         </div>
       </div>
 

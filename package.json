@@ -1,6 +1,6 @@
 {
   "name": "mari-solat",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3005",
@@ -21,6 +21,7 @@
     "lucide-react": "^0.561.0",
     "next": "16.0.10",
     "next-themes": "^0.4.6",
+    "radix-ui": "^1.4.3",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-leaflet": "^5.0.0",

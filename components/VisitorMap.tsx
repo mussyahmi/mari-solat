@@ -21,7 +21,7 @@ export default function VisitorMap({ rows }: { rows: Visit[] }) {
     <MapContainer
       center={[4.5, 109.5]}
       zoom={6}
-      style={{ height: '420px', width: '100%', borderRadius: '12px' }}
+      style={{ height: '420px', width: '100%', borderRadius: '12px', zIndex: 0 }}
       scrollWheelZoom={false}
     >
       <TileLayer

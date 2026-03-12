@@ -127,3 +127,12 @@
 body.focus-mode header {
   display: none !important;
 }
+
+.leaflet-pane,
+.leaflet-control {
+  z-index: 0 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
