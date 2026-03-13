@@ -91,7 +91,9 @@ export default function PantauPage() {
                   </td>
                   <td className="py-2 pr-4">{r.zone}</td>
                   <td className="py-2 pr-4 font-mono text-muted-foreground">
-                    {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                    <a href={`https://www.google.com/maps?q=${r.lat},${r.lng}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">
+                      {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                    </a>
                   </td>
                   <td className="py-2 text-muted-foreground/50 font-mono">{r.uuid.slice(0, 8)}…</td>
                 </tr>
