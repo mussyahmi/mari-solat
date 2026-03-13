@@ -28,8 +28,8 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="flex w-full items-center justify-between px-4 py-3 sticky top-0 bg-background border-b border-border z-50 lg:hidden">
-      <div className="flex items-center gap-2">
+    <header className="relative flex w-full items-center justify-between px-4 py-3 sticky top-0 bg-background border-b border-border z-50 lg:hidden">
+      <div className="flex items-center">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant={"ghost"} size={"sm"}>
@@ -88,6 +88,9 @@ export default function Header() {
             </SheetFooter>
           </SheetContent>
         </Sheet>
+      </div>
+
+      <div className="absolute left-1/2 -translate-x-1/2">
         <Link href="/">
           <Image src="/logo-horizontal.png" alt="MariSolat" width={120} height={32} className="object-contain rounded-sm" />
         </Link>
