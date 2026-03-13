@@ -84,7 +84,7 @@ export default function PantauPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {[...rows].reverse().map((r, i) => (
+              {[...rows].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((r, i) => (
                 <tr key={i}>
                   <td className="py-2 pr-4 text-muted-foreground whitespace-nowrap">
                     {new Date(r.timestamp).toLocaleString('ms-MY')}
