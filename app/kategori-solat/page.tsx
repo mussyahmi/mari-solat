@@ -91,12 +91,15 @@ export default function KategoriSolatPage() {
     const load = async () => {
       try {
         const today = new Date();
-        const tomorrow = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
 
-        const [td, tm] = await Promise.all([
+        const [td, tm, yd] = await Promise.all([
           fetchSolat(zoneCode, today),
           fetchSolat(zoneCode, tomorrow),
+          fetchSolat(zoneCode, yesterday),
         ]);
 
         const subuh   = parseTime(formatTime(td.prayerTime.fajr));
@@ -107,12 +110,16 @@ export default function KategoriSolatPage() {
         const isyak   = parseTime(formatTime(td.prayerTime.isha));
         const subuhTm = parseTime(formatTime(tm.prayerTime.fajr), tomorrow);
 
+        const ydIsyak = parseTime(formatTime(yd.prayerTime.isha), yesterday);
+
         setPrayerWindows([
-          { name: 'Subuh',   start: subuh,   end: syuruk },
-          { name: 'Zohor',   start: zohor,   end: asar },
-          { name: 'Asar',    start: asar,    end: maghrib },
-          { name: 'Maghrib', start: maghrib, end: isyak },
-          { name: 'Isyak',   start: isyak,   end: subuhTm },
+          // Post-midnight window: yesterday's Isyak → today's Subuh
+          { name: 'Isyak',   start: ydIsyak,  end: subuh },
+          { name: 'Subuh',   start: subuh,    end: syuruk },
+          { name: 'Zohor',   start: zohor,    end: asar },
+          { name: 'Asar',    start: asar,     end: maghrib },
+          { name: 'Maghrib', start: maghrib,  end: isyak },
+          { name: 'Isyak',   start: isyak,    end: subuhTm },
         ]);
       } catch {
         setError(true);

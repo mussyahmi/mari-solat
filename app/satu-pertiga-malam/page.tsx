@@ -74,25 +74,47 @@ export default function SatuPertigaMalamPage() {
     const load = async () => {
       try {
         const today = new Date();
-        const tomorrow = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
 
-        const [todayRes, tomorrowRes] = await Promise.all([
+        const [todayRes, tomorrowRes, yesterdayRes] = await Promise.all([
           fetchSolat(zoneCode, today),
           fetchSolat(zoneCode, tomorrow),
+          fetchSolat(zoneCode, yesterday),
         ]);
 
-        const maghrib = parseTime(formatTime(todayRes.prayerTime.maghrib));
-        const subuhBase = new Date(today);
-        subuhBase.setDate(today.getDate() + 1);
-        const subuh = parseTime(formatTime(tomorrowRes.prayerTime.fajr), subuhBase);
+        const todaySubuh = parseTime(formatTime(todayRes.prayerTime.fajr));
+        const isPostMidnight = new Date() < todaySubuh;
+
+        let maghrib: Date;
+        let subuh: Date;
+        let maghribLabel: string;
+        let subuhLabel: string;
+
+        if (isPostMidnight) {
+          // After midnight but before dawn — current night = yesterday's Maghrib → today's Subuh
+          maghrib = parseTime(formatTime(yesterdayRes.prayerTime.maghrib), yesterday);
+          subuh = todaySubuh;
+          maghribLabel = formatTime(yesterdayRes.prayerTime.maghrib);
+          subuhLabel = formatTime(todayRes.prayerTime.fajr);
+        } else {
+          // Daytime or evening — next night = today's Maghrib → tomorrow's Subuh
+          maghrib = parseTime(formatTime(todayRes.prayerTime.maghrib));
+          const subuhBase = new Date(today);
+          subuhBase.setDate(today.getDate() + 1);
+          subuh = parseTime(formatTime(tomorrowRes.prayerTime.fajr), subuhBase);
+          maghribLabel = formatTime(todayRes.prayerTime.maghrib);
+          subuhLabel = formatTime(tomorrowRes.prayerTime.fajr);
+        }
 
         const nightMs = subuh.getTime() - maghrib.getTime();
         const thirdMs = nightMs / 3;
         const start = new Date(subuh.getTime() - thirdMs);
 
-        setMaghribLabel(formatTime(todayRes.prayerTime.maghrib));
-        setSubuhLabel(formatTime(tomorrowRes.prayerTime.fajr));
+        setMaghribLabel(maghribLabel);
+        setSubuhLabel(subuhLabel);
         setStartDate(start);
         setEndDate(subuh);
         setMaghribDate(maghrib);
