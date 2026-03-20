@@ -18,14 +18,23 @@ export default function Header() {
 
   useEffect(() => {
     setMounted(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => setCoords({ lat: coords.latitude, lng: coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
   }, []);
+
+  const openNearbyMasjid = () => {
+    if (coords) {
+      window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank');
+      return;
+    }
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: c }) => {
+        setCoords({ lat: c.latitude, lng: c.longitude });
+        window.open(`https://www.google.com/maps/search/masjid/@${c.latitude},${c.longitude},15z`, '_blank');
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   return (
     <header className="relative flex w-full items-center justify-between px-4 py-3 sticky top-0 bg-background border-b border-border z-50 lg:hidden">
@@ -75,14 +84,12 @@ export default function Header() {
             <SheetFooter>
               <Separator />
               <div className="space-y-2">
-                {coords && (
-                  <button
-                    onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank')}
-                    className="text-sm text-muted-foreground hover:text-foreground transition text-left"
-                  >
-                    Cari Masjid Berdekatan
-                  </button>
-                )}
+                <button
+                  onClick={openNearbyMasjid}
+                  className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+                >
+                  Cari Masjid Berdekatan
+                </button>
                 <Footer />
                 <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
               </div>

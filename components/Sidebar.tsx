@@ -42,14 +42,23 @@ export default function Sidebar() {
     if (localStorage.getItem('msolat_sidebar_collapsed') === 'true') {
       setCollapsed(true);
     }
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => setCoords({ lat: coords.latitude, lng: coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
   }, []);
+
+  const openNearbyMasjid = () => {
+    if (coords) {
+      window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank');
+      return;
+    }
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: c }) => {
+        setCoords({ lat: c.latitude, lng: c.longitude });
+        window.open(`https://www.google.com/maps/search/masjid/@${c.latitude},${c.longitude},15z`, '_blank');
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const toggle = () => {
     const next = !collapsed;
@@ -122,14 +131,12 @@ export default function Sidebar() {
           </nav>
 
           <div className="mt-auto border-t border-border pt-4 space-y-2">
-            {coords && (
-              <button
-                onClick={() => window.open(`https://www.google.com/maps/search/masjid/@${coords.lat},${coords.lng},15z`, '_blank')}
-                className="text-sm text-muted-foreground hover:text-foreground transition text-left"
-              >
-                Cari Masjid Berdekatan
-              </button>
-            )}
+            <button
+              onClick={openNearbyMasjid}
+              className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+            >
+              Cari Masjid Berdekatan
+            </button>
             <Footer />
             <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
           </div>
