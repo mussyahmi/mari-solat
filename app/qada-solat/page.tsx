@@ -19,12 +19,32 @@ function formatMalayDate(date: Date) {
   return `${date.getDate()} ${MALAY_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-function estimateCompletion(total: number, dailyRate: number): { days: number; date: string } | null {
+function estimateCompletion(total: number, dailyRate: number): { days: number; label: string; date: string } | null {
   if (total <= 0 || dailyRate <= 0) return null;
   const days = Math.ceil(total / dailyRate);
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return { days, date: formatMalayDate(date) };
+
+  let label: string;
+  if (days === 1) {
+    label = 'Esok';
+  } else if (days < 30) {
+    label = `${days} hari lagi`;
+  } else if (days < 365) {
+    const months = Math.floor(days / 30);
+    const rem = days % 30;
+    label = rem > 0 ? `${months} bulan ${rem} hari lagi` : `${months} bulan lagi`;
+  } else {
+    const years = Math.floor(days / 365);
+    const months = Math.floor((days % 365) / 30);
+    const rem = days % 365 % 30;
+    if (months > 0 && rem > 0) label = `${years} tahun ${months} bulan ${rem} hari lagi`;
+    else if (months > 0) label = `${years} tahun ${months} bulan lagi`;
+    else if (rem > 0) label = `${years} tahun ${rem} hari lagi`;
+    else label = `${years} tahun lagi`;
+  }
+
+  return { days, label, date: formatMalayDate(date) };
 }
 
 function localDateStr(date: Date) {
@@ -527,7 +547,7 @@ export default function QadaSolatPage() {
                     <div className="bg-muted/40 rounded-2xl px-5 py-4">
                       <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3">Anggaran Selesai</p>
                       <p className="text-2xl font-bold">
-                        {estimation.days === 1 ? 'Esok' : `${estimation.days} hari lagi`}
+                        {estimation.label}
                       </p>
                       <p className="text-sm text-muted-foreground/60 mt-1">{estimation.date}</p>
                     </div>
