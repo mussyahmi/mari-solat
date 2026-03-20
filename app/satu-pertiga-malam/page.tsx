@@ -138,10 +138,30 @@ export default function SatuPertigaMalamPage() {
         </header>
 
         {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-14 w-64" />
-            <Skeleton className="h-4 w-48" />
+          <div className="space-y-10">
+            {/* Main time display */}
+            <div className="space-y-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-14 w-72" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            {/* Timeline */}
+            <div>
+              <Skeleton className="h-1 w-full rounded-full" />
+              <div className="flex justify-between mt-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            {/* Details rows */}
+            <div className="divide-y divide-border/50">
+              {[0, 1].map(i => (
+                <div key={i} className="flex justify-between py-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : noZone ? (
           <p className="text-sm text-muted-foreground">
