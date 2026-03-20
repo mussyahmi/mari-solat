@@ -53,6 +53,7 @@ export default function Header() {
                   <Link href="/arah-kiblat" className="text-sm text-muted-foreground">Arah Kiblat</Link>
                   <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground">Satu Pertiga Malam</Link>
                   <Link href="/kategori-solat" className="text-sm text-muted-foreground">Kategori Waktu</Link>
+                  <Link href="/qada-solat" className="text-sm text-muted-foreground">Qada Solat</Link>
                 </div>
               </div>
               <div>

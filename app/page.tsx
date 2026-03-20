@@ -323,33 +323,29 @@ export default function HomePage() {
                   {/* Date */}
                   <p className="text-xs text-muted-foreground/25 uppercase tracking-widest mb-5">{liveDate}</p>
                   {/* Live clock */}
-                  <p className="text-[4rem] lg:text-[8rem] font-bold tabular-nums tracking-tight leading-none text-foreground/15">
+                  <p className="text-[4rem] lg:text-[8rem] font-bold tabular-nums tracking-tight leading-none text-foreground/25">
                     {liveClockHMS}
                     <span className="text-[1.5rem] lg:text-[3rem] font-medium ml-2 align-middle opacity-60">{liveClockPeriod}</span>
                   </p>
                   <div className="mb-10" />
-                  {/* Condensed prayer label */}
-                  <p className="text-xs text-muted-foreground/30 uppercase tracking-widest mb-1">Waktu Seterusnya</p>
-                  <p className="text-base lg:text-lg text-muted-foreground/50 mb-6">
-                    {capitalize(nextPrayer.label!)} · {currentTimes ? currentTimes[nextPrayer.label!] : '—'}
+                  {/* Prayer name — primary anchor */}
+                  <p className="text-3xl lg:text-5xl font-bold mb-2">{capitalize(nextPrayer.label!)}</p>
+                  {/* Prayer time — secondary */}
+                  <p className="text-sm text-muted-foreground/40 tabular-nums mb-6">
+                    {currentTimes ? currentTimes[nextPrayer.label!] : '—'}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
-                  <p className="text-xs text-muted-foreground/30 uppercase tracking-widest mt-5">lagi</p>
                   {zone && <p className="text-[10px] text-muted-foreground/20 uppercase tracking-widest mt-8">{zone}</p>}
                 </>
               ) : (
                 <>
-                  <p className="text-[10px] text-muted-foreground/35 uppercase tracking-widest mb-4">Waktu Seterusnya</p>
-                  {/* Prayer name + time on one line */}
-                  <div className="flex items-baseline gap-2 lg:gap-3 mb-8">
-                    <p className="text-2xl lg:text-4xl font-semibold text-muted-foreground/50">{capitalize(nextPrayer.label!)}</p>
-                    <p className="text-sm text-muted-foreground/20">·</p>
-                    <p className="text-2xl lg:text-4xl font-bold tabular-nums">
-                      {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-7 w-28 lg:h-10 lg:w-36 inline-block" />}
-                    </p>
-                  </div>
+                  {/* Prayer name — primary anchor */}
+                  <p className="text-5xl lg:text-7xl font-bold mb-2">{capitalize(nextPrayer.label!)}</p>
+                  {/* Prayer time — secondary */}
+                  <p className="text-sm lg:text-base text-muted-foreground/40 tabular-nums mb-8">
+                    {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-4 w-20 inline-block" />}
+                  </p>
                   {countdown && <CountdownFlip parts={countdown} />}
-                  <p className="text-[10px] text-muted-foreground/30 uppercase tracking-widest mt-5">lagi</p>
                 </>
               )}
             </div>
@@ -368,11 +364,8 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center">
-                <Skeleton className="h-2 w-24 mb-4" />
-                <div className="flex items-baseline gap-2 mb-8">
-                  <Skeleton className="h-7 w-16 lg:h-10 lg:w-20" />
-                  <Skeleton className="h-7 w-24 lg:h-10 lg:w-28" />
-                </div>
+                <Skeleton className="h-12 lg:h-16 w-40 lg:w-56 mb-2" />
+                <Skeleton className="h-4 w-20 mb-8" />
                 <div className="flex gap-3 lg:gap-5">
                   {[0, 1].map(u => (
                     <div key={u} className="flex flex-col items-center gap-2.5">
@@ -418,10 +411,10 @@ export default function HomePage() {
                     i < 5 ? "lg:border-r lg:border-border/40" : "",
                   ].join(" ")}
                 >
-                  <span className={`text-[11px] font-medium ${isNext ? "text-primary" : isPast ? "text-muted-foreground/20" : "text-muted-foreground/50"}`}>
+                  <span className={`text-[11px] font-medium ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/50"}`}>
                     {capitalize(label)}
                   </span>
-                  <span className={`text-sm font-bold tabular-nums ${isNext ? "text-primary" : isPast ? "text-muted-foreground/20" : ""}`}>
+                  <span className={`text-sm font-bold tabular-nums ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : ""}`}>
                     {currentTimes ? currentTimes[label] : <Skeleton className="h-4 w-12" />}
                   </span>
                 </div>

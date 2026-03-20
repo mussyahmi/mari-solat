@@ -27,11 +27,29 @@ function estimateCompletion(total: number, dailyRate: number): { days: number; d
   return { days, date: formatMalayDate(date) };
 }
 
+function localDateStr(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function todayStr() { return localDateStr(new Date()); }
+function yesterdayStr() { return localDateStr(new Date(Date.now() - 86400000)); }
+
 export default function QadaSolatPage() {
   const [user, setUser] = useState<User | null>(null);
   const [counts, setCounts] = useState<QadaCounts>(DEFAULT);
   const [dailyRate, setDailyRate] = useState(1);
+  const [initialTotal, setInitialTotal] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [lastLogDate, setLastLogDate] = useState('');
+  const [preLogCounts, setPreLogCounts] = useState<QadaCounts | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editingPrayer, setEditingPrayer] = useState<Prayer | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [editingInitial, setEditingInitial] = useState(false);
+  const [editInitialValue, setEditInitialValue] = useState('');
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [logInputs, setLogInputs] = useState<QadaCounts>(DEFAULT);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -43,6 +61,23 @@ export default function QadaSolatPage() {
             const data = snap.data();
             setCounts({ ...DEFAULT, ...(data as QadaCounts) });
             if (typeof data.dailyRate === 'number') setDailyRate(data.dailyRate);
+            if (typeof data.initialTotal === 'number') setInitialTotal(data.initialTotal);
+            const loadedLastLog = typeof data.lastLogDate === 'string' ? data.lastLogDate : '';
+            const loadedStreak = typeof data.streak === 'number' ? data.streak : 0;
+            const streakAlive = loadedLastLog === todayStr() || loadedLastLog === yesterdayStr();
+            const effectiveStreak = streakAlive ? loadedStreak : 0;
+            setStreak(effectiveStreak);
+            setLastLogDate(loadedLastLog);
+            if (!streakAlive && loadedStreak > 0) {
+              const c = { ...DEFAULT, ...(data as QadaCounts) };
+              await setDoc(doc(db, 'users', u.uid, 'qada', 'counts'), {
+                ...c,
+                dailyRate: data.dailyRate ?? 1,
+                initialTotal: data.initialTotal ?? 0,
+                streak: 0,
+                lastLogDate: loadedLastLog,
+              });
+            }
           }
         } catch {
           toast.error('Gagal memuatkan data.');
@@ -50,16 +85,25 @@ export default function QadaSolatPage() {
       } else {
         setCounts(DEFAULT);
         setDailyRate(1);
+        setInitialTotal(0);
+        setStreak(0);
+        setLastLogDate('');
       }
       setLoading(false);
     });
     return unsub;
   }, []);
 
-  const save = async (nextCounts: QadaCounts, nextRate: number) => {
+  const save = async (
+    nextCounts: QadaCounts, nextRate: number, nextInitial: number,
+    nextStreak: number, nextLastLog: string,
+  ) => {
     if (!user) return;
     try {
-      await setDoc(doc(db, 'users', user.uid, 'qada', 'counts'), { ...nextCounts, dailyRate: nextRate });
+      await setDoc(doc(db, 'users', user.uid, 'qada', 'counts'), {
+        ...nextCounts, dailyRate: nextRate, initialTotal: nextInitial,
+        streak: nextStreak, lastLogDate: nextLastLog,
+      });
     } catch {
       toast.error('Gagal menyimpan.');
     }
@@ -68,13 +112,81 @@ export default function QadaSolatPage() {
   const updateCount = async (prayer: Prayer, delta: number) => {
     const next = { ...counts, [prayer]: Math.max(0, counts[prayer] + delta) };
     setCounts(next);
-    await save(next, dailyRate);
+    await save(next, dailyRate, initialTotal, streak, lastLogDate);
+  };
+
+  const commitPrayerEdit = async (prayer: Prayer) => {
+    const val = Math.max(0, parseInt(editValue) || 0);
+    const next = { ...counts, [prayer]: val };
+    setCounts(next);
+    setEditingPrayer(null);
+    await save(next, dailyRate, initialTotal, streak, lastLogDate);
   };
 
   const updateRate = async (delta: number) => {
     const next = Math.max(1, dailyRate + delta);
     setDailyRate(next);
-    await save(counts, next);
+    await save(counts, next, initialTotal, streak, lastLogDate);
+  };
+
+  const commitInitialEdit = async () => {
+    const val = Math.max(0, parseInt(editInitialValue) || 0);
+    setInitialTotal(val);
+    setEditingInitial(false);
+    await save(counts, dailyRate, val, streak, lastLogDate);
+  };
+
+  const openLogForm = async () => {
+    if (total === 0) {
+      // Nothing to subtract — log directly
+      if (saving) return;
+      setSaving(true);
+      const today = todayStr();
+      const newStreak = lastLogDate === yesterdayStr() ? streak + 1 : 1;
+      setStreak(newStreak);
+      setLastLogDate(today);
+      await save(counts, dailyRate, initialTotal, newStreak, today);
+      setSaving(false);
+      return;
+    }
+    setLogInputs(DEFAULT);
+    setShowLogForm(true);
+  };
+
+  const confirmLog = async () => {
+    if (saving) return;
+    setSaving(true);
+    const nextCounts = { ...counts };
+    let totalSubtracted = 0;
+    for (const prayer of PRAYERS) {
+      const sub = Math.min(logInputs[prayer], counts[prayer]);
+      nextCounts[prayer] = counts[prayer] - sub;
+      totalSubtracted += sub;
+    }
+    const today = todayStr();
+    const shouldIncrementStreak = totalSubtracted > 0 || total === 0;
+    const newStreak = shouldIncrementStreak
+      ? (lastLogDate === yesterdayStr() ? streak + 1 : 1)
+      : streak;
+    const nextLastLog = shouldIncrementStreak ? today : lastLogDate;
+    setPreLogCounts(counts);
+    setCounts(nextCounts);
+    setStreak(newStreak);
+    setLastLogDate(nextLastLog);
+    setShowLogForm(false);
+    await save(nextCounts, dailyRate, initialTotal, newStreak, nextLastLog);
+    if (totalSubtracted > 0) toast.success(`${totalSubtracted} qada dikurangkan`);
+    setSaving(false);
+  };
+
+  const undoToday = async () => {
+    const newStreak = Math.max(0, streak - 1);
+    const restored = preLogCounts ?? counts;
+    setCounts(restored);
+    setStreak(newStreak);
+    setLastLogDate('');
+    setPreLogCounts(null);
+    await save(restored, dailyRate, initialTotal, newStreak, '');
   };
 
   const login = async () => {
@@ -87,12 +199,16 @@ export default function QadaSolatPage() {
 
   const total = PRAYERS.reduce((sum, p) => sum + counts[p], 0);
   const estimation = estimateCompletion(total, dailyRate);
+  const completed = initialTotal > 0 ? Math.max(0, initialTotal - total) : 0;
+  const progressPct = initialTotal > 0 ? Math.min(100, (completed / initialTotal) * 100) : 0;
+  const totalExceedsInitial = initialTotal > 0 && total > initialTotal;
+  const doneToday = lastLogDate === todayStr();
 
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden">
       <Sidebar />
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-md mx-auto px-4 lg:px-8 py-10">
+        <div className="max-w-md lg:max-w-lg mx-auto px-4 lg:px-8 py-10">
 
           {/* Header */}
           <div className="mb-10">
@@ -102,13 +218,37 @@ export default function QadaSolatPage() {
           </div>
 
           {loading ? (
-            <div className="space-y-4">
-              {PRAYERS.map(p => (
-                <div key={p} className="flex items-center justify-between py-4">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-8 w-28 rounded-full" />
+            <div>
+              {/* User row */}
+              <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/40">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="size-7 rounded-full" />
+                  <Skeleton className="h-4 w-28" />
                 </div>
-              ))}
+                <Skeleton className="h-3 w-16" />
+              </div>
+              {/* Prayer rows */}
+              <div className="divide-y divide-border/50">
+                {PRAYERS.map(p => (
+                  <div key={p} className="flex items-center justify-between py-4">
+                    <Skeleton className="h-4 w-14" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="size-8 rounded-full" />
+                      <Skeleton className="h-5 w-8" />
+                      <Skeleton className="size-8 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Total row */}
+              <div className="mt-6 pt-5 border-t border-border/40 flex items-center justify-between">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-9 w-10" />
+              </div>
+              {/* Daily log button */}
+              <div className="mt-8 pt-6 border-t border-border/40">
+                <Skeleton className="h-11 w-full rounded-xl" />
+              </div>
             </div>
           ) : !user ? (
             <div className="flex flex-col items-center py-16 gap-5">
@@ -152,7 +292,28 @@ export default function QadaSolatPage() {
                         disabled={counts[prayer] === 0}
                         className="size-8 rounded-full border border-border/50 flex items-center justify-center text-lg text-muted-foreground hover:text-foreground hover:border-border transition disabled:opacity-25"
                       >−</button>
-                      <span className="text-base font-bold tabular-nums w-8 text-center">{counts[prayer]}</span>
+                      {editingPrayer === prayer ? (
+                        <input
+                          type="number"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={() => commitPrayerEdit(prayer)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') commitPrayerEdit(prayer);
+                            if (e.key === 'Escape') setEditingPrayer(null);
+                          }}
+                          className="w-12 text-base font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
+                          autoFocus
+                          min={0}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => { setEditingPrayer(prayer); setEditValue(String(counts[prayer])); }}
+                          className="text-base font-bold tabular-nums w-8 text-center hover:text-primary transition"
+                        >
+                          {counts[prayer]}
+                        </button>
+                      )}
                       <button
                         onClick={() => updateCount(prayer, 1)}
                         className="size-8 rounded-full border border-border/50 flex items-center justify-center text-lg text-muted-foreground hover:text-foreground hover:border-border transition"
@@ -168,18 +329,184 @@ export default function QadaSolatPage() {
                 <p className="text-3xl font-bold tabular-nums">{total}</p>
               </div>
 
-              {total === 0 ? (
+              {/* Progress bar */}
+              {initialTotal > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    {editingInitial ? (
+                      <div className="flex items-center gap-3 flex-1">
+                        <p className="text-xs text-muted-foreground/50">Jumlah qada asal:</p>
+                        <input
+                          type="number"
+                          value={editInitialValue}
+                          onChange={e => setEditInitialValue(e.target.value)}
+                          onBlur={commitInitialEdit}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') commitInitialEdit();
+                            if (e.key === 'Escape') setEditingInitial(false);
+                          }}
+                          className="w-20 text-sm font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
+                          autoFocus
+                          min={0}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs text-muted-foreground/40">
+                          {completed} selesai daripada {initialTotal}
+                        </p>
+                        <button
+                          onClick={() => { setEditingInitial(true); setEditInitialValue(String(initialTotal)); }}
+                          className="text-xs text-muted-foreground/30 hover:text-muted-foreground transition"
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {totalExceedsInitial ? (
+                    <p className="text-xs text-muted-foreground/30">
+                      Jumlah semasa melebihi asal.{' '}
+                      <button
+                        onClick={() => { setEditingInitial(true); setEditInitialValue(String(total)); }}
+                        className="underline hover:text-muted-foreground transition"
+                      >
+                        Kemaskini jumlah asal
+                      </button>
+                    </p>
+                  ) : (
+                    <div className="h-1 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Set initial total prompt */}
+              {initialTotal === 0 && total > 0 && !editingInitial && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => { setEditingInitial(true); setEditInitialValue(String(total)); }}
+                    className="text-xs text-muted-foreground/30 hover:text-muted-foreground transition"
+                  >
+                    + Tetapkan jumlah asal untuk jejak kemajuan
+                  </button>
+                </div>
+              )}
+              {initialTotal === 0 && editingInitial && (
+                <div className="mt-3 flex items-center gap-3">
+                  <p className="text-xs text-muted-foreground/50 flex-1">Jumlah qada asal:</p>
+                  <input
+                    type="number"
+                    value={editInitialValue}
+                    onChange={e => setEditInitialValue(e.target.value)}
+                    onBlur={commitInitialEdit}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') commitInitialEdit();
+                      if (e.key === 'Escape') setEditingInitial(false);
+                    }}
+                    className="w-20 text-sm font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
+                    autoFocus
+                    min={0}
+                  />
+                </div>
+              )}
+
+              {/* Daily log */}
+              <div className="mt-8 pt-6 border-t border-border/40">
+                {!doneToday && !showLogForm && (
+                  <button
+                    onClick={openLogForm}
+                    className="w-full py-3 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition"
+                  >
+                    Selesai hari ini
+                  </button>
+                )}
+
+                {/* Per-prayer log form */}
+                {showLogForm && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">Berapa qada hari ini?</p>
+                    <div className="divide-y divide-border/50">
+                      {PRAYERS.filter(prayer => counts[prayer] > 0).map(prayer => (
+                        <div key={prayer} className="flex items-center justify-between py-3">
+                          <span className="text-sm font-medium capitalize">{prayer}</span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.max(0, p[prayer] - 1) }))}
+                              disabled={logInputs[prayer] === 0}
+                              className="size-8 rounded-full border border-border/50 flex items-center justify-center text-lg text-muted-foreground hover:text-foreground hover:border-border transition disabled:opacity-25"
+                            >−</button>
+                            <span className="text-base font-bold tabular-nums w-8 text-center">{logInputs[prayer]}</span>
+                            <button
+                              onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.min(counts[prayer], p[prayer] + 1) }))}
+                              disabled={logInputs[prayer] >= counts[prayer]}
+                              className="size-8 rounded-full border border-border/50 flex items-center justify-center text-lg text-muted-foreground hover:text-foreground hover:border-border transition disabled:opacity-25"
+                            >+</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 pt-1">
+                      <button
+                        onClick={confirmLog}
+                        disabled={saving}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
+                      >
+                        Sahkan
+                      </button>
+                      <button
+                        onClick={() => setShowLogForm(false)}
+                        className="px-5 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground border border-border/50 transition"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {doneToday && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 py-3 rounded-xl text-sm font-medium bg-muted/50 text-muted-foreground/40 text-center">
+                      Selesai hari ini
+                    </div>
+                    {preLogCounts !== null && (
+                      <button
+                        onClick={undoToday}
+                        className="text-xs text-muted-foreground/30 hover:text-muted-foreground transition shrink-0"
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {streak > 0 && (
+                  <p className="text-xs text-muted-foreground/40 text-center mt-3">
+                    {streak === 1 ? 'Bermula hari ini' : `${streak} hari berturut-turut`}
+                  </p>
+                )}
+              </div>
+
+              {total === 0 && initialTotal > 0 ? (
                 <p className="text-xs text-muted-foreground/40 text-center mt-8">
                   Tiada qada tertunggak. Alhamdulillah.
                 </p>
-              ) : (
+              ) : total === 0 && initialTotal === 0 ? (
+                <p className="text-xs text-muted-foreground/25 text-center mt-6">
+                  Tambah bilangan qada anda di atas untuk mula menjejak.
+                </p>
+              ) : total > 0 ? (
                 <div className="mt-8 pt-6 border-t border-border/40 space-y-5">
 
                   {/* Daily rate */}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Kadar Harian</p>
-                      <p className="text-xs text-muted-foreground/50 mt-0.5">Berapa qada sehari?</p>
+                      <p className="text-xs text-muted-foreground/50 mt-0.5">Untuk anggaran selesai</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -207,7 +534,7 @@ export default function QadaSolatPage() {
                   )}
 
                 </div>
-              )}
+              ) : null}
             </>
           )}
 
