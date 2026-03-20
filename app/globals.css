@@ -128,6 +128,16 @@ body.focus-mode header {
   display: none !important;
 }
 
+@keyframes digitIn {
+  from { transform: translateY(-30%) scale(0.85); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+@keyframes progressShine {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(400%); }
+}
+
 .leaflet-pane,
 .leaflet-control {
   z-index: 0 !important;
