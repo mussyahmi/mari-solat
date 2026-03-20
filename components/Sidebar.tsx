@@ -17,6 +17,7 @@ const NAV_GROUPS = [
       { href: '/arah-kiblat', label: 'Arah Kiblat' },
       { href: '/satu-pertiga-malam', label: 'Satu Pertiga Malam' },
       { href: '/kategori-solat', label: 'Kategori Waktu' },
+      { href: '/qada-solat', label: 'Qada Solat' },
     ],
   },
   {
