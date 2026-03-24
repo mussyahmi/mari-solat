@@ -20,7 +20,7 @@ function formatMalayDateTime(iso: string) {
   const date = `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
-  const period = h < 12 ? 'pg' : h < 15 ? 'tgh' : h < 19 ? 'ptg' : 'mlm';
+  const period = h < 12 ? 'AM' : 'PM';
   const h12 = h % 12 || 12;
   return `${date}, ${h12}:${m} ${period}`;
 }
@@ -122,6 +122,8 @@ export default function QadaSolatPage() {
         setInitialTotal(0);
         setStreak(0);
         setLastLogDate('');
+        setLastUpdatedPrayer(null);
+        setLastUpdatedAt('');
       }
       setLoading(false);
     });
@@ -138,7 +140,8 @@ export default function QadaSolatPage() {
       await setDoc(doc(db, 'users', user.uid, 'qada', 'counts'), {
         ...nextCounts, dailyRate: nextRate, initialTotal: nextInitial,
         streak: nextStreak, lastLogDate: nextLastLog,
-        ...(updatedPrayer !== undefined ? { lastUpdatedPrayer: updatedPrayer, lastUpdatedAt: updatedAt } : {}),
+        lastUpdatedPrayer: updatedPrayer ?? lastUpdatedPrayer,
+        lastUpdatedAt: updatedAt ?? lastUpdatedAt,
       });
     } catch {
       toast.error('Gagal menyimpan.');
