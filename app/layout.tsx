@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import Header from "@/components/Header";
+import WakeLock from "@/components/WakeLock";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -66,6 +67,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Header />
+          <WakeLock />
           <div className="flex-1 min-h-0 overflow-y-auto">
             {children}
           </div>
