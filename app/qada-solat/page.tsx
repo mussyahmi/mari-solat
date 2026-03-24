@@ -15,6 +15,16 @@ type QadaCounts = Record<Prayer, number>;
 const DEFAULT: QadaCounts = { subuh: 0, zohor: 0, asar: 0, maghrib: 0, isyak: 0 };
 const MALAY_MONTHS = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogs', 'Sep', 'Okt', 'Nov', 'Dis'];
 
+function formatMalayDateTime(iso: string) {
+  const d = new Date(iso);
+  const date = `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const period = h < 12 ? 'pg' : h < 15 ? 'tgh' : h < 19 ? 'ptg' : 'mlm';
+  const h12 = h % 12 || 12;
+  return `${date}, ${h12}:${m} ${period}`;
+}
+
 function formatMalayDate(date: Date) {
   return `${date.getDate()} ${MALAY_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
@@ -62,6 +72,8 @@ export default function QadaSolatPage() {
   const [streak, setStreak] = useState(0);
   const [lastLogDate, setLastLogDate] = useState('');
   const [preLogCounts, setPreLogCounts] = useState<QadaCounts | null>(null);
+  const [lastUpdatedPrayer, setLastUpdatedPrayer] = useState<Prayer | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingPrayer, setEditingPrayer] = useState<Prayer | null>(null);
@@ -88,6 +100,8 @@ export default function QadaSolatPage() {
             const effectiveStreak = streakAlive ? loadedStreak : 0;
             setStreak(effectiveStreak);
             setLastLogDate(loadedLastLog);
+            if (typeof data.lastUpdatedPrayer === 'string') setLastUpdatedPrayer(data.lastUpdatedPrayer as Prayer);
+            if (typeof data.lastUpdatedAt === 'string') setLastUpdatedAt(data.lastUpdatedAt);
             if (!streakAlive && loadedStreak > 0) {
               const c = { ...DEFAULT, ...(data as QadaCounts) };
               await setDoc(doc(db, 'users', u.uid, 'qada', 'counts'), {
@@ -117,12 +131,14 @@ export default function QadaSolatPage() {
   const save = async (
     nextCounts: QadaCounts, nextRate: number, nextInitial: number,
     nextStreak: number, nextLastLog: string,
+    updatedPrayer?: Prayer, updatedAt?: string,
   ) => {
     if (!user) return;
     try {
       await setDoc(doc(db, 'users', user.uid, 'qada', 'counts'), {
         ...nextCounts, dailyRate: nextRate, initialTotal: nextInitial,
         streak: nextStreak, lastLogDate: nextLastLog,
+        ...(updatedPrayer !== undefined ? { lastUpdatedPrayer: updatedPrayer, lastUpdatedAt: updatedAt } : {}),
       });
     } catch {
       toast.error('Gagal menyimpan.');
@@ -131,16 +147,22 @@ export default function QadaSolatPage() {
 
   const updateCount = async (prayer: Prayer, delta: number) => {
     const next = { ...counts, [prayer]: Math.max(0, counts[prayer] + delta) };
+    const now = new Date().toISOString();
     setCounts(next);
-    await save(next, dailyRate, initialTotal, streak, lastLogDate);
+    setLastUpdatedPrayer(prayer);
+    setLastUpdatedAt(now);
+    await save(next, dailyRate, initialTotal, streak, lastLogDate, prayer, now);
   };
 
   const commitPrayerEdit = async (prayer: Prayer) => {
     const val = Math.max(0, parseInt(editValue) || 0);
     const next = { ...counts, [prayer]: val };
+    const now = new Date().toISOString();
     setCounts(next);
     setEditingPrayer(null);
-    await save(next, dailyRate, initialTotal, streak, lastLogDate);
+    setLastUpdatedPrayer(prayer);
+    setLastUpdatedAt(now);
+    await save(next, dailyRate, initialTotal, streak, lastLogDate, prayer, now);
   };
 
   const updateRate = async (delta: number) => {
@@ -348,6 +370,13 @@ export default function QadaSolatPage() {
                 <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">Jumlah</p>
                 <p className="text-3xl font-bold tabular-nums">{total}</p>
               </div>
+
+              {/* Last updated */}
+              {lastUpdatedPrayer && lastUpdatedAt && (
+                <p className="text-xs text-muted-foreground/30 mt-2 text-right">
+                  Kemaskini terakhir: <span className="capitalize">{lastUpdatedPrayer}</span> · {formatMalayDateTime(lastUpdatedAt)}
+                </p>
+              )}
 
               {/* Progress bar */}
               {initialTotal > 0 && (
