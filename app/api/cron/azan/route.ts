@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         const invalid = await sendPushNotification(
           targets,
           `Waktu ${PRAYER_LABELS[prayer]}`,
-          `Sudah masuk waktu ${PRAYER_LABELS[prayer]}.`,
+          `Sudah masuk waktu ${PRAYER_LABELS[prayer]}. (${zone})`,
           { type: 'azan', prayer, tag: `azan-${prayer}` },
         );
 
