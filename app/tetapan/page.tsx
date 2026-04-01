@@ -59,27 +59,14 @@ export default function TetapanPage() {
     const unsub = onAuthStateChanged(auth, async u => {
       setUser(u);
       if (!u) return;
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      const token = await getFCMToken().catch(() => null);
-      if (!token) return;
-      setFcmToken(token);
-      const snap = await getDoc(doc(db, 'fcm_tokens', token));
-      if (snap.exists()) {
+      // Load preferences using cached token — avoid calling getToken() on every page load
+      const cached = localStorage.getItem('msolat_fcm_token');
+      if (!cached) return;
+      setFcmToken(cached);
+      const snap = await getDoc(doc(db, 'fcm_tokens', cached)).catch(() => null);
+      if (snap?.exists()) {
         setPushAzanOn(snap.data().azanEnabled ?? true);
         setPushQadaOn(snap.data().qadaReminderEnabled ?? true);
-      } else {
-        // First time — register with defaults enabled
-        const zoneCode = localStorage.getItem('msolat_zone_code') ?? '';
-        await setDoc(doc(db, 'fcm_tokens', token), {
-          uid: u.uid,
-          zone: zoneCode,
-          azanEnabled: true,
-          azanPrayers: [...AZAN_PRAYERS],
-          qadaReminderEnabled: true,
-          updatedAt: new Date(),
-        });
-        setPushAzanOn(true);
-        setPushQadaOn(true);
       }
     });
     return unsub;
@@ -159,6 +146,7 @@ export default function TetapanPage() {
         return;
       }
       setFcmToken(token);
+      localStorage.setItem('msolat_fcm_token', token);
 
       const zoneCode = localStorage.getItem('msolat_zone_code') ?? '';
       if (azanEnabled && !zoneCode) {

@@ -16,14 +16,16 @@ async function registerSW(): Promise<ServiceWorkerRegistration | null> {
 
 export async function getFCMToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
-  if (!VAPID_KEY) return null;
+  if (!VAPID_KEY) { console.error('[FCM] VAPID key missing'); return null; }
   try {
     const sw = await registerSW();
-    if (!sw) return null;
+    if (!sw) { console.error('[FCM] Service worker registration failed'); return null; }
     const messaging = getMessaging(app);
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
+    if (!token) console.error('[FCM] getToken returned empty');
     return token || null;
-  } catch {
+  } catch (e) {
+    console.error('[FCM] getToken error:', e);
     return null;
   }
 }
