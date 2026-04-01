@@ -40,7 +40,7 @@ export function fetchVisits(): Promise<any[]> {
     (window as any)[callbackName] = (data: any) => {
       delete (window as any)[callbackName];
       document.head.removeChild(script);
-      resolve(data.rows ?? []);
+      resolve(Array.isArray(data) ? data : (data.rows ?? []));
     };
     script.src = `${SCRIPT_URL}?action=read&callback=${callbackName}`;
     script.onerror = () => { document.head.removeChild(script); resolve([]); };

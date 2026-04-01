@@ -40,19 +40,8 @@ export function playAzan(isSubuh: boolean): void {
   } catch { /* silent */ }
 }
 
-export function showAzanNotification(prayer: string): void {
-  if (typeof window === 'undefined' || !('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
-  const label = PRAYER_LABELS[prayer] ?? prayer;
-  new Notification(`Waktu ${label}`, {
-    body: `Sudah masuk waktu ${label}.`,
-    icon: '/icons/icon-192.png',
-  });
-}
-
 export function triggerAzan(prayer: string): void {
   const label = PRAYER_LABELS[prayer] ?? prayer;
   playAzan(prayer === 'subuh');
-  showAzanNotification(prayer);
   toast.info(`Waktu ${label}`, { description: `Sudah masuk waktu ${label}.`, duration: 10000 });
 }

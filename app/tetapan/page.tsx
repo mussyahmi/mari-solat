@@ -20,6 +20,10 @@ import {
   isAzanEnabled, setAzanEnabled,
   requestNotifPermission,
 } from '@/lib/azan';
+import { getFCMToken } from '@/lib/fcm';
+import { auth, db } from '@/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export default function TetapanPage() {
   const [zone, setZone] = useState<string | null>(null);
@@ -31,6 +35,11 @@ export default function TetapanPage() {
   const [azanOn, setAzanOn] = useState(false);
   const [prayerToggles, setPrayerToggles] = useState<Record<string, boolean>>({});
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [user, setUser] = useState<User | null>(null);
+  const [pushAzanOn, setPushAzanOn] = useState(false);
+  const [pushQadaOn, setPushQadaOn] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
 
   useEffect(() => {
     const savedName = localStorage.getItem('msolat_zone_name');
@@ -44,6 +53,36 @@ export default function TetapanPage() {
     setAzanOn(isGlobalAzanOn());
     setPrayerToggles(Object.fromEntries(AZAN_PRAYERS.map(p => [p, isAzanEnabled(p)])));
     if ('Notification' in window) setNotifPermission(Notification.permission);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async u => {
+      setUser(u);
+      if (!u) return;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const token = await getFCMToken().catch(() => null);
+      if (!token) return;
+      setFcmToken(token);
+      const snap = await getDoc(doc(db, 'fcm_tokens', token));
+      if (snap.exists()) {
+        setPushAzanOn(snap.data().azanEnabled ?? true);
+        setPushQadaOn(snap.data().qadaReminderEnabled ?? true);
+      } else {
+        // First time — register with defaults enabled
+        const zoneCode = localStorage.getItem('msolat_zone_code') ?? '';
+        await setDoc(doc(db, 'fcm_tokens', token), {
+          uid: u.uid,
+          zone: zoneCode,
+          azanEnabled: true,
+          azanPrayers: [...AZAN_PRAYERS],
+          qadaReminderEnabled: true,
+          updatedAt: new Date(),
+        });
+        setPushAzanOn(true);
+        setPushQadaOn(true);
+      }
+    });
+    return unsub;
   }, []);
 
   const saveZone = (code: string, name: string, manual: boolean) => {
@@ -99,6 +138,55 @@ export default function TetapanPage() {
   const togglePrayer = (prayer: string, value: boolean) => {
     setAzanEnabled(prayer, value);
     setPrayerToggles(prev => ({ ...prev, [prayer]: value }));
+  };
+
+  const savePushToken = async (azanEnabled: boolean, qadaEnabled: boolean) => {
+    if (!user) return;
+    setPushLoading(true);
+    try {
+      const permission = await requestNotifPermission();
+      if (permission !== 'granted') {
+        toast.error('Benarkan notifikasi pelayar dahulu.');
+        setPushLoading(false);
+        return;
+      }
+      setNotifPermission('granted');
+
+      const token = fcmToken ?? await getFCMToken();
+      if (!token) {
+        toast.error('Gagal mendaftar notifikasi. Cuba semula.');
+        setPushLoading(false);
+        return;
+      }
+      setFcmToken(token);
+
+      const zoneCode = localStorage.getItem('msolat_zone_code') ?? '';
+      if (azanEnabled && !zoneCode) {
+        toast.error('Tetapkan zon waktu solat dahulu.');
+        setPushLoading(false);
+        return;
+      }
+
+      if (!azanEnabled && !qadaEnabled) {
+        await deleteDoc(doc(db, 'fcm_tokens', token));
+      } else {
+        await setDoc(doc(db, 'fcm_tokens', token), {
+          uid: user.uid,
+          zone: zoneCode,
+          azanEnabled,
+          azanPrayers: [...AZAN_PRAYERS],
+          qadaReminderEnabled: qadaEnabled,
+          updatedAt: new Date(),
+        });
+      }
+
+      setPushAzanOn(azanEnabled);
+      setPushQadaOn(qadaEnabled);
+    } catch {
+      toast.error('Gagal menyimpan tetapan notifikasi.');
+    } finally {
+      setPushLoading(false);
+    }
   };
 
   const negeriList = Array.from(new Set(allZones.map(z => z.negeri)));
@@ -175,6 +263,38 @@ export default function TetapanPage() {
                     <Switch checked={prayerToggles[prayer] ?? true} onCheckedChange={v => togglePrayer(prayer, v)} />
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Push notifications */}
+          {user && (
+            <div className="py-4">
+              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Notifikasi Push</p>
+              <p className="text-xs text-muted-foreground/50 mb-3">Terima notifikasi walaupun aplikasi ditutup.</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Azan waktu solat</p>
+                    <p className="text-xs text-muted-foreground/50">Berdasarkan zon anda</p>
+                  </div>
+                  <Switch
+                    checked={pushAzanOn}
+                    disabled={pushLoading}
+                    onCheckedChange={v => savePushToken(v, pushQadaOn)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Peringatan qada harian</p>
+                    <p className="text-xs text-muted-foreground/50">Setiap hari jam 9 malam</p>
+                  </div>
+                  <Switch
+                    checked={pushQadaOn}
+                    disabled={pushLoading}
+                    onCheckedChange={v => savePushToken(pushAzanOn, v)}
+                  />
+                </div>
               </div>
             </div>
           )}
