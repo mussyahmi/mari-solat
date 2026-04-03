@@ -797,7 +797,7 @@ export default function QadaSolatPage() {
 
           {/* ── LEFT PANEL: Rekod ────────────────────────────────────────── */}
           <div className={`lg:w-[380px] lg:shrink-0 lg:flex-none lg:border-r lg:border-border/30 flex flex-col overflow-hidden ${tab !== 'rekod' ? 'hidden lg:flex' : 'flex flex-1'}`}>
-            <div className="flex-1 overflow-y-auto px-5 sm:px-7 lg:px-8 py-8 lg:py-10">
+            <div className="flex-1 overflow-y-auto px-5 sm:px-7 lg:px-8 py-10 lg:py-14">
 
               <div className="mb-8">
                 <h1 className="text-2xl font-semibold">Qada Solat</h1>
@@ -868,7 +868,7 @@ export default function QadaSolatPage() {
                   {/* Prayer list */}
                   <div className="divide-y divide-border/50">
                     {PRAYERS.map(prayer => (
-                      <div key={prayer} className="flex items-center justify-between py-4">
+                      <div key={prayer} className="flex items-center justify-between py-5">
                         <span className="text-sm font-medium capitalize">{prayer}</span>
                         <div className="flex items-center gap-3">
                           <button
@@ -905,7 +905,7 @@ export default function QadaSolatPage() {
                   </div>
 
                   {/* Total */}
-                  <div className="mt-6 pt-5 border-t border-border/40 flex items-center justify-between">
+                  <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between">
                     <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Jumlah</p>
                     <p className="text-3xl font-bold tabular-nums">{total}</p>
                   </div>
@@ -994,7 +994,7 @@ export default function QadaSolatPage() {
                   )}
 
                   {/* Daily log */}
-                  <div className="mt-8 pt-6 border-t border-border/40">
+                  <div className="mt-10 pt-8 border-t border-border/40">
                     {!doneToday && !showLogForm && (total > 0 || initialTotal > 0) && (
                       <button
                         onClick={openLogForm}
@@ -1012,7 +1012,7 @@ export default function QadaSolatPage() {
                               ? PRAYERS.reduce((acc, p) => ({ ...acc, [p]: counts[p] + todayLog[p] }), {} as QadaCounts)
                               : counts;
                             return PRAYERS.filter(p => formMax[p] > 0).map(prayer => (
-                              <div key={prayer} className="flex items-center justify-between py-3">
+                              <div key={prayer} className="flex items-center justify-between py-4">
                                 <span className="text-sm font-medium capitalize">{prayer}</span>
                                 <div className="flex items-center gap-3">
                                   <button
@@ -1078,7 +1078,7 @@ export default function QadaSolatPage() {
                   ) : total === 0 && initialTotal === 0 ? (
                     <p className="text-xs text-foreground/40 text-center mt-6">Tambah bilangan qada anda di atas untuk mula menjejak.</p>
                   ) : total > 0 ? (
-                    <div className="mt-8 pt-6 border-t border-border/40 space-y-5">
+                    <div className="mt-10 pt-8 border-t border-border/40 space-y-6">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">Kadar Harian</p>
@@ -1145,25 +1145,25 @@ export default function QadaSolatPage() {
                 </div>
 
               ) : rightTab === 'cabaran' ? (
-                <div className="px-5 sm:px-7 lg:px-12 py-8">
+                <div className="px-5 sm:px-7 lg:px-12 py-10 lg:py-14">
                   {/* Mobile header */}
                   <div className="lg:hidden mb-8">
                     <h2 className="text-2xl font-semibold">Cabaran</h2>
                   </div>
 
-                  <div className="space-y-10">
+                  <div className="space-y-14">
                       {/* My stats */}
                       <div>
                         <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-4">Pencapaian Bulan Ini</p>
                         {myChallenge ? (
-                          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                             {[
                               { label: 'Streak Semasa', value: myChallenge.streak, sub: 'hari' },
                               { label: 'Streak Terpanjang', value: myChallenge.longestStreak, sub: 'hari' },
                               { label: 'Qada Selesai', value: myChallenge.totalQada, sub: 'solat' },
                               { label: 'Hari Aktif', value: myChallenge.activeDays, sub: 'hari' },
                             ].map(stat => (
-                              <div key={stat.label} className="bg-muted/30 rounded-2xl px-4 py-4 text-center">
+                              <div key={stat.label} className="bg-muted/30 rounded-2xl px-4 py-6 text-center">
                                 <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
                                 <p className="text-xs text-foreground/50 mt-0.5">{stat.sub}</p>
                                 <p className="text-xs text-foreground/40 mt-0.5">{stat.label}</p>
@@ -1276,14 +1276,16 @@ export default function QadaSolatPage() {
                       </div>
 
                       {/* Info sections */}
-                      <div className="pt-2 border-t border-border/30 grid grid-cols-1 xl:grid-cols-2 gap-8">
+                      <div className="pt-8 border-t border-border/30 space-y-10">
+
+                        {/* Tujuan + Peringatan Niat — full width */}
                         <div>
                           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Tujuan</p>
                           <p className="text-sm text-foreground/70 leading-relaxed">
                             Cabaran ini bertujuan membantu anda kekal istiqamah dalam menunaikan solat qada.
                             Bukan untuk bersaing, tetapi untuk saling mengingatkan dan memberi semangat sesama Muslim.
                           </p>
-                          <div className="mt-4 px-4 py-3.5 bg-muted/30 rounded-2xl">
+                          <div className="mt-5 px-5 py-5 bg-muted/30 rounded-2xl">
                             <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1.5">Peringatan Niat</p>
                             <p className="text-sm text-foreground/70 leading-relaxed">
                               Betulkan niat — menunaikan qada kerana Allah, bukan kerana kedudukan dalam papan pendahuluan.
@@ -1292,6 +1294,7 @@ export default function QadaSolatPage() {
                           </div>
                         </div>
 
+                        {/* Nama Samaran — full width */}
                         <div>
                           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Nama Samaran</p>
                           <p className="text-sm text-foreground/65 mt-2">
@@ -1299,40 +1302,44 @@ export default function QadaSolatPage() {
                           </p>
                         </div>
 
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peraturan</p>
-                          <ul className="space-y-2.5">
-                            {[
-                              '1 log sehari untuk streak — boleh diedit semula pada hari yang sama jika perlu.',
-                              'Terlepas 2 hari berturut-turut → streak kembali 0.',
-                              'Streak dan hari aktif reset setiap awal bulan.',
-                              'Papan pendahuluan dibuka pada 1 haribulan berikutnya.',
-                            ].map(rule => (
-                              <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                <span>{rule}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        {/* Peraturan | Papan Pendahuluan — balanced side by side */}
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                          <div>
+                            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peraturan</p>
+                            <ul className="space-y-2.5">
+                              {[
+                                '1 log sehari untuk streak — boleh diedit semula pada hari yang sama jika perlu.',
+                                'Terlepas 2 hari berturut-turut → streak kembali 0.',
+                                'Streak dan hari aktif reset setiap awal bulan.',
+                                'Papan pendahuluan dibuka pada 1 haribulan berikutnya.',
+                              ].map(rule => (
+                                <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
+                                  <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
+                                  <span>{rule}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Papan Pendahuluan</p>
+                            <ul className="space-y-2.5">
+                              {[
+                                'Streak Terpanjang — siapa yang paling konsisten.',
+                                'Jumlah Qada — siapa yang paling banyak selesaikan qada.',
+                                'Hari Aktif — siapa yang paling kerap log.',
+                                'Kedudukan sama jika nilai sama.',
+                              ].map(rule => (
+                                <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
+                                  <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
+                                  <span>{rule}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
 
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Papan Pendahuluan</p>
-                          <ul className="space-y-2.5">
-                            {[
-                              'Streak Terpanjang — siapa yang paling konsisten.',
-                              'Jumlah Qada — siapa yang paling banyak selesaikan qada.',
-                              'Hari Aktif — siapa yang paling kerap log.',
-                              'Kedudukan sama jika nilai sama.',
-                            ].map(rule => (
-                              <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                <span>{rule}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
+                        {/* Chat Awam — full width */}
                         <div>
                           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Chat Awam</p>
                           <ul className="space-y-2.5">
@@ -1350,6 +1357,7 @@ export default function QadaSolatPage() {
                             ))}
                           </ul>
                         </div>
+
                       </div>
                     </div>
                 </div>
