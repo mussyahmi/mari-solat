@@ -1065,11 +1065,6 @@ export default function QadaSolatPage() {
                       </div>
                     )}
 
-                    {streak > 0 && (
-                      <p className="text-xs text-foreground/50 text-center mt-3">
-                        {streak === 1 ? 'Bermula hari ini' : `${streak} hari berturut-turut`}
-                      </p>
-                    )}
                   </div>
 
                   {/* Empty states & estimation */}
