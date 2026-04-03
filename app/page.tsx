@@ -6,7 +6,7 @@ import { formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Maximize2, Minimize2, RefreshCw } from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import { isManualZone } from "@/lib/zoneState";
@@ -303,12 +303,6 @@ export default function HomePage() {
         {/* Hero — next prayer */}
         <div className="flex-1 flex flex-col justify-center items-center px-4 lg:px-10 py-10 relative overflow-hidden">
           <div className="absolute top-4 right-4 flex items-center gap-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="text-muted-foreground/30 hover:text-muted-foreground transition"
-            >
-              <RefreshCw className="size-4" />
-            </button>
             <button
               onClick={() => setIsFocusMode(f => !f)}
               className="text-muted-foreground/30 hover:text-muted-foreground transition"
