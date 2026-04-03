@@ -172,7 +172,7 @@ export default function QadaSolatPage() {
   const [preLogCounts, setPreLogCounts] = useState<QadaCounts | null>(null);
   const [preChallenge, setPreChallenge] = useState<Participant | null | undefined>(undefined);
   const [todayLog, setTodayLog] = useState<QadaCounts>(DEFAULT);
-  const [lastUpdatedPrayer, setLastUpdatedPrayer] = useState<Prayer | null>(null);
+  const [lastUpdatedPrayer, setLastUpdatedPrayer] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -246,7 +246,7 @@ export default function QadaSolatPage() {
             setCounts({ ...DEFAULT, ...(data as QadaCounts) });
             if (typeof data.dailyRate === 'number') setDailyRate(data.dailyRate);
             if (typeof data.initialTotal === 'number') setInitialTotal(data.initialTotal);
-            if (typeof data.lastUpdatedPrayer === 'string') setLastUpdatedPrayer(data.lastUpdatedPrayer as Prayer);
+            if (typeof data.lastUpdatedPrayer === 'string') setLastUpdatedPrayer(data.lastUpdatedPrayer);
             if (typeof data.lastUpdatedAt === 'string') setLastUpdatedAt(data.lastUpdatedAt);
             const storedLastLog = typeof data.lastLogDate === 'string' ? data.lastLogDate : '';
             const storedStreak = typeof data.streak === 'number' ? data.streak : 0;
@@ -259,6 +259,9 @@ export default function QadaSolatPage() {
             setLastLogDate(storedLastLog);
             if (storedLastLog === todayStr() && data.todayLog && typeof data.todayLog === 'object') {
               setTodayLog({ ...DEFAULT, ...(data.todayLog as QadaCounts) });
+              if (data.preLogCounts && typeof data.preLogCounts === 'object') {
+                setPreLogCounts({ ...DEFAULT, ...(data.preLogCounts as QadaCounts) });
+              }
             }
             if (!streakAlive && storedStreak > 0) {
               await setDoc(doc(db, 'users', u.uid, 'qada', 'counts'), {
@@ -359,8 +362,9 @@ export default function QadaSolatPage() {
   const saveQada = async (
     nextCounts: QadaCounts, nextRate: number, nextInitial: number,
     nextStreak: number, nextLastLog: string,
-    updatedPrayer?: Prayer, updatedAt?: string,
+    updatedPrayer?: string, updatedAt?: string,
     nextTodayLog?: QadaCounts,
+    nextPreLogCounts?: QadaCounts | null,
   ) => {
     if (!user) return;
     try {
@@ -373,6 +377,7 @@ export default function QadaSolatPage() {
         lastUpdatedPrayer: updatedPrayer ?? lastUpdatedPrayer,
         lastUpdatedAt: updatedAt ?? lastUpdatedAt,
         todayLog: nextTodayLog ?? todayLog,
+        preLogCounts: nextPreLogCounts !== undefined ? nextPreLogCounts : preLogCounts,
       });
     } catch {
       toast.error('Gagal menyimpan.');
@@ -481,7 +486,7 @@ export default function QadaSolatPage() {
       setTodayLog(DEFAULT);
       setStreak(newStreak);
       setLastLogDate(today);
-      await saveQada(counts, dailyRate, initialTotal, newStreak, today, undefined, undefined, DEFAULT);
+      await saveQada(counts, dailyRate, initialTotal, newStreak, today, undefined, undefined, DEFAULT, counts);
       await updateChallengeOnLog(0, counts, initialTotal);
       setSaving(false);
       return;
@@ -519,12 +524,19 @@ export default function QadaSolatPage() {
       setPreLogCounts(counts);
       setPreChallenge(myChallenge);
     }
+    const now = new Date().toISOString();
+    const loggedPrayers = PRAYERS.filter(p => logInputs[p] > 0);
+    const loggedPrayer = loggedPrayers.length > 0 ? loggedPrayers.join(', ') : null;
     setTodayLog(newTodayLog);
     setCounts(nextCounts);
     setStreak(newStreak);
     setLastLogDate(nextLastLog);
     setShowLogForm(false);
-    await saveQada(nextCounts, dailyRate, initialTotal, newStreak, nextLastLog, undefined, undefined, newTodayLog);
+    if (loggedPrayer) {
+      setLastUpdatedPrayer(loggedPrayer);
+      setLastUpdatedAt(now);
+    }
+    await saveQada(nextCounts, dailyRate, initialTotal, newStreak, nextLastLog, loggedPrayer ?? undefined, loggedPrayer ? now : undefined, newTodayLog, !alreadyLoggedToday ? counts : undefined);
     if (shouldLog || alreadyLoggedToday) {
       await updateChallengeOnLog(challengeDelta, nextCounts, initialTotal);
       if (totalSubtracted > 0) toast.success(`${totalSubtracted} qada dikurangkan`);
@@ -540,7 +552,7 @@ export default function QadaSolatPage() {
     setStreak(newStreak);
     setLastLogDate('');
     setPreLogCounts(null);
-    await saveQada(restored, dailyRate, initialTotal, newStreak, '');
+    await saveQada(restored, dailyRate, initialTotal, newStreak, '', undefined, undefined, undefined, null);
     // Revert challenge participant
     if (preChallenge !== undefined) {
       const mk = monthKey();
@@ -788,7 +800,6 @@ export default function QadaSolatPage() {
             <div className="flex-1 overflow-y-auto px-5 sm:px-7 lg:px-8 py-8 lg:py-10">
 
               <div className="mb-8">
-                <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Rekod & Cabaran</p>
                 <h1 className="text-2xl font-semibold">Qada Solat</h1>
                 <p className="text-sm text-foreground/60 mt-1">Jejak solat yang perlu diganti dan sertai cabaran bulanan.</p>
               </div>
@@ -1134,10 +1145,9 @@ export default function QadaSolatPage() {
                 </div>
 
               ) : rightTab === 'cabaran' ? (
-                <div className="px-5 sm:px-7 lg:px-12 py-8 max-w-2xl">
+                <div className="px-5 sm:px-7 lg:px-12 py-8">
                   {/* Mobile header */}
                   <div className="lg:hidden mb-8">
-                    <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Bulanan</p>
                     <h2 className="text-2xl font-semibold">Cabaran</h2>
                   </div>
 
@@ -1146,7 +1156,7 @@ export default function QadaSolatPage() {
                       <div>
                         <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-4">Pencapaian Bulan Ini</p>
                         {myChallenge ? (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                             {[
                               { label: 'Streak Semasa', value: myChallenge.streak, sub: 'hari' },
                               { label: 'Streak Terpanjang', value: myChallenge.longestStreak, sub: 'hari' },
@@ -1266,7 +1276,7 @@ export default function QadaSolatPage() {
                       </div>
 
                       {/* Info sections */}
-                      <div className="pt-2 border-t border-border/30 space-y-8">
+                      <div className="pt-2 border-t border-border/30 grid grid-cols-1 xl:grid-cols-2 gap-8">
                         <div>
                           <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Tujuan</p>
                           <p className="text-sm text-foreground/70 leading-relaxed">

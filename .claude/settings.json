@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "Bash(grep -E \"\\\\.\\(js|ts|json\\)$\")",
+      "Bash(grep -r \"FCM\\\\|messaging\\\\|notif\\\\|NOTIF\" /Users/mustafasyahmi/development/mari-solat --include=*.ts --include=*.tsx --include=*.env* --include=*.json)",
+      "Bash(grep -r \"getMessaging\\\\|onMessage\\\\|getToken\\\\|deleteToken\" /Users/mustafasyahmi/development/mari-solat --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"scheduleAzan\\\\|scheduleNotif\\\\|workerQueue\\\\|cron\" /Users/mustafasyahmi/development/mari-solat --include=*.ts --include=*.tsx)",
+      "Bash(firebase --version)",
+      "Bash(firebase functions:list)",
+      "Bash(gcloud projects:*)",
+      "Bash(firebase functions:artifacts:setpolicy)"
+    ]
+  }
+}
