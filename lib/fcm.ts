@@ -6,9 +6,8 @@ const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 async function registerSW(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null;
   try {
-    const existing = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-    if (existing) return existing;
-    return await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    return await navigator.serviceWorker.ready;
   } catch {
     return null;
   }

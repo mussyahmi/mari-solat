@@ -13,7 +13,7 @@ export default function UpdatePrompt() {
     const check = async () => {
       if (shown.current) return;
       try {
-        const res = await fetch('/api/version', { cache: 'no-store' });
+        const res = await fetch('/version.json', { cache: 'no-store' });
         const { version } = await res.json();
         if (version !== INITIAL_VERSION && !shown.current) {
           shown.current = true;
