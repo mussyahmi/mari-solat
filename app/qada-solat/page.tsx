@@ -757,8 +757,13 @@ export default function QadaSolatPage() {
   })();
 
   const login = async () => {
-    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-    catch { toast.error('Log masuk gagal.'); }
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch {
+      toast.error('Log masuk gagal.');
+    }
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
