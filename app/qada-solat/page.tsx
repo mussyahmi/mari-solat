@@ -13,7 +13,8 @@ import Sidebar from '@/components/Sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Loader2, RefreshCcw } from "lucide-react";
+import { ExternalLink, Loader2, RefreshCcw } from "lucide-react";
+import { isInAppBrowser } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,46 @@ function getLbValue(p: Participant, view: LbView) {
   return p.activeDays;
 }
 
+function InAppBrowserBanner() {
+  const url = typeof window !== "undefined" ? window.location.href : "https://kirapoket.web.app";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex flex-col gap-3">
+      <div className="flex items-start gap-3">
+        <ExternalLink className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Buka dalam pelayar untuk log masuk</p>
+          <p className="text-xs text-amber-800/80 dark:text-amber-300/70 leading-relaxed">
+            Log masuk dengan Google tidak berfungsi dalam pelayar dalaman ini. Buka MariSolat dalam Safari atau Chrome untuk teruskan.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={handleCopy}
+        className="inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-amber-500 text-white text-sm font-semibold px-4 hover:bg-amber-600 transition-colors w-full"
+      >
+        {copied ? "Disalin!" : "Salin pautan"}
+      </button>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function QadaSolatPage() {
@@ -210,6 +251,12 @@ export default function QadaSolatPage() {
   const [unreadChat, setUnreadChat] = useState(false);
   const tabRef = useRef<Tab>('rekod');
   const chatLoadedRef = useRef(false);
+
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    setInAppBrowser(isInAppBrowser());
+  }, []);
 
   // ─── Auth + initial data load ──────────────────────────────────────────────
 
@@ -757,6 +804,7 @@ export default function QadaSolatPage() {
   })();
 
   const login = async () => {
+    if (inAppBrowser) return;
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -808,13 +856,19 @@ export default function QadaSolatPage() {
                   <p className="text-sm text-foreground/60">
                     Log masuk untuk menyimpan rekod qada dan sertai cabaran bulanan bersama komuniti.
                   </p>
-                  <button
-                    onClick={login}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-border/60 text-sm text-foreground/70 hover:text-foreground hover:border-border transition"
-                  >
-                    <GoogleIcon />
-                    Log Masuk dengan Google
-                  </button>
+                  {inAppBrowser || true ? (
+                    <div className="anim-fade-up" style={{ animationDelay: "340ms" }}>
+                      <InAppBrowserBanner />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={login}
+                      className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-border/60 text-sm text-foreground/70 hover:text-foreground hover:border-border transition"
+                    >
+                      <GoogleIcon />
+                      Log Masuk dengan Google
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
