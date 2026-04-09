@@ -978,7 +978,7 @@ export default function QadaSolatPage() {
                       </div>
                     )}
 
-                    {lastUpdatedPrayer && lastUpdatedAt && (
+                    {total > 0 && lastUpdatedPrayer && lastUpdatedAt && (
                       <p className="text-xs text-foreground/35 mt-4 text-center">
                         Dikemaskini · <span className="capitalize">{lastUpdatedPrayer}</span> · {formatMalayDateTime(lastUpdatedAt)}
                       </p>
@@ -987,7 +987,7 @@ export default function QadaSolatPage() {
 
                   {/* Empty state */}
                   {total === 0 && (
-                    <p className="text-xs text-foreground/40 mt-6">Masukkan berapa solat yang perlu diqada di atas.</p>
+                    <p className="text-xs text-foreground/40 mt-6 text-center">Masukkan berapa solat yang perlu diqada di atas.</p>
                   )}
                 </>
               )}
