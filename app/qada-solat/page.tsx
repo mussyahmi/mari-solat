@@ -13,6 +13,7 @@ import Sidebar from '@/components/Sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Loader2, RefreshCcw } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ function formatMalayDateTime(iso: string) {
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
   const period = h < 12 ? 'AM' : 'PM';
-  return `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]} ${d.getFullYear()}, ${h % 12 || 12}:${m} ${period}`;
+  return `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]}, ${h % 12 || 12}:${m} ${period}`;
 }
 
 function formatMalayDate(date: Date) {
@@ -131,7 +132,6 @@ function estimateCompletion(total: number, rate: number): { label: string; date:
   }
   return { label, date: formatMalayDate(date) };
 }
-
 
 function isMonthComplete(mk: string): boolean {
   const [year, month] = mk.split('-').map(Number);
@@ -178,8 +178,6 @@ export default function QadaSolatPage() {
   const [saving, setSaving] = useState(false);
   const [editingPrayer, setEditingPrayer] = useState<Prayer | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [editingInitial, setEditingInitial] = useState(false);
-  const [editInitialValue, setEditInitialValue] = useState('');
   const [showLogForm, setShowLogForm] = useState(false);
   const [logInputs, setLogInputs] = useState<QadaCounts>(DEFAULT);
 
@@ -220,26 +218,23 @@ export default function QadaSolatPage() {
       setUser(u);
       if (u) {
         try {
-          // Load or generate alias
           const userDocRef = doc(db, 'users', u.uid);
           const userDoc = await getDoc(userDocRef);
           let loadedAlias = '';
           if (userDoc.exists() && userDoc.data().alias) {
             loadedAlias = userDoc.data().alias;
           } else {
-            // Find a free alias and claim it
             for (let i = 0; i < 20; i++) {
               const candidate = generateAlias();
               const taken = await getDoc(doc(db, 'aliases', candidate));
               if (!taken.exists()) { loadedAlias = candidate; break; }
             }
-            if (!loadedAlias) loadedAlias = generateAlias(); // fallback
+            if (!loadedAlias) loadedAlias = generateAlias();
             await setDoc(userDocRef, { alias: loadedAlias }, { merge: true });
             await setDoc(doc(db, 'aliases', loadedAlias), { uid: u.uid });
           }
           setAlias(loadedAlias);
 
-          // Load qada counts
           const snap = await getDoc(doc(db, 'users', u.uid, 'qada', 'counts'));
           if (snap.exists()) {
             const data = snap.data();
@@ -276,14 +271,12 @@ export default function QadaSolatPage() {
             }
           }
 
-          // Load challenge participant data
           const mk = monthKey();
           const partSnap = await getDoc(doc(db, 'challenge', mk, 'participants', u.uid));
           if (partSnap.exists()) {
             setMyChallenge({ uid: u.uid, ...partSnap.data() } as Participant);
           }
 
-          // Load daily report count
           const today = todayStr();
           const reportSnap = await getDoc(doc(db, 'users', u.uid, 'moderation', 'daily'));
           if (reportSnap.exists() && reportSnap.data().date === today) {
@@ -337,7 +330,7 @@ export default function QadaSolatPage() {
   // ─── Leaderboard load ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (tab === 'chat' || !user) return; // load for rekod+cabaran (desktop shows cabaran panel in both)
+    if (tab === 'chat' || !user) return;
     loadLeaderboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, lbMonth, user]);
@@ -463,13 +456,6 @@ export default function QadaSolatPage() {
     await saveQada(counts, next, initialTotal, streak, lastLogDate);
   };
 
-  const commitInitialEdit = async () => {
-    const val = Math.max(0, parseInt(editInitialValue) || 0);
-    setInitialTotal(val);
-    setEditingInitial(false);
-    await saveQada(counts, dailyRate, val, streak, lastLogDate);
-  };
-
   const today = todayStr();
   const total = PRAYERS.reduce((sum, p) => sum + counts[p], 0);
   const doneToday = lastLogDate === today;
@@ -499,7 +485,6 @@ export default function QadaSolatPage() {
     if (saving) return;
     setSaving(true);
     const alreadyLoggedToday = lastLogDate === today;
-    // For re-edits, restore counts to pre-log state first
     const startCounts = alreadyLoggedToday
       ? PRAYERS.reduce((acc, p) => ({ ...acc, [p]: counts[p] + todayLog[p] }), {} as QadaCounts)
       : counts;
@@ -553,7 +538,6 @@ export default function QadaSolatPage() {
     setLastLogDate('');
     setPreLogCounts(null);
     await saveQada(restored, dailyRate, initialTotal, newStreak, '', undefined, undefined, undefined, null);
-    // Revert challenge participant
     if (preChallenge !== undefined) {
       const mk = monthKey();
       const partRef = doc(db, 'challenge', mk, 'participants', user.uid);
@@ -581,7 +565,6 @@ export default function QadaSolatPage() {
           return;
         }
       }
-      // All tries taken — show last candidate anyway
       setPreviewAlias(generateAlias());
     } finally {
       setAliasChecking(false);
@@ -592,7 +575,6 @@ export default function QadaSolatPage() {
     if (!trimmed || !user) return;
     try {
       setAliasChecking(true);
-      // Check if taken by someone else
       const aliasSnap = await getDoc(doc(db, 'aliases', trimmed));
       if (aliasSnap.exists() && aliasSnap.data().uid !== user.uid) {
         toast.error('Nama samaran ini sudah digunakan. Jana semula.');
@@ -602,7 +584,6 @@ export default function QadaSolatPage() {
       const mk = monthKey();
       const batch = writeBatch(db);
 
-      // Release old alias, claim new one
       if (alias && alias !== trimmed) {
         const oldAliasSnap = await getDoc(doc(db, 'aliases', alias));
         if (oldAliasSnap.exists()) {
@@ -648,7 +629,7 @@ export default function QadaSolatPage() {
           return;
         }
       }
-    } catch {}
+    } catch { }
 
     setSendingChat(true);
     try {
@@ -751,9 +732,6 @@ export default function QadaSolatPage() {
   // ─── Derived values ───────────────────────────────────────────────────────
 
   const estimation = estimateCompletion(total, dailyRate);
-  const completed = initialTotal > 0 ? Math.max(0, initialTotal - total) : 0;
-  const progressPct = initialTotal > 0 ? Math.min(100, (completed / initialTotal) * 100) : 0;
-  const totalExceedsInitial = initialTotal > 0 && total > initialTotal;
 
   const sortedLb = [...leaderboard].sort((a, b) => getLbValue(b, lbView) - getLbValue(a, lbView));
   let currentRank = 1;
@@ -792,26 +770,20 @@ export default function QadaSolatPage() {
       <Sidebar />
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
-        {/* ════ Content panels ════════════════════════════════════════════════ */}
         <div className="flex-1 min-h-0 flex overflow-hidden">
 
           {/* ── LEFT PANEL: Rekod ────────────────────────────────────────── */}
           <div className={`lg:w-[380px] lg:shrink-0 lg:flex-none lg:border-r lg:border-border/30 flex flex-col overflow-hidden ${tab !== 'rekod' ? 'hidden lg:flex' : 'flex flex-1'}`}>
+            <div className="hidden lg:flex px-8 border-b border-border/30 shrink-0">
+              <span className="px-5 py-4 text-sm font-medium border-b-2 border-primary -mb-px text-foreground">Rekod</span>
+            </div>
             <div className="flex-1 overflow-y-auto px-5 sm:px-7 lg:px-8 py-10 lg:py-14">
-
-              <div className="mb-8">
-                <h1 className="text-2xl font-semibold">Qada Solat</h1>
-                <p className="text-sm text-foreground/60 mt-1">Jejak solat yang perlu diganti dan sertai cabaran bulanan.</p>
-              </div>
 
               {loading ? (
                 <div>
-                  <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/40">
-                    <div className="flex items-center gap-2.5">
-                      <Skeleton className="size-7 rounded-full" />
-                      <Skeleton className="h-4 w-28" />
-                    </div>
-                    <Skeleton className="h-3 w-16" />
+                  <div className="flex items-center mb-8 pb-6 border-b border-border/40 gap-2.5">
+                    <Skeleton className="size-7 rounded-full" />
+                    <Skeleton className="h-4 w-28" />
                   </div>
                   <div className="divide-y divide-border/50">
                     {PRAYERS.map(p => (
@@ -827,8 +799,8 @@ export default function QadaSolatPage() {
                   </div>
                 </div>
               ) : !user ? (
-                <div className="flex flex-col items-center py-16 gap-5">
-                  <p className="text-sm text-foreground/60 text-center">
+                <div className="flex flex-col items-center py-10 gap-5 text-center">
+                  <p className="text-sm text-foreground/60">
                     Log masuk untuk menyimpan rekod qada dan sertai cabaran bulanan bersama komuniti.
                   </p>
                   <button
@@ -842,33 +814,22 @@ export default function QadaSolatPage() {
               ) : (
                 <>
                   {/* User row */}
-                  <div className="flex items-center justify-between mb-6 pb-6 border-b border-border/40">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-center mb-6 pb-6 border-b border-border/40">
+                    <button
+                      onClick={() => { setPreviewAlias(''); setShowAliasDialog(true); }}
+                      className="flex items-center gap-2.5 text-sm font-medium hover:text-primary transition text-left"
+                    >
                       {user.photoURL && (
                         <img src={user.photoURL} alt="" className="size-7 rounded-full" referrerPolicy="no-referrer" />
                       )}
-                      <div>
-                        <button
-                          onClick={() => { setPreviewAlias(''); setShowAliasDialog(true); }}
-                          className="text-sm font-medium hover:text-primary transition text-left block"
-                        >
-                          {alias}
-                        </button>
-                        <p className="text-xs text-muted-foreground/50">{user.displayName}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => signOut(auth)}
-                      className="text-xs text-foreground/40 hover:text-foreground transition"
-                    >
-                      Log keluar
+                      {alias}
                     </button>
                   </div>
 
                   {/* Prayer list */}
                   <div className="divide-y divide-border/50">
                     {PRAYERS.map(prayer => (
-                      <div key={prayer} className="flex items-center justify-between py-5">
+                      <div key={prayer} className="flex items-center justify-between py-4">
                         <span className="text-sm font-medium capitalize">{prayer}</span>
                         <div className="flex items-center gap-3">
                           <button
@@ -904,98 +865,43 @@ export default function QadaSolatPage() {
                     ))}
                   </div>
 
-                  {/* Total */}
-                  <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Jumlah</p>
-                    <p className="text-3xl font-bold tabular-nums">{total}</p>
-                  </div>
-
-                  {/* Last updated */}
-                  {lastUpdatedPrayer && lastUpdatedAt && (
-                    <p className="text-xs text-foreground/35 mt-2 text-right">
-                      Kemaskini terakhir: <span className="capitalize">{lastUpdatedPrayer}</span> · {formatMalayDateTime(lastUpdatedAt)}
-                    </p>
-                  )}
-
-                  {/* Progress bar */}
-                  {initialTotal > 0 && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        {editingInitial ? (
-                          <div className="flex items-center gap-3 flex-1">
-                            <p className="text-xs text-foreground/60">Jumlah qada asal:</p>
-                            <input
-                              type="number"
-                              value={editInitialValue}
-                              onChange={e => setEditInitialValue(e.target.value)}
-                              onBlur={commitInitialEdit}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') commitInitialEdit();
-                                if (e.key === 'Escape') setEditingInitial(false);
-                              }}
-                              className="w-20 text-sm font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
-                              autoFocus min={0}
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-xs text-foreground/50">{completed} selesai daripada {initialTotal}</p>
-                            <button
-                              onClick={() => { setEditingInitial(true); setEditInitialValue(String(initialTotal)); }}
-                              className="text-xs text-foreground/40 hover:text-foreground transition"
-                            >Edit</button>
-                          </>
-                        )}
-                      </div>
-                      {totalExceedsInitial ? (
-                        <p className="text-xs text-foreground/50">
-                          Jumlah semasa melebihi asal.{' '}
+                  {/* Total + Estimation */}
+                  <div className="mt-8 pt-6 border-t border-border/40 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Jumlah</p>
+                      <p className="text-3xl font-bold tabular-nums">{total}</p>
+                    </div>
+                    {total > 0 && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Kadar Harian</p>
+                        <div className="flex items-center gap-3">
                           <button
-                            onClick={() => { setEditingInitial(true); setEditInitialValue(String(total)); }}
-                            className="underline hover:text-foreground transition"
-                          >Kemaskini jumlah asal</button>
-                        </p>
-                      ) : (
-                        <div className="h-1 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-500"
-                            style={{ width: `${progressPct}%` }}
-                          />
+                            onClick={() => updateRate(-1)}
+                            disabled={dailyRate <= 1}
+                            className="text-foreground/40 hover:text-foreground transition disabled:opacity-25 text-lg leading-none"
+                          >−</button>
+                          <span className="text-sm font-bold tabular-nums min-w-6 text-center">{dailyRate}</span>
+                          <button
+                            onClick={() => updateRate(1)}
+                            className="text-foreground/40 hover:text-foreground transition text-lg leading-none"
+                          >+</button>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Set initial total prompt */}
-                  {initialTotal === 0 && total > 0 && !editingInitial && (
-                    <div className="mt-3">
-                      <button
-                        onClick={() => { setEditingInitial(true); setEditInitialValue(String(total)); }}
-                        className="text-xs text-foreground/40 hover:text-foreground transition"
-                      >+ Tetapkan jumlah asal untuk jejak kemajuan</button>
-                    </div>
-                  )}
-                  {initialTotal === 0 && editingInitial && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <p className="text-xs text-foreground/60 flex-1">Jumlah qada asal:</p>
-                      <input
-                        type="number"
-                        value={editInitialValue}
-                        onChange={e => setEditInitialValue(e.target.value)}
-                        onBlur={commitInitialEdit}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') commitInitialEdit();
-                          if (e.key === 'Escape') setEditingInitial(false);
-                        }}
-                        className="w-20 text-sm font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
-                        autoFocus min={0}
-                      />
-                    </div>
-                  )}
+                      </div>
+                    )}
+                    {estimation && (
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center justify-between w-full">
+                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Anggaran Selesai</p>
+                          <p className="text-xs text-foreground/50">{estimation.date}</p>
+                        </div>
+                        <p className="text-2xl font-bold text-center">{estimation.label}</p>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Daily log */}
                   <div className="mt-10 pt-8 border-t border-border/40">
-                    {!doneToday && !showLogForm && (total > 0 || initialTotal > 0) && (
+                    {!doneToday && !showLogForm && total > 0 && (
                       <button
                         onClick={openLogForm}
                         disabled={saving}
@@ -1005,7 +911,7 @@ export default function QadaSolatPage() {
 
                     {showLogForm && (
                       <div className="space-y-4">
-                        <p className="text-xs text-foreground/60 uppercase tracking-widest">Berapa qada hari ini?</p>
+                        <p className="text-sm text-foreground/60">{doneToday ? 'Edit log hari ini' : 'Berapa qada hari ini?'}</p>
                         <div className="divide-y divide-border/50">
                           {(() => {
                             const formMax = doneToday
@@ -1046,61 +952,38 @@ export default function QadaSolatPage() {
                     )}
 
                     {doneToday && !showLogForm && (
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 py-3 rounded-xl text-sm font-medium bg-muted/50 text-foreground/40 text-center">
-                          Selesai hari ini
-                        </div>
-                        {total > 0 && (
-                          <button
-                            onClick={() => { setLogInputs(todayLog); setShowLogForm(true); }}
-                            className="text-xs text-foreground/40 hover:text-foreground transition shrink-0"
-                          >Edit</button>
-                        )}
-                        {preLogCounts !== null && (
-                          <button
-                            onClick={undoToday}
-                            className="text-xs text-foreground/40 hover:text-foreground transition shrink-0"
-                          >Batal</button>
+                      <div className="flex flex-col gap-3">
+                        <p className="text-xs text-foreground/40 text-center">Log hari ini selesai</p>
+                        {(total > 0 || preLogCounts !== null) && (
+                          <div className="flex gap-3">
+                            {total > 0 && (
+                              <button
+                                onClick={() => { setLogInputs(todayLog); setShowLogForm(true); }}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
+                              >Edit</button>
+                            )}
+                            {preLogCounts !== null && (
+                              <button
+                                onClick={undoToday}
+                                className="px-5 py-2.5 rounded-xl text-sm text-foreground/60 hover:text-foreground border border-border/50 transition"
+                              >Batal</button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
 
+                    {lastUpdatedPrayer && lastUpdatedAt && (
+                      <p className="text-xs text-foreground/35 mt-4 text-center">
+                        Dikemaskini · <span className="capitalize">{lastUpdatedPrayer}</span> · {formatMalayDateTime(lastUpdatedAt)}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Empty states & estimation */}
-                  {total === 0 && initialTotal > 0 ? (
-                    <p className="text-xs text-foreground/50 text-center mt-8">Tiada qada tertunggak. Alhamdulillah.</p>
-                  ) : total === 0 && initialTotal === 0 ? (
-                    <p className="text-xs text-foreground/40 text-center mt-6">Tambah bilangan qada anda di atas untuk mula menjejak.</p>
-                  ) : total > 0 ? (
-                    <div className="mt-10 pt-8 border-t border-border/40 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Kadar Harian</p>
-                          <p className="text-xs text-foreground/50 mt-0.5">Untuk anggaran selesai</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateRate(-1)}
-                            disabled={dailyRate <= 1}
-                            className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition disabled:opacity-25"
-                          >−</button>
-                          <span className="text-base font-bold tabular-nums min-w-8 text-center">{dailyRate}</span>
-                          <button
-                            onClick={() => updateRate(1)}
-                            className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition"
-                          >+</button>
-                        </div>
-                      </div>
-                      {estimation && (
-                        <div className="bg-muted/40 rounded-2xl px-5 py-4">
-                          <p className="text-xs text-foreground/50 uppercase tracking-widest mb-3">Anggaran Selesai</p>
-                          <p className="text-2xl font-bold">{estimation.label}</p>
-                          <p className="text-sm text-foreground/60 mt-1">{estimation.date}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
+                  {/* Empty state */}
+                  {total === 0 && (
+                    <p className="text-xs text-foreground/40 mt-6">Masukkan berapa solat yang perlu diqada di atas.</p>
+                  )}
                 </>
               )}
             </div>
@@ -1109,20 +992,19 @@ export default function QadaSolatPage() {
           {/* ── RIGHT PANEL: Cabaran / Chat ──────────────────────────────── */}
           <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${tab === 'rekod' ? 'hidden lg:flex' : 'flex'}`}>
 
-            {/* Desktop sub-tab: Cabaran | Chat */}
+            {/* Desktop sub-tab */}
             {user && (
               <div className="hidden lg:flex gap-0 px-8 border-b border-border/30 shrink-0">
                 {(['cabaran', 'chat'] as const).map(t => (
                   <button
                     key={t}
                     onClick={() => { if (t === 'chat') setUnreadChat(false); setTab(t); }}
-                    className={`px-5 py-4 text-sm transition border-b-2 -mb-px relative ${
-                      rightTab === t
-                        ? 'border-primary text-foreground font-medium'
-                        : 'border-transparent text-foreground/50 hover:text-foreground'
-                    }`}
+                    className={`px-5 py-4 text-sm transition border-b-2 -mb-px relative ${rightTab === t
+                      ? 'border-primary text-foreground font-medium'
+                      : 'border-transparent text-foreground/50 hover:text-foreground'
+                      }`}
                   >
-                    {t === 'cabaran' ? 'Cabaran' : 'Chat'}
+                    {t === 'cabaran' ? 'Cabaran' : 'Sembang'}
                     {t === 'chat' && unreadChat && rightTab !== 'chat' && (
                       <span className="absolute top-3 ml-1 size-1.5 rounded-full bg-primary inline-block" />
                     )}
@@ -1141,209 +1023,147 @@ export default function QadaSolatPage() {
 
               ) : rightTab === 'cabaran' ? (
                 <div className="px-5 sm:px-7 lg:px-12 py-10 lg:py-14">
-                  {/* Mobile header */}
-                  <div className="lg:hidden mb-8">
-                    <h2 className="text-2xl font-semibold">Cabaran</h2>
-                  </div>
-
                   <div className="space-y-14">
-                      {/* My stats */}
-                      <div>
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-4">Pencapaian Bulan Ini</p>
-                        {myChallenge ? (
-                          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                            {[
-                              { label: 'Streak Semasa', value: myChallenge.streak, sub: 'hari' },
-                              { label: 'Streak Terpanjang', value: myChallenge.longestStreak, sub: 'hari' },
-                              { label: 'Qada Selesai', value: myChallenge.totalQada, sub: 'solat' },
-                              { label: 'Hari Aktif', value: myChallenge.activeDays, sub: 'hari' },
-                            ].map(stat => (
-                              <div key={stat.label} className="bg-muted/30 rounded-2xl px-4 py-6 text-center">
-                                <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
-                                <p className="text-xs text-foreground/50 mt-0.5">{stat.sub}</p>
-                                <p className="text-xs text-foreground/40 mt-0.5">{stat.label}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-foreground/60">
-                            Tekan <span className="font-medium text-foreground/80">Selesai hari ini</span> dalam tab Rekod untuk menyertai cabaran bulan ini.
-                          </p>
-                        )}
+
+                    {/* My stats */}
+                    <div>
+                      {myChallenge && <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-4">Macam Mana Bulan Ni?</p>}
+                      {myChallenge ? (
+                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                          {[
+                            { label: 'Streak Semasa', value: myChallenge.streak },
+                            { label: 'Streak Terpanjang', value: myChallenge.longestStreak },
+                            { label: 'Qada Selesai', value: myChallenge.totalQada },
+                            { label: 'Hari Aktif', value: myChallenge.activeDays },
+                          ].map(stat => (
+                            <div key={stat.label} className="bg-muted/30 rounded-2xl px-4 py-6 text-center">
+                              <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
+                              <p className="text-xs text-foreground/40 mt-1">{stat.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-foreground/60">
+                          Belum join lagi. Log qada dalam tab <span className="font-medium text-foreground/80">Rekod</span> untuk masuk cabaran bulan ini.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Leaderboard */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Siapa Paling Rajin?</p>
+                        <select
+                          value={lbMonth}
+                          onChange={e => setLbMonth(e.target.value)}
+                          className="text-xs text-foreground/60 bg-transparent border-none focus:outline-none cursor-pointer"
+                        >
+                          {monthOptions.map(o => (
+                            <option key={o.key} value={o.key}>{o.label}</option>
+                          ))}
+                        </select>
                       </div>
 
-                      {/* Leaderboard */}
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Papan Pendahuluan</p>
-                          <select
-                            value={lbMonth}
-                            onChange={e => setLbMonth(e.target.value)}
-                            className="text-xs text-foreground/60 bg-transparent border-none focus:outline-none cursor-pointer"
-                          >
-                            {monthOptions.map(o => (
-                              <option key={o.key} value={o.key}>{o.label}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {!isMonthComplete(lbMonth) ? (
-                          <p className="text-sm text-foreground/55 text-center py-10">
-                            Papan pendahuluan akan dipaparkan selepas {lastDayOfMonth(lbMonth)}.
-                          </p>
-                        ) : (
-                          <>
-                            {/* View toggle */}
-                            <div className="flex gap-1 mb-5 p-1 bg-muted/30 rounded-xl">
-                              {([['streak', 'Streak'], ['qada', 'Qada'], ['hari', 'Hari Aktif']] as [LbView, string][]).map(([v, label]) => (
-                                <button
-                                  key={v}
-                                  onClick={() => setLbView(v)}
-                                  className={`flex-1 py-1.5 text-xs rounded-lg transition ${
-                                    lbView === v
-                                      ? 'bg-background shadow-sm font-medium text-foreground'
-                                      : 'text-foreground/50 hover:text-foreground'
+                      {!isMonthComplete(lbMonth) ? (
+                        <p className="text-sm text-foreground/55 py-10 text-center">
+                          Keputusan bulan ini akan keluar selepas {lastDayOfMonth(lbMonth)}.<br />Tunggu dulu!
+                        </p>
+                      ) : (
+                        <>
+                          <div className="flex gap-1 mb-5 p-1 bg-muted/30 rounded-xl">
+                            {([['streak', 'Streak'], ['qada', 'Qada'], ['hari', 'Hari Aktif']] as [LbView, string][]).map(([v, label]) => (
+                              <button
+                                key={v}
+                                onClick={() => setLbView(v)}
+                                className={`flex-1 py-1.5 text-xs rounded-lg transition ${lbView === v
+                                  ? 'bg-background shadow-sm font-medium text-foreground'
+                                  : 'text-foreground/50 hover:text-foreground'
                                   }`}
-                                >{label}</button>
+                              >{label}</button>
+                            ))}
+                          </div>
+
+                          {loadingLb ? (
+                            <div className="space-y-3">
+                              {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="flex items-center gap-3 py-2.5">
+                                  <Skeleton className="h-3.5 w-5" />
+                                  <Skeleton className="h-3.5 w-32" />
+                                  <Skeleton className="h-3.5 w-12 ml-auto" />
+                                </div>
                               ))}
                             </div>
+                          ) : rankedLb.length === 0 ? (
+                            <p className="text-sm text-foreground/50 py-10">
+                              Belum ada peserta lagi. Jadi yang pertama!
+                            </p>
+                          ) : (
+                            <div>
+                              <div className="flex items-center gap-3 pb-2 border-b border-border/40">
+                                <span className="w-5 shrink-0" />
+                                <span className="text-xs text-foreground/50 flex-1">Peserta</span>
+                                <span className="text-xs text-foreground/50">
+                                  {lbView === 'streak' ? 'Streak' : lbView === 'qada' ? 'Qada' : 'Hari Aktif'}
+                                </span>
+                              </div>
+                              <div className="divide-y divide-border/50">
+                                {rankedLb.map(p => {
+                                  const isMe = p.uid === user.uid;
+                                  const val = getLbValue(p, lbView);
+                                  return (
+                                    <div key={p.uid} className={`flex items-center gap-3 py-3 ${isMe ? 'text-primary' : ''}`}>
+                                      <span className="text-xs text-foreground/45 w-5 tabular-nums text-right shrink-0">{p.rank}</span>
+                                      <span className={`text-sm flex-1 truncate ${isMe ? 'font-semibold' : ''}`}>
+                                        {p.alias}
+                                        {p.qadaDone && (
+                                          <span className="ml-2 text-[10px] text-primary/60 font-normal">Qada Selesai</span>
+                                        )}
+                                      </span>
+                                      <span className="text-sm font-bold tabular-nums">{val}</span>
+                                    </div>
+                                  );
+                                })}
+                                {!rankedLb.find(p => p.uid === user.uid) && myChallenge && lbMonth === monthKey() && (
+                                  <>
+                                    <div className="border-t border-dashed border-border/30 my-1" />
+                                    <div className="flex items-center gap-3 py-3 text-primary/70">
+                                      <span className="text-xs w-5 text-right shrink-0">—</span>
+                                      <span className="text-sm flex-1 font-semibold truncate">{alias}</span>
+                                      <span className="text-sm font-bold tabular-nums">{getLbValue(myChallenge, lbView)}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-                            {loadingLb ? (
-                              <div className="space-y-3">
-                                {[1, 2, 3, 4].map(i => (
-                                  <div key={i} className="flex items-center gap-3 py-2.5">
-                                    <Skeleton className="h-3.5 w-5" />
-                                    <Skeleton className="h-3.5 w-32" />
-                                    <Skeleton className="h-3.5 w-12 ml-auto" />
-                                  </div>
-                                ))}
-                              </div>
-                            ) : rankedLb.length === 0 ? (
-                              <p className="text-sm text-foreground/50 text-center py-10">
-                                Tiada peserta lagi untuk bulan ini.
-                              </p>
-                            ) : (
-                              <div>
-                                <div className="flex items-center gap-3 pb-2 border-b border-border/40">
-                                  <span className="w-5 shrink-0" />
-                                  <span className="text-xs text-foreground/50 flex-1">Peserta</span>
-                                  <span className="text-xs text-foreground/50">
-                                    {lbView === 'streak' ? 'Streak' : lbView === 'qada' ? 'Qada' : 'Hari Aktif'}
-                                  </span>
-                                </div>
-                                <div className="divide-y divide-border/50">
-                                  {rankedLb.map(p => {
-                                    const isMe = p.uid === user.uid;
-                                    const val = getLbValue(p, lbView);
-                                    return (
-                                      <div
-                                        key={p.uid}
-                                        className={`flex items-center gap-3 py-3 ${isMe ? 'text-primary' : ''}`}
-                                      >
-                                        <span className="text-xs text-foreground/45 w-5 tabular-nums text-right shrink-0">
-                                          {p.rank}
-                                        </span>
-                                        <span className={`text-sm flex-1 truncate ${isMe ? 'font-semibold' : ''}`}>
-                                          {p.alias}
-                                          {p.qadaDone && (
-                                            <span className="ml-2 text-[10px] text-primary/60 font-normal">Qada Selesai</span>
-                                          )}
-                                        </span>
-                                        <span className="text-sm font-bold tabular-nums">{val}</span>
-                                      </div>
-                                    );
-                                  })}
-                                  {!rankedLb.find(p => p.uid === user.uid) && myChallenge && lbMonth === monthKey() && (
-                                    <>
-                                      <div className="border-t border-dashed border-border/30 my-1" />
-                                      <div className="flex items-center gap-3 py-3 text-primary/70">
-                                        <span className="text-xs w-5 text-right shrink-0">—</span>
-                                        <span className="text-sm flex-1 font-semibold truncate">{alias}</span>
-                                        <span className="text-sm font-bold tabular-nums">{getLbValue(myChallenge, lbView)}</span>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
+                    {/* Info sections */}
+                    <div className="pt-8 border-t border-border/30 space-y-10">
+                      <div>
+                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Kenapa Ada Cabaran Ini?</p>
+                        <p className="text-sm text-foreground/70 leading-relaxed">
+                          Cabaran ini bukan tentang siapa yang paling hebat — bila kita tengok ada kawan-kawan yang turut serta, kita pun jadi lebih bersemangat. Log sahaja, in shaa Allah mereka pun akan ikut sama.
+                        </p>
                       </div>
 
-                      {/* Info sections */}
-                      <div className="pt-8 border-t border-border/30 space-y-10">
+                      <div>
+                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peringatan Niat</p>
+                        <p className="text-sm text-foreground/70 leading-relaxed">
+                          Betulkan semula niat — buat kerana Allah, bukan kerana nak naik tangga. Jadikan streak dan kedudukan sebagai pemangkin semangat, bukan matlamat.
+                        </p>
+                      </div>
 
-                        {/* Tujuan + Peringatan Niat — full width */}
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
                         <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Tujuan</p>
-                          <p className="text-sm text-foreground/70 leading-relaxed">
-                            Cabaran ini bertujuan membantu anda kekal istiqamah dalam menunaikan solat qada.
-                            Bukan untuk bersaing, tetapi untuk saling mengingatkan dan memberi semangat sesama Muslim.
-                          </p>
-                          <div className="mt-5 px-5 py-5 bg-muted/30 rounded-2xl">
-                            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1.5">Peringatan Niat</p>
-                            <p className="text-sm text-foreground/70 leading-relaxed">
-                              Betulkan niat — menunaikan qada kerana Allah, bukan kerana kedudukan dalam papan pendahuluan.
-                              Streak dan kedudukan hanyalah alat bantu, bukan matlamat.
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Nama Samaran — full width */}
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Nama Samaran</p>
-                          <p className="text-sm text-foreground/65 mt-2">
-                            Nama samaran anda telah dijana secara automatik. Ketik nama di bahagian Rekod untuk menukarnya bila-bila masa.
-                          </p>
-                        </div>
-
-                        {/* Peraturan | Papan Pendahuluan — balanced side by side */}
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                          <div>
-                            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peraturan</p>
-                            <ul className="space-y-2.5">
-                              {[
-                                '1 log sehari untuk streak — boleh diedit semula pada hari yang sama jika perlu.',
-                                'Terlepas 2 hari berturut-turut → streak kembali 0.',
-                                'Streak dan hari aktif reset setiap awal bulan.',
-                                'Papan pendahuluan dibuka pada 1 haribulan berikutnya.',
-                              ].map(rule => (
-                                <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                  <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                  <span>{rule}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Papan Pendahuluan</p>
-                            <ul className="space-y-2.5">
-                              {[
-                                'Streak Terpanjang — siapa yang paling konsisten.',
-                                'Jumlah Qada — siapa yang paling banyak selesaikan qada.',
-                                'Hari Aktif — siapa yang paling kerap log.',
-                                'Kedudukan sama jika nilai sama.',
-                              ].map(rule => (
-                                <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                  <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                  <span>{rule}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-
-                        {/* Chat Awam — full width */}
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Chat Awam</p>
+                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Cara Sertai</p>
                           <ul className="space-y-2.5">
                             {[
-                              'Mesej sendiri boleh diedit atau dipadam dalam masa 5 minit.',
-                              'Ketik mesej pengguna lain untuk lapor. Mesej yang cukup laporan disembunyikan secara automatik.',
-                              'Had 3 laporan sehari per pengguna. Laporan boleh dibatalkan.',
-                              'Mesej lama dipadam selepas 30 hari.',
-                              'Hormat-menghormati adalah kewajipan.',
+                              'Log setiap hari — Buat 1 log sehari untuk streak. Masih boleh edit semula untuk hari yang sama.',
+                              'Jaga streak — Jika terlepas 2 hari berturut-turut, streak semasa akan reset ke 0.',
+                              'Reset bulanan — Jumlah streak semasa, streak terpanjang, qada selesai dan hari aktif akan reset setiap awal bulan. Mulakan bulan baru dengan semangat baru!',
                             ].map(rule => (
                               <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
                                 <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
@@ -1353,26 +1173,60 @@ export default function QadaSolatPage() {
                           </ul>
                         </div>
 
+                        <div>
+                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">3 Kategori Tangga</p>
+                          <ul className="space-y-2.5">
+                            {[
+                              'Streak Terpanjang — Menunjukkan siapa yang paling konsisten log setiap hari tanpa terlepas.',
+                              'Jumlah Qada — Mengira siapa yang paling banyak menyelesaikan qada solat sepanjang cabaran.',
+                              'Hari Aktif — Memaparkan siapa yang paling kerap log, tanpa mengira streak.',
+                            ].map(rule => (
+                              <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
+                                <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
+                                <span>{rule}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Ruang Sembang</p>
+                        <ul className="space-y-2.5">
+                          {[
+                            'Edit & Padam — Mesej sendiri boleh diedit atau dipadam dalam masa 5 minit.',
+                            'Lapor Mesej — Tekan mesej pengguna lain untuk lapor. Mesej dengan laporan mencukupi akan disembunyikan.',
+                            'Had Laporan — Boleh lapor maksimum 3 mesej sehari. Laporan boleh dibatalkan.',
+                            'Penyimpanan — Mesej lama dipadam selepas 30 hari.',
+                            'Etika — Jaga adab dan perasaan sesama pengguna.',
+                          ].map(rule => (
+                            <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
+                              <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
+                              <span>{rule}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Nama Samaran</p>
+                        <p className="text-sm text-foreground/65 mt-2">
+                          Nama samaran anda boleh ditukar bila-bila masa — ketik nama anda dalam tab Rekod.
+                        </p>
                       </div>
                     </div>
+                  </div>
                 </div>
 
               ) : (
                 /* ── Chat ───────────────────────────────────────────────── */
                 <>
-                  {/* Mobile header */}
-                  <div className="lg:hidden px-5 py-4 border-b border-border/30 shrink-0 flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Chat Awam</p>
-                    <p className="text-xs text-foreground/45">Laporan: {reportCountToday}/{DAILY_REPORT_LIMIT}</p>
-                  </div>
+                  {reportCountToday > 0 && (
+                    <div className="px-5 lg:px-8 py-3 border-b border-border/30 shrink-0 flex justify-end">
+                      <p className="text-xs text-foreground/45">Laporan: {reportCountToday}/{DAILY_REPORT_LIMIT}</p>
+                    </div>
+                  )}
 
-                  {/* Desktop header */}
-                  <div className="hidden lg:flex px-8 py-4 items-center justify-between shrink-0">
-                    <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Chat Awam</p>
-                    <p className="text-xs text-foreground/45">Laporan hari ini: {reportCountToday}/{DAILY_REPORT_LIMIT}</p>
-                  </div>
-
-                  {/* Messages */}
                   <div className="flex-1 overflow-y-auto px-5 lg:px-8 py-2 space-y-0.5">
                     {messages.length === 0 ? (
                       <p className="text-sm text-foreground/45 text-center py-16">
@@ -1422,13 +1276,12 @@ export default function QadaSolatPage() {
                                       : setConfirmAction({ type: 'report', msg });
                                   }
                                 }}
-                                className={`px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-[78%] ${canEditDelete || (!isMe && !msg.hidden) ? 'cursor-pointer active:opacity-70' : ''} transition-opacity ${
-                                  isMe
-                                    ? 'bg-primary/10 text-foreground rounded-br-sm'
-                                    : msg.hidden
+                                className={`px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-[78%] ${canEditDelete || (!isMe && !msg.hidden) ? 'cursor-pointer active:opacity-70' : ''} transition-opacity ${isMe
+                                  ? 'bg-primary/10 text-foreground rounded-br-sm'
+                                  : msg.hidden
                                     ? 'bg-muted/20 text-foreground/40 italic rounded-bl-sm'
                                     : 'bg-muted/40 text-foreground rounded-bl-sm'
-                                }`}
+                                  }`}
                               >
                                 {msg.hidden && msg.uid === user.uid ? '[Mesej ini disembunyikan]' : msg.text}
                               </div>
@@ -1446,7 +1299,6 @@ export default function QadaSolatPage() {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Confirmation dialog */}
                   {confirmAction && (
                     <div className="shrink-0 mx-5 lg:mx-8 mb-2 px-4 py-3.5 bg-muted/60 rounded-2xl border border-border/40">
                       <p className="text-sm font-medium mb-1">
@@ -1460,11 +1312,10 @@ export default function QadaSolatPage() {
                             else reportMessage(confirmAction.msg);
                             setConfirmAction(null);
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                            confirmAction.type === 'delete'
-                              ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-                              : 'bg-primary/10 text-primary hover:bg-primary/20'
-                          }`}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${confirmAction.type === 'delete'
+                            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                            }`}
                         >
                           {confirmAction.type === 'delete' ? 'Ya, padam' : 'Ya, lapor'}
                         </button>
@@ -1476,7 +1327,6 @@ export default function QadaSolatPage() {
                     </div>
                   )}
 
-                  {/* Chat input — sticky at bottom */}
                   <div className="shrink-0 px-5 lg:px-8 py-4 border-t border-border/30">
                     <div className="flex gap-3">
                       <input
@@ -1508,18 +1358,16 @@ export default function QadaSolatPage() {
 
         </div>
 
-        {/* ── Mobile bottom tab bar ──────────────────────────────────────────── */}
+        {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
         {user && (
           <nav className="lg:hidden shrink-0 flex border-t border-border/30 bg-background">
             {(['rekod', 'cabaran', 'chat'] as Tab[]).map(t => (
               <button
                 key={t}
                 onClick={() => { if (t === 'chat') setUnreadChat(false); setTab(t); }}
-                className={`flex-1 py-3.5 text-xs font-medium transition relative ${
-                  tab === t ? 'text-primary' : 'text-foreground/40 hover:text-foreground'
-                }`}
+                className={`flex-1 py-3.5 text-xs font-medium transition relative ${tab === t ? 'text-primary' : 'text-foreground/40 hover:text-foreground'}`}
               >
-                {t === 'rekod' ? 'Rekod' : t === 'cabaran' ? 'Cabaran' : 'Chat'}
+                {t === 'rekod' ? 'Rekod' : t === 'cabaran' ? 'Cabaran' : 'Sembang'}
                 {t === 'chat' && unreadChat && tab !== 'chat' && (
                   <span className="absolute top-2.5 right-[calc(50%-14px)] size-1.5 rounded-full bg-primary" />
                 )}
@@ -1530,39 +1378,50 @@ export default function QadaSolatPage() {
 
       </main>
 
-      {/* ── Alias Dialog ──────────────────────────────────────────────────────── */}
+      {/* ── Alias Dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={showAliasDialog} onOpenChange={setShowAliasDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Nama Samaran</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-1">
-            <div className="bg-muted/30 rounded-2xl px-5 py-4 text-center">
-              <p className="text-xl font-bold">{previewAlias || alias}</p>
-              {previewAlias && previewAlias !== alias && (
-                <p className="text-xs text-foreground/45 mt-1">Pratonton</p>
-              )}
+            <div className="bg-muted/30 rounded-2xl px-5 py-4 flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-bold">{previewAlias || alias}</p>
+                <button
+                  onClick={generateFreeAlias}
+                  disabled={aliasChecking}
+                  className="text-foreground/45 hover:text-foreground transition disabled:opacity-40"
+                >
+                  {aliasChecking ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="size-4" />
+                  )}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={generateFreeAlias}
-              disabled={aliasChecking}
-              className="w-full py-2.5 rounded-xl text-sm text-foreground/70 border border-border/50 hover:text-foreground hover:border-border transition disabled:opacity-40"
-            >
-              {aliasChecking ? 'Menyemak...' : 'Jana Nama Baru'}
-            </button>
             <div className="flex gap-3 pt-1">
               <button
                 onClick={() => saveAlias(previewAlias)}
                 disabled={aliasChecking || !previewAlias || previewAlias === alias}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
               >
-                {aliasChecking ? 'Menyemak...' : 'Guna'}
+                Guna
               </button>
               <button
                 onClick={() => setShowAliasDialog(false)}
                 className="px-5 py-2.5 rounded-xl text-sm text-foreground/60 hover:text-foreground border border-border/50 transition"
               >
                 Batal
+              </button>
+            </div>
+            <div className="pt-2 border-t border-border/30">
+              <button
+                onClick={() => { setShowAliasDialog(false); signOut(auth); }}
+                className="text-xs text-foreground/40 hover:text-foreground transition text-center w-full"
+              >
+                Log keluar
               </button>
             </div>
           </div>

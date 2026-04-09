@@ -225,7 +225,7 @@ export default function TetapanPage() {
           </div>
 
           {/* Azan global toggle */}
-          <div className="py-4">
+          {/* <div className="py-4">
             <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan</p>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -238,10 +238,10 @@ export default function TetapanPage() {
                 </Button>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Per-prayer azan toggles */}
-          {azanOn && (
+          {/* {azanOn && (
             <div className="py-4">
               <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan Setiap Solat</p>
               <div className="space-y-3">
@@ -253,10 +253,10 @@ export default function TetapanPage() {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Push notifications */}
-          {user && (
+          {/* {user && (
             <div className="py-4">
               <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Notifikasi Push</p>
               <p className="text-xs text-muted-foreground/50 mb-3">Terima notifikasi walaupun aplikasi ditutup.</p>
@@ -285,7 +285,7 @@ export default function TetapanPage() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
         </div>
       </main>
