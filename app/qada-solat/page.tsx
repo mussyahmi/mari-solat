@@ -856,7 +856,7 @@ export default function QadaSolatPage() {
                   <p className="text-sm text-foreground/60">
                     Log masuk untuk menyimpan rekod qada dan sertai cabaran bulanan bersama komuniti.
                   </p>
-                  {inAppBrowser || true ? (
+                  {inAppBrowser ? (
                     <div className="anim-fade-up" style={{ animationDelay: "340ms" }}>
                       <InAppBrowserBanner />
                     </div>
