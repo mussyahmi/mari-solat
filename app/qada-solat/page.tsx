@@ -834,7 +834,7 @@ export default function QadaSolatPage() {
 
               {loading ? (
                 <div>
-                  <div className="flex items-center mb-8 pb-6 border-b border-border/40 gap-2.5">
+                  <div className="flex items-center justify-center mb-6 pb-6 border-b border-border/40 gap-2.5">
                     <Skeleton className="size-7 rounded-full" />
                     <Skeleton className="h-4 w-28" />
                   </div>
@@ -849,6 +849,12 @@ export default function QadaSolatPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-8 pt-6 border-t border-border/40 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-14" />
+                      <Skeleton className="h-8 w-12" />
+                    </div>
                   </div>
                 </div>
               ) : !user ? (
