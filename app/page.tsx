@@ -257,13 +257,13 @@ export default function HomePage() {
 
         {/* Top bar */}
         {!isFocusMode && <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
-          <div className="flex items-center justify-between py-3 gap-3">
+          <div className="flex items-center justify-between py-4 gap-3">
             <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
               {currentTimes ? (
-                <p className="text-xs text-muted-foreground/50">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
+                <p className="text-xs text-muted-foreground/50 tracking-wide">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
               ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
               {zone
-                ? <p className="text-sm font-medium mt-0.5">{zone}</p>
+                ? <p className="text-sm font-semibold mt-0.5 tracking-tight">{zone}</p>
                 : <Skeleton className="h-4 w-32 mt-1 mx-auto lg:mx-0" />
               }
             </Link>
@@ -301,7 +301,7 @@ export default function HomePage() {
         </div>}
 
         {/* Hero — next prayer */}
-        <div className="flex-1 flex flex-col justify-center items-center px-4 lg:px-10 py-10 relative overflow-hidden">
+        <div className="flex-1 flex flex-col justify-center items-center px-4 lg:px-10 py-12 relative overflow-hidden">
           <div className="absolute top-4 right-4 flex items-center gap-3">
             <button
               onClick={() => setIsFocusMode(f => !f)}
@@ -323,9 +323,9 @@ export default function HomePage() {
                   </p>
                   <div className="mb-10" />
                   {/* Prayer name — primary anchor */}
-                  <p className="text-3xl lg:text-5xl font-bold mb-2">{capitalize(nextPrayer.label!)}</p>
+                  <p className="text-4xl lg:text-6xl font-display mb-3 tracking-tight">{capitalize(nextPrayer.label!)}</p>
                   {/* Prayer time — secondary */}
-                  <p className="text-sm text-muted-foreground/40 tabular-nums mb-6">
+                  <p className="text-sm text-muted-foreground/40 tabular-nums mb-6 font-light tracking-wider">
                     {currentTimes ? currentTimes[nextPrayer.label!] : '—'}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
@@ -334,9 +334,9 @@ export default function HomePage() {
               ) : (
                 <>
                   {/* Prayer name — primary anchor */}
-                  <p className="text-5xl lg:text-7xl font-bold mb-2">{capitalize(nextPrayer.label!)}</p>
+                  <p className="text-6xl lg:text-8xl font-display mb-3 tracking-tight">{capitalize(nextPrayer.label!)}</p>
                   {/* Prayer time — secondary */}
-                  <p className="text-sm lg:text-base text-muted-foreground/40 tabular-nums mb-8">
+                  <p className="text-base lg:text-lg text-muted-foreground/40 tabular-nums mb-10 font-light tracking-wider">
                     {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-4 w-20 inline-block" />}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
@@ -345,8 +345,8 @@ export default function HomePage() {
             </div>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
             <div className="text-center">
-              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">Waktu Hari Ini</p>
-              <p className="text-5xl lg:text-8xl font-bold text-muted-foreground/20 tabular-nums">
+              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-5 font-medium">Waktu Hari Ini</p>
+              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/20 tabular-nums">
                 {formatShortDate(dayDates.today)}
               </p>
             </div>
@@ -375,10 +375,10 @@ export default function HomePage() {
             )
           ) : (
             <div className="text-center">
-              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-4">
+              <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-5 font-medium">
                 {selectedDay === "yesterday" ? "Waktu Semalam" : "Waktu Esok"}
               </p>
-              <p className="text-5xl lg:text-8xl font-bold text-muted-foreground/20 tabular-nums">
+              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/20 tabular-nums">
                 {selectedDay === "yesterday" ? formatShortDate(dayDates.yesterday) : formatShortDate(dayDates.tomorrow)}
               </p>
             </div>
@@ -398,17 +398,17 @@ export default function HomePage() {
                 <div
                   key={label}
                   className={[
-                    "relative px-4 py-4 lg:py-5 flex flex-col items-center gap-1 transition-colors",
-                    isNext ? "bg-primary/[0.06]" : "",
+                    "relative px-3 py-5 lg:py-6 flex flex-col items-center gap-1.5 transition-colors",
+                    isNext ? "bg-primary/[0.05]" : "",
                     col < 2 ? "border-r border-border/40" : "",
                     isFirstRow ? "border-b border-border/40 lg:border-b-0" : "",
                     i < 5 ? "lg:border-r lg:border-border/40" : "",
                   ].join(" ")}
                 >
-                  <span className={`text-[11px] font-medium ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/50"}`}>
+                  <span className={`text-[11px] font-semibold tracking-wide ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/45"}`}>
                     {capitalize(label)}
                   </span>
-                  <span className={`text-sm font-bold tabular-nums ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : ""}`}>
+                  <span className={`text-sm font-bold tabular-nums tracking-tight ${isNext ? "text-primary" : isPast ? "text-muted-foreground/25" : "text-foreground/80"}`}>
                     {currentTimes ? currentTimes[label] : <Skeleton className="h-4 w-12" />}
                   </span>
                 </div>
@@ -433,15 +433,15 @@ function CountdownFlip({ parts }: { parts: CountdownParts }) {
     { value: String(parts.seconds).padStart(2, '0'), label: 'saat' },
   ];
   return (
-    <div className="flex items-end gap-3 lg:gap-5">
+    <div className="flex items-end gap-4 lg:gap-6">
       {units.map(({ value, label }) => (
-        <div key={label} className="flex flex-col items-center gap-2.5">
-          <div className="flex gap-1">
+        <div key={label} className="flex flex-col items-center gap-3">
+          <div className="flex gap-1.5">
             {value.split('').map((d, i) => (
-              <div key={i} className="w-11 lg:w-[4.5rem] h-16 lg:h-[5.5rem] bg-muted/50 rounded-xl flex items-center justify-center overflow-hidden">
+              <div key={i} className="w-12 lg:w-20 h-[4.5rem] lg:h-24 bg-card border border-border/60 shadow-sm rounded-2xl flex items-center justify-center overflow-hidden">
                 <span
                   key={d}
-                  className="text-[1.875rem] lg:text-[3rem] font-bold tabular-nums text-primary leading-none"
+                  className="text-[2rem] lg:text-[3.25rem] font-bold tabular-nums text-foreground leading-none"
                   style={{ animation: 'digitIn 200ms ease-out' }}
                 >
                   {d}
@@ -449,7 +449,7 @@ function CountdownFlip({ parts }: { parts: CountdownParts }) {
               </div>
             ))}
           </div>
-          <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">{label}</span>
+          <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium">{label}</span>
         </div>
       ))}
     </div>

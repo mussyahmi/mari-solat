@@ -19,15 +19,15 @@ export default function PembatalSolatPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Pembatal Solat</h1>
-          <p className="text-sm text-muted-foreground mt-1">11 perkara yang membatalkan solat.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Pembatal Solat</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">11 perkara yang membatalkan solat.</p>
         </header>
 
         <div className="divide-y divide-border/50">
           {PEMBATAL_SOLAT.map((item, i) => (
-            <div key={i} className="flex gap-4 py-4">
+            <div key={i} className="flex gap-4 py-5">
               <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right mt-0.5">{i + 1}</span>
               <p className="text-sm leading-relaxed">{item}</p>
             </div>

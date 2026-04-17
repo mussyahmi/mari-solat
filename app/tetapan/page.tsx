@@ -183,17 +183,17 @@ export default function TetapanPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Tetapan</h1>
-          <p className="text-sm text-muted-foreground mt-1">Urus zon waktu solat anda.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Tetapan</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">Urus zon waktu solat anda.</p>
         </header>
 
         <div className="divide-y divide-border/50">
 
           {/* Zone */}
-          <div className="py-4">
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Zon Waktu Solat</p>
+          <div className="py-5">
+            <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Zon Waktu Solat</p>
             <div className="flex items-center justify-between gap-4">
               {zone
                 ? <p className="text-sm font-medium">{zone}</p>
@@ -206,8 +206,8 @@ export default function TetapanPage() {
           </div>
 
           {/* Detect location */}
-          <div className="py-4">
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Lokasi Semasa</p>
+          <div className="py-5">
+            <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Lokasi Semasa</p>
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm text-muted-foreground">
                 {coords

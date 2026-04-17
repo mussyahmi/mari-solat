@@ -24,15 +24,15 @@ export default function SyaratWajibSolatPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Syarat Wajib Solat</h1>
-          <p className="text-sm text-muted-foreground mt-1">7 syarat yang mewajibkan seseorang untuk menunaikan solat.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Syarat Wajib Solat</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">7 syarat yang mewajibkan seseorang untuk menunaikan solat.</p>
         </header>
 
         <div className="divide-y divide-border/50">
           {SYARAT_WAJIB.map((syarat, i) => (
-            <div key={syarat.name} className="flex gap-4 py-4">
+            <div key={syarat.name} className="flex gap-4 py-5">
               <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right mt-0.5">{i + 1}</span>
               <div className="min-w-0">
                 <p className="text-sm leading-snug">{syarat.name}</p>
@@ -46,7 +46,7 @@ export default function SyaratWajibSolatPage() {
 
         {/* Video */}
         <div className="mt-10">
-          <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3">Tonton</p>
+          <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Tonton</p>
           <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border/40">
             <iframe
               src="https://www.youtube.com/embed/UJqkAkh37pE"

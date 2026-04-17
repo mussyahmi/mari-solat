@@ -142,14 +142,14 @@ export default function KategoriSolatPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Kategori Waktu</h1>
-          <p className="text-sm text-muted-foreground mt-1">5 kategori waktu dalam setiap waktu solat fardu.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Kategori Waktu</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">5 kategori waktu dalam setiap waktu solat fardu.</p>
         </header>
 
         {/* Live status */}
-        <div className="mb-10">
+        <div className="mb-12">
           {loading ? (
             <div className="space-y-2">
               <Skeleton className="h-3 w-28" />
@@ -165,21 +165,21 @@ export default function KategoriSolatPage() {
             <p className="text-sm text-muted-foreground">Gagal memuatkan data.</p>
           ) : currentWindow && currentKategori ? (
             <>
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-2">
+              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">
                 Sekarang · {currentWindow.name}
               </p>
-              <p className="text-3xl font-bold">
+              <p className="text-4xl font-display tracking-tight">
                 {KATEGORI.find(k => k.id === currentKategori)!.title}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground mt-3">
                 Bertukar dalam{' '}
                 <span className="font-semibold text-foreground tabular-nums">{formatCountdown(countdownMs)}</span>
               </p>
             </>
           ) : (
             <>
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-2">Sekarang</p>
-              <p className="text-2xl font-semibold text-muted-foreground">Di luar waktu solat</p>
+              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Sekarang</p>
+              <p className="text-3xl font-display tracking-tight text-muted-foreground/50">Di luar waktu solat</p>
             </>
           )}
         </div>
@@ -193,7 +193,7 @@ export default function KategoriSolatPage() {
             return (
               <div
                 key={item.id}
-                className={`py-4 flex gap-4 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
+                className={`py-5 flex gap-4 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
               >
                 <span className={`text-sm font-bold w-5 shrink-0 pt-0.5 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`}>
                   {index + 1}

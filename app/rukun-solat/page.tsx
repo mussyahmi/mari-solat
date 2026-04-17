@@ -39,10 +39,10 @@ export default function RukunSolatPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Rukun Solat</h1>
-          <p className="text-sm text-muted-foreground mt-1">13 perkara yang wajib dilakukan dalam solat.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Rukun Solat</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">13 perkara yang wajib dilakukan dalam solat.</p>
 
           {/* Category descriptions */}
           <div className="flex flex-col gap-1 mt-3">
@@ -78,7 +78,7 @@ export default function RukunSolatPage() {
           {visible.map(item => {
             const globalIndex = RUKUN_SOLAT.indexOf(item);
             return (
-              <div key={item.name} className="flex items-center justify-between py-4 gap-4">
+              <div key={item.name} className="flex items-center justify-between py-5 gap-4">
                 <div className="flex items-center gap-4 min-w-0">
                   <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right">
                     {globalIndex + 1}

@@ -68,7 +68,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-border bg-background h-screen sticky top-0 overflow-hidden transition-[width] duration-200 ${
+      className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-border/60 bg-background/95 backdrop-blur-sm h-screen sticky top-0 overflow-hidden transition-[width] duration-200 ${
         collapsed ? 'lg:w-12' : 'lg:w-[260px]'
       }`}
     >
@@ -87,7 +87,7 @@ export default function Sidebar() {
         </div>
       ) : (
         <div className="flex flex-col h-full p-6 min-w-[260px]">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-10">
             <Link href="/">
               <Image src="/logo-horizontal.png" alt="MariSolat" width={120} height={40} className="object-contain rounded-sm" />
             </Link>
@@ -105,16 +105,16 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <nav className="flex flex-col gap-5 mb-6">
+          <nav className="flex flex-col gap-6 mb-6">
             {NAV_GROUPS.map(group => (
               <div key={group.label}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">{group.label}</p>
-                <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">{group.label}</p>
+                <div className="flex flex-col gap-1.5">
                   {group.links.map(link => (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5"
                     >
                       {link.label}
                     </Link>
@@ -123,14 +123,14 @@ export default function Sidebar() {
               </div>
             ))}
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1.5">Lain-lain</p>
-              <div className="flex flex-col gap-1">
-                <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition">Tetapan</Link>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">Lain-lain</p>
+              <div className="flex flex-col gap-1.5">
+                <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5">Tetapan</Link>
               </div>
             </div>
           </nav>
 
-          <div className="mt-auto border-t border-border pt-4 space-y-2">
+          <div className="mt-auto border-t border-border/50 pt-5 space-y-2.5">
             <button
               onClick={openNearbyMasjid}
               className="text-sm text-muted-foreground hover:text-foreground transition text-left"

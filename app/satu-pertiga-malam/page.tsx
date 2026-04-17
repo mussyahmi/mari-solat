@@ -153,10 +153,10 @@ export default function SatuPertigaMalamPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Satu Pertiga Malam</h1>
-          <p className="text-sm text-muted-foreground mt-1">Waktu terbaik untuk qiamullail dan doa mustajab.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Satu Pertiga Malam</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">Waktu terbaik untuk qiamullail dan doa mustajab.</p>
         </header>
 
         {loading ? (
@@ -197,10 +197,10 @@ export default function SatuPertigaMalamPage() {
 
             {/* Main time display */}
             <div>
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">
+              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-4 font-semibold">
                 {status === 'active' ? 'Sedang Berlangsung' : status === 'ended' ? 'Telah Berlalu' : 'Malam ini'}
               </p>
-              <p className="text-5xl lg:text-6xl font-bold tabular-nums tracking-tight leading-none">
+              <p className="text-5xl lg:text-7xl font-display tracking-tight leading-none">
                 {fmt12(startDate!)}{' '}
                 <span className="text-3xl font-normal text-muted-foreground">–</span>{' '}
                 {fmt12(endDate!)}{' '}
@@ -257,15 +257,15 @@ export default function SatuPertigaMalamPage() {
 
             {/* Details */}
             <div className="divide-y divide-border/50">
-              <div className="flex justify-between py-3">
+              <div className="flex justify-between py-4">
                 <span className="text-sm text-muted-foreground">Tempoh malam</span>
-                <span className="text-sm font-medium tabular-nums">
+                <span className="text-sm font-semibold tabular-nums">
                   {Math.floor(durationMin / 60)} jam {durationMin % 60} minit
                 </span>
               </div>
-              <div className="flex justify-between py-3">
+              <div className="flex justify-between py-4">
                 <span className="text-sm text-muted-foreground">Tempoh 1/3 malam</span>
-                <span className="text-sm font-medium tabular-nums">
+                <span className="text-sm font-semibold tabular-nums">
                   {Math.floor(thirdMin / 60)} jam {thirdMin % 60} minit
                 </span>
               </div>
@@ -273,7 +273,7 @@ export default function SatuPertigaMalamPage() {
 
             {/* Cara kiraan */}
             <div>
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Cara Kiraan</p>
+              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-4 font-semibold">Cara Kiraan</p>
               <ol className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">1</span><span>Kenal pasti waktu Maghrib dan Subuh esok</span></li>
                 <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">2</span><span>Kira tempoh malam: Subuh − Maghrib</span></li>

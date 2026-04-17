@@ -44,10 +44,10 @@ export default function SyaratSahSolatPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 px-4 py-8 lg:px-10 lg:py-10">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold">Syarat Sah Solat</h1>
-          <p className="text-sm text-muted-foreground mt-1">5 syarat sah solat seseorang.</p>
+      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
+        <header className="mb-10">
+          <h1 className="text-3xl font-display tracking-tight">Syarat Sah Solat</h1>
+          <p className="text-sm text-muted-foreground/70 mt-2">5 syarat sah solat seseorang.</p>
         </header>
 
         <div className="divide-y divide-border/50">

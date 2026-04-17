@@ -129,10 +129,10 @@ export default function ArahKiblatPage() {
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-4 lg:px-10 py-3 border-b border-border/40 shrink-0 gap-3">
+        <div className="flex items-center justify-between px-4 lg:px-10 py-4 border-b border-border/40 shrink-0 gap-3">
           <div>
-            <h1 className="text-sm font-semibold">Arah Kiblat</h1>
-            <p className="text-xs text-muted-foreground/50">Kompas berorientasikan Kaabah</p>
+            <h1 className="text-base font-semibold tracking-tight">Arah Kiblat</h1>
+            <p className="text-xs text-muted-foreground/50 mt-0.5">Kompas berorientasikan Kaabah</p>
           </div>
           {needsPermissionButton && (
             <Button size="sm" variant="outline" onClick={requestPermission}>
@@ -178,24 +178,24 @@ export default function ArahKiblatPage() {
         {/* Bottom strip */}
         {coords && (
           <div className="border-t border-border/40 grid grid-cols-2 divide-x divide-border/40 shrink-0">
-            <div className="px-6 py-5">
-              <p className="text-xs text-muted-foreground/40 mb-1">Kiblat</p>
-              <p className="text-2xl font-bold tabular-nums">{Math.round(qibla)}°</p>
-              <p className="text-xs text-muted-foreground/40 mt-0.5">dari arah Utara</p>
+            <div className="px-6 py-6">
+              <p className="text-xs text-muted-foreground/40 mb-1.5 font-medium uppercase tracking-widest">Kiblat</p>
+              <p className="text-3xl font-bold tabular-nums tracking-tight">{Math.round(qibla)}°</p>
+              <p className="text-xs text-muted-foreground/40 mt-1">dari arah Utara</p>
             </div>
-            <div className="px-6 py-5">
-              <p className="text-xs text-muted-foreground/40 mb-1">Arah semasa</p>
+            <div className="px-6 py-6">
+              <p className="text-xs text-muted-foreground/40 mb-1.5 font-medium uppercase tracking-widest">Arah semasa</p>
               {normalizedHeading !== null ? (
                 <>
-                  <p className={`text-2xl font-bold tabular-nums ${isAligned ? 'text-emerald-500' : ''}`}>
+                  <p className={`text-3xl font-bold tabular-nums tracking-tight ${isAligned ? 'text-emerald-500' : ''}`}>
                     {Math.round(normalizedHeading)}°
                   </p>
-                  <p className={`text-xs mt-0.5 ${isAligned ? 'text-emerald-500/70' : 'text-muted-foreground/40'}`}>
+                  <p className={`text-xs mt-1 ${isAligned ? 'text-emerald-500/70' : 'text-muted-foreground/40'}`}>
                     {isAligned ? 'Menghadap Kiblat' : 'pusingkan peranti'}
                   </p>
                 </>
               ) : (
-                <p className="text-2xl font-bold tabular-nums text-muted-foreground/20">—</p>
+                <p className="text-3xl font-bold tabular-nums text-muted-foreground/20">—</p>
               )}
             </div>
           </div>
