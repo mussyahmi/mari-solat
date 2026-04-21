@@ -138,8 +138,8 @@ export default function Sidebar() {
             >
               Cari Masjid Berdekatan
             </button>
-            <InstallButton />
             <Footer />
+            <InstallButton />
             <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
           </div>
         </div>
