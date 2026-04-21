@@ -55,7 +55,7 @@ export default function InstallButton() {
         onClick={handleInstall}
         className="text-sm text-muted-foreground hover:text-foreground transition text-left"
       >
-        Install App
+        Install MariSolat
       </button>
 
       <Dialog open={showIosDialog} onOpenChange={setShowIosDialog}>
@@ -63,21 +63,21 @@ export default function InstallButton() {
           <DialogHeader>
             <DialogTitle>Install MariSolat</DialogTitle>
             <DialogDescription>
-              Follow these steps to install MariSolat on your iPhone or iPad.
+              Ikuti langkah berikut untuk install MariSolat pada iPhone atau iPad anda.
             </DialogDescription>
           </DialogHeader>
           <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
             <li className="flex gap-3">
               <span className="shrink-0 font-semibold text-foreground">1.</span>
-              <span>Tap the <span className="font-medium text-foreground">Share</span> icon (box with an arrow pointing up) in Safari&apos;s bottom bar.</span>
+              <span>Tekan ikon <span className="font-medium text-foreground">Share</span> (kotak dengan anak panah ke atas) di bar bawah Safari.</span>
             </li>
             <li className="flex gap-3">
               <span className="shrink-0 font-semibold text-foreground">2.</span>
-              <span>Scroll down and tap <span className="font-medium text-foreground">&ldquo;Add to Home Screen&rdquo;</span>.</span>
+              <span>Skrol ke bawah dan pilih <span className="font-medium text-foreground">&ldquo;Add to Home Screen&rdquo;</span>.</span>
             </li>
             <li className="flex gap-3">
               <span className="shrink-0 font-semibold text-foreground">3.</span>
-              <span>Tap <span className="font-medium text-foreground">Add</span> to confirm.</span>
+              <span>Tekan <span className="font-medium text-foreground">Add</span> untuk mengesahkan.</span>
             </li>
           </ol>
         </DialogContent>
