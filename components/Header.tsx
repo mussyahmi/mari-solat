@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { APP_VERSION } from "@/lib/version";
 import Footer from "./Footer";
+import InstallButton from "./InstallButton";
 import { Separator } from "./ui/separator";
 
 export default function Header() {
@@ -90,6 +91,7 @@ export default function Header() {
                 >
                   Cari Masjid Berdekatan
                 </button>
+                <InstallButton />
                 <Footer />
                 <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
               </div>

@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import { ChevronLeft, ChevronRight, Loader2Icon, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
+import InstallButton from '@/components/InstallButton';
 import { APP_VERSION } from '@/lib/version';
 
 const NAV_GROUPS = [
@@ -137,6 +138,7 @@ export default function Sidebar() {
             >
               Cari Masjid Berdekatan
             </button>
+            <InstallButton />
             <Footer />
             <p className="text-[10px] text-muted-foreground/40">v{APP_VERSION}</p>
           </div>
