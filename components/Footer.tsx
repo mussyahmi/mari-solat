@@ -17,20 +17,18 @@ export default function Footer() {
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <button
-          onClick={() => setShowFeedbackDialog(true)}
-          className="text-sm text-muted-foreground hover:text-foreground transition text-left"
-        >
-          Beri Maklum Balas
-        </button>
-        <button
-          onClick={() => setShowSupportDialog(true)}
-          className="text-sm text-muted-foreground hover:text-foreground transition text-left"
-        >
-          Belanja Kopi
-        </button>
-      </div>
+      <button
+        onClick={() => setShowFeedbackDialog(true)}
+        className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+      >
+        Beri Maklum Balas
+      </button>
+      <button
+        onClick={() => setShowSupportDialog(true)}
+        className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+      >
+        Belanja Kopi
+      </button>
 
       {/* Feedback dialog */}
       <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
