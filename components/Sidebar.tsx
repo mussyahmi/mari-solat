@@ -131,7 +131,7 @@ export default function Sidebar() {
             </div>
           </nav>
 
-          <div className="mt-auto border-t border-border/50 pt-5 space-y-2.5">
+          <div className="mt-auto border-t border-border/50 pt-5 flex flex-col gap-2.5">
             <button
               onClick={openNearbyMasjid}
               className="text-sm text-muted-foreground hover:text-foreground transition text-left"

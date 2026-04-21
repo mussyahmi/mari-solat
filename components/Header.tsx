@@ -84,7 +84,7 @@ export default function Header() {
             </nav>
             <SheetFooter>
               <Separator />
-              <div className="space-y-2.5">
+              <div className="flex flex-col gap-2.5">
                 <button
                   onClick={openNearbyMasjid}
                   className="text-sm text-muted-foreground hover:text-foreground transition text-left"
