@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import InstallButton from '@/components/InstallButton';
 import { APP_VERSION } from '@/lib/version';
+import ScrollableNav from '@/components/ScrollableNav';
 
 const NAV_GROUPS = [
   {
@@ -87,8 +88,8 @@ export default function Sidebar() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col h-full p-6 min-w-[260px]">
-          <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col h-full min-w-[260px]">
+          <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-0 mb-10">
             <Link href="/">
               <Image src="/logo-horizontal.png" alt="MariSolat" width={120} height={40} className="object-contain rounded-sm" />
             </Link>
@@ -106,32 +107,34 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <nav className="flex flex-col gap-6 mb-6">
-            {NAV_GROUPS.map(group => (
-              <div key={group.label}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">{group.label}</p>
+          <ScrollableNav>
+            <nav className="flex flex-col gap-6 px-6 pb-4">
+              {NAV_GROUPS.map(group => (
+                <div key={group.label}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">{group.label}</p>
+                  <div className="flex flex-col gap-1.5">
+                    {group.links.map(link => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">Lain-lain</p>
                 <div className="flex flex-col gap-1.5">
-                  {group.links.map(link => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5">Tetapan</Link>
                 </div>
               </div>
-            ))}
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35 mb-2.5">Lain-lain</p>
-              <div className="flex flex-col gap-1.5">
-                <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-0.5">Tetapan</Link>
-              </div>
-            </div>
-          </nav>
+            </nav>
+          </ScrollableNav>
 
-          <div className="mt-auto border-t border-border/50 pt-5 flex flex-col gap-2.5">
+          <div className="shrink-0 border-t border-border/50 px-6 pt-5 pb-6 flex flex-col gap-2.5">
             <button
               onClick={openNearbyMasjid}
               className="text-sm text-muted-foreground hover:text-foreground transition text-left"

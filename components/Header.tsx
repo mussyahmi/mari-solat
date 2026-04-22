@@ -11,6 +11,7 @@ import { APP_VERSION } from "@/lib/version";
 import Footer from "./Footer";
 import InstallButton from "./InstallButton";
 import { Separator } from "./ui/separator";
+import ScrollableNav from "./ScrollableNav";
 
 export default function Header() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -55,33 +56,35 @@ export default function Header() {
               </SheetTitle>
               <SheetDescription className="sr-only">MariSolat — Waktu Solat Malaysia</SheetDescription>
             </SheetHeader>
-            <nav className="flex flex-col gap-6 px-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Waktu</p>
-                <div className="flex flex-col gap-3.5">
-                  <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Waktu Solat</Link>
-                  <Link href="/arah-kiblat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Arah Kiblat</Link>
-                  <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Satu Pertiga Malam</Link>
-                  <Link href="/kategori-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Kategori Waktu</Link>
-                  <Link href="/qada-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Qada Solat</Link>
+            <ScrollableNav>
+              <nav className="flex flex-col gap-6 px-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Waktu</p>
+                  <div className="flex flex-col gap-3.5">
+                    <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Waktu Solat</Link>
+                    <Link href="/arah-kiblat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Arah Kiblat</Link>
+                    <Link href="/satu-pertiga-malam" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Satu Pertiga Malam</Link>
+                    <Link href="/kategori-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Kategori Waktu</Link>
+                    <Link href="/qada-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Qada Solat</Link>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Ilmu Solat</p>
-                <div className="flex flex-col gap-3.5">
-                  <Link href="/rukun-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Rukun Solat</Link>
-                  <Link href="/syarat-wajib-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Syarat Wajib Solat</Link>
-                  <Link href="/syarat-sah-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Syarat Sah Solat</Link>
-                  <Link href="/pembatal-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pembatal Solat</Link>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Ilmu Solat</p>
+                  <div className="flex flex-col gap-3.5">
+                    <Link href="/rukun-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Rukun Solat</Link>
+                    <Link href="/syarat-wajib-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Syarat Wajib Solat</Link>
+                    <Link href="/syarat-sah-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Syarat Sah Solat</Link>
+                    <Link href="/pembatal-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pembatal Solat</Link>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Lain-lain</p>
-                <div className="flex flex-col gap-3.5">
-                  <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Tetapan</Link>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Lain-lain</p>
+                  <div className="flex flex-col gap-3.5">
+                    <Link href="/tetapan" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Tetapan</Link>
+                  </div>
                 </div>
-              </div>
-            </nav>
+              </nav>
+            </ScrollableNav>
             <SheetFooter>
               <Separator />
               <div className="flex flex-col gap-2.5">
