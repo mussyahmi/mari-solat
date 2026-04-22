@@ -24,15 +24,22 @@ export default function InstallButton() {
     setIsStandalone(false);
 
     const ua = navigator.userAgent;
-    const ios = /iphone|ipad|ipod/i.test(ua) && !/crios|fxios/i.test(ua);
-    setIsIos(ios);
+    const isAndroid = /Android/i.test(ua);
+    const isIOS =
+      /iphone|ipad|ipod/i.test(ua) &&
+      !(window as { MSStream?: unknown }).MSStream &&
+      !/crios|fxios|opios|mercury/i.test(ua);
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    if (isAndroid) {
+      const handler = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
+
+    if (isIOS) setIsIos(true);
   }, []);
 
   if (isStandalone) return null;
