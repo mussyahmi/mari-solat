@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { fetchVisits } from '@/lib/track';
 import Sidebar from '@/components/Sidebar';
@@ -16,7 +16,34 @@ type Visit = {
   ua: string;
 };
 
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1fbCLp9eSxYwIRyCN5eiKyybrjZEJ0UGumCOkfNEDwa0/edit?gid=620806291#gid=620806291';
+function UaCell({ ua }: { ua: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  const short = ua.slice(0, 32) + (ua.length > 32 ? '…' : '');
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(v => !v)} className="text-left text-muted-foreground/60 hover:text-foreground transition font-mono">
+        {short}
+      </button>
+      {open && (
+        <div className="absolute z-50 left-0 top-full mt-1 w-80 rounded-lg border border-border bg-background p-3 shadow-lg text-xs text-muted-foreground break-all">
+          {ua}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PantauPage() {
   const [rows, setRows] = useState<Visit[]>([]);
@@ -42,14 +69,9 @@ export default function PantauPage() {
     <div className="min-h-screen lg:flex">
       <Sidebar />
       <main className="flex-1 min-w-0 px-6 py-10 max-w-5xl mx-auto lg:mx-0 lg:max-w-none">
-        <div className='flex items-start justify-between'>
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Pantau</h1>
-            <p className="text-sm text-muted-foreground mb-8">Data pelawat MariSolat</p>
-          </div>
-          <a href={SHEET_URL} target="_blank" rel="noopener noreferrer" className="text-xs border border-border rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition whitespace-nowrap">
-            ↗ Buka Spreadsheet
-          </a>
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Pantau</h1>
+          <p className="text-sm text-muted-foreground mb-8">Data pelawat MariSolat</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
@@ -89,7 +111,8 @@ export default function PantauPage() {
                   <th className="pb-2 pr-4 font-medium">Masa</th>
                   <th className="pb-2 pr-4 font-medium">Zon</th>
                   <th className="pb-2 pr-4 font-medium">Koordinat</th>
-                  <th className="pb-2 font-medium">UUID</th>
+                  <th className="pb-2 pr-4 font-medium">UUID</th>
+                  <th className="pb-2 font-medium">UA</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -104,7 +127,8 @@ export default function PantauPage() {
                         {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
                       </a>
                     </td>
-                    <td className="py-2 text-muted-foreground/50 font-mono">{r.uuid.slice(0, 8)}…</td>
+                    <td className="py-2 pr-4 text-muted-foreground/50 font-mono">{r.uuid.slice(0, 8)}…</td>
+                    <td className="py-2"><UaCell ua={r.ua ?? ''} /></td>
                   </tr>
                 ))}
               </tbody>

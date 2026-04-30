@@ -44,7 +44,7 @@ No global state library. State lives in:
 shadcn/ui components in `components/ui/`. TailwindCSS v4 with CSS variables. Theme via `next-themes`. Design is minimalist: `divide-y divide-border/50` lists, no outer-border cards, green primary accent (`oklch(0.42 0.13 162)` light / `oklch(0.70 0.14 158)` dark).
 
 ### Analytics
-`lib/track.ts` posts visitor zone + lat/lng to a Google Apps Script endpoint (`NEXT_PUBLIC_ANALYTICS_URL`). Tracked once per session via a localStorage flag.
+`lib/track.ts` writes visitor zone + lat/lng to the Firestore `visits` collection (public read/write). Tracked once per session via a localStorage flag. Historical data was seeded via `scripts/seed-visits.mjs`.
 
 ## App Identity
 - App name: **MariSolat** (no space)
