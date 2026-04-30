@@ -195,7 +195,7 @@ export default function ArahKiblatPage() {
                   </p>
                 </>
               ) : (
-                <p className="text-3xl font-bold tabular-nums text-muted-foreground/20">—</p>
+                <p className="text-3xl font-bold tabular-nums text-muted-foreground/40">—</p>
               )}
             </div>
           </div>

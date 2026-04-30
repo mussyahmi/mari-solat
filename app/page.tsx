@@ -256,23 +256,15 @@ export default function HomePage() {
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 
         {/* Top bar */}
-        {!isFocusMode && <div className="border-b border-border/40 shrink-0 px-4 lg:px-10">
-          <div className="flex items-center justify-between py-4 gap-3">
-            <Link href="/tetapan" className="min-w-0 flex-1 text-center lg:text-left">
-              {currentTimes ? (
-                <p className="text-xs text-muted-foreground/50 tracking-wide">{formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate)}</p>
-              ) : <Skeleton className="h-3 w-36 mx-auto lg:mx-0" />}
-              {zone
-                ? <p className="text-sm font-semibold mt-0.5 tracking-tight">{zone}</p>
-                : <Skeleton className="h-4 w-32 mt-1 mx-auto lg:mx-0" />
-              }
-            </Link>
+        {!isFocusMode && <div className="shrink-0 px-4 lg:px-10">
+          <div className="flex items-center justify-center py-4 gap-3">
             <div className="hidden lg:block shrink-0">
               <ButtonGroup>
                 {(["yesterday", "today", "tomorrow"] as const).map((day) => (
                   <Button
                     key={day}
-                    variant={selectedDay === day ? "default" : "outline"}
+                    variant="outline"
+                    className={selectedDay === day ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" : ""}
                     onClick={() => setSelectedDay(day)}
                     size="sm"
                   >
@@ -289,7 +281,8 @@ export default function HomePage() {
               {(["yesterday", "today", "tomorrow"] as const).map((day) => (
                 <Button
                   key={day}
-                  variant={selectedDay === day ? "default" : "outline"}
+                  variant="outline"
+                    className={selectedDay === day ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" : ""}
                   onClick={() => setSelectedDay(day)}
                   size="sm"
                 >
@@ -301,8 +294,8 @@ export default function HomePage() {
         </div>}
 
         {/* Hero — next prayer */}
-        <div className="flex-1 flex flex-col justify-center items-center px-4 lg:px-10 py-12 relative overflow-hidden">
-          <div className="absolute top-4 right-4 flex items-center gap-3">
+        <div className="flex-1 min-h-[480px] flex flex-col justify-center items-center px-4 lg:px-10 py-12 relative">
+          <div className="absolute bottom-4 right-4 flex items-center gap-3">
             <button
               onClick={() => setIsFocusMode(f => !f)}
               className="text-muted-foreground/30 hover:text-muted-foreground transition"
@@ -315,7 +308,7 @@ export default function HomePage() {
               {isFocusMode ? (
                 <>
                   {/* Date */}
-                  <p className="text-xs text-muted-foreground/25 uppercase tracking-widest mb-5">{liveDate}</p>
+                  <p className="text-xs text-muted-foreground/40 tracking-wide mb-5">{currentTimes ? formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate) : liveDate}</p>
                   {/* Live clock */}
                   <p className="text-[4rem] lg:text-[8rem] font-bold tabular-nums tracking-tight leading-none text-foreground/25">
                     {liveClockHMS}
@@ -329,24 +322,33 @@ export default function HomePage() {
                     {currentTimes ? currentTimes[nextPrayer.label!] : '—'}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
-                  {zone && <p className="text-[10px] text-muted-foreground/20 uppercase tracking-widest mt-8">{zone}</p>}
+                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition">{zone}</Link>}
                 </>
               ) : (
                 <>
+                  {/* Date */}
+                  <p className="text-xs text-muted-foreground/40 tracking-wide mb-5">{currentTimes ? formatPrayerDates(currentTimes.gregorianDate, currentTimes.hijriDate) : liveDate}</p>
+                  {/* Live clock */}
+                  <p className="text-[4rem] lg:text-[8rem] font-bold tabular-nums tracking-tight leading-none text-foreground/25">
+                    {liveClockHMS}
+                    <span className="text-[1.5rem] lg:text-[3rem] font-medium ml-2 align-middle opacity-60">{liveClockPeriod}</span>
+                  </p>
+                  <div className="mb-10" />
                   {/* Prayer name — primary anchor */}
-                  <p className="text-6xl lg:text-8xl font-display mb-3 tracking-tight">{capitalize(nextPrayer.label!)}</p>
+                  <p className="text-4xl lg:text-6xl font-display mb-3 tracking-tight">{capitalize(nextPrayer.label!)}</p>
                   {/* Prayer time — secondary */}
-                  <p className="text-base lg:text-lg text-muted-foreground/40 tabular-nums mb-10 font-light tracking-wider">
+                  <p className="text-sm text-muted-foreground/40 tabular-nums mb-6 font-light tracking-wider">
                     {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-4 w-20 inline-block" />}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
+                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition">{zone}</Link>}
                 </>
               )}
             </div>
           ) : isToday && !nextPrayer.label && allTimes.today ? (
             <div className="text-center">
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-5 font-medium">Waktu Hari Ini</p>
-              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/20 tabular-nums">
+              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/40 tabular-nums">
                 {formatShortDate(dayDates.today)}
               </p>
             </div>
@@ -378,7 +380,7 @@ export default function HomePage() {
               <p className="text-xs text-muted-foreground/40 uppercase tracking-widest mb-5 font-medium">
                 {selectedDay === "yesterday" ? "Waktu Semalam" : "Waktu Esok"}
               </p>
-              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/20 tabular-nums">
+              <p className="text-6xl lg:text-8xl font-display text-muted-foreground/40 tabular-nums">
                 {selectedDay === "yesterday" ? formatShortDate(dayDates.yesterday) : formatShortDate(dayDates.tomorrow)}
               </p>
             </div>
@@ -408,7 +410,7 @@ export default function HomePage() {
                   <span className={`text-[11px] font-semibold tracking-wide ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/45"}`}>
                     {capitalize(label)}
                   </span>
-                  <span className={`text-sm font-bold tabular-nums tracking-tight ${isNext ? "text-primary" : isPast ? "text-muted-foreground/25" : "text-foreground/80"}`}>
+                  <span className={`text-sm font-bold tabular-nums tracking-tight ${isNext ? "text-primary" : isPast ? "text-muted-foreground/40" : "text-foreground/80"}`}>
                     {currentTimes ? currentTimes[label] : <Skeleton className="h-4 w-12" />}
                   </span>
                 </div>
