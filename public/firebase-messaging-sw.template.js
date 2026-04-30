@@ -2,7 +2,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyD0zMlyWfP6ExnG0gu5LfImaMNC3b-0lhM',
+  apiKey: '__FIREBASE_API_KEY__',
   authDomain: 'mari-solat.firebaseapp.com',
   projectId: 'mari-solat',
   storageBucket: 'mari-solat.firebasestorage.app',

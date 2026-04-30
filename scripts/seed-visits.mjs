@@ -1,8 +1,20 @@
 // Seeds historical visit data into Firestore via REST API (no admin credentials needed).
 // Uses the public API key — works because firestore.rules allows `create: if true` on /visits.
+// Usage: node scripts/seed-visits.mjs  (reads NEXT_PUBLIC_FIREBASE_API_KEY from .env)
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+const envPath = resolve(process.cwd(), '.env');
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^([^#=]+)=(.*)$/);
+    if (match) process.env[match[1].trim()] ??= match[2].trim();
+  }
+}
 
 const PROJECT_ID = 'mari-solat';
-const API_KEY = 'AIzaSyD0zMlyWfP6ExnG0gu5LfImaMNC3b-0lhM';
+const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+if (!API_KEY) { console.error('NEXT_PUBLIC_FIREBASE_API_KEY not set'); process.exit(1); }
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/visits`;
 
 const visits = [

@@ -61,6 +61,9 @@ Thumbs.db
 firebase-debug.log
 .firebaserc
 
+# Generated from public/firebase-messaging-sw.template.js — do not commit
+public/firebase-messaging-sw.js
+
 # =========================
 # TypeScript
 # =========================
