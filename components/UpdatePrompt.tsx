@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 const POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const INITIAL_VERSION = process.env.NEXT_PUBLIC_BUILD_TIME ?? 'unknown';
+const INITIAL_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown';
 
 export default function UpdatePrompt() {
   const shown = useRef(false);

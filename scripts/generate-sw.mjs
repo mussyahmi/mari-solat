@@ -27,3 +27,7 @@ const template = readFileSync(resolve(root, 'public/firebase-messaging-sw.templa
 const output = template.replace('__FIREBASE_API_KEY__', apiKey);
 writeFileSync(resolve(root, 'public/firebase-messaging-sw.js'), output);
 console.log('generate-sw: public/firebase-messaging-sw.js generated');
+
+const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+writeFileSync(resolve(root, 'public/version.json'), JSON.stringify({ version: pkg.version }));
+console.log(`generate-sw: public/version.json generated (v${pkg.version})`);

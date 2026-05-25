@@ -56,3 +56,11 @@ export function formatTime(time: string) {
 
   return `${formattedHour}:${minute} ${period}`;
 }
+
+export function adjustRawTime(time: string, deltaMinutes: number) {
+  const [h, m, s = "00"] = time.split(":");
+  const total = ((Number(h) * 60 + Number(m) + deltaMinutes) % 1440 + 1440) % 1440;
+  const hh = String(Math.floor(total / 60)).padStart(2, "0");
+  const mm = String(total % 60).padStart(2, "0");
+  return `${hh}:${mm}:${s}`;
+}

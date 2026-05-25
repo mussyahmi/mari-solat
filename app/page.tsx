@@ -2,13 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
+import { adjustRawTime, formatPrayerDates, formatShortDate, formatTime } from "@/utils/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Info, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { isManualZone } from "@/lib/zoneState";
 import { trackVisit } from "@/lib/track";
 import { AZAN_PRAYERS, isGlobalAzanOn, isAzanEnabled, triggerAzan } from "@/lib/azan";
@@ -20,8 +28,10 @@ type Prayer = {
 }
 
 type PrayerTimes = {
+  imsak: string;
   subuh: string;
   syuruk: string;
+  dhuha: string;
   zohor: string;
   asar: string;
   maghrib: string;
@@ -38,7 +48,7 @@ type PrayerDataByDay = {
 
 type CountdownParts = { hours: number; minutes: number; seconds: number };
 
-const PRAYERS = ["subuh", "syuruk", "zohor", "asar", "maghrib", "isyak"] as const;
+const PRAYERS = ["imsak", "subuh", "syuruk", "dhuha", "zohor", "asar", "maghrib", "isyak"] as const;
 
 export default function HomePage() {
   const [zone, setZone] = useState<string | null>(null);
@@ -176,9 +186,15 @@ export default function HomePage() {
         if (day === "yesterday") date.setDate(date.getDate() - 1);
         if (day === "tomorrow") date.setDate(date.getDate() + 1);
         const solatData = await fetchSolat(zoneCode, date);
+        // Dhuha = syuruk + 1/3 × (syuruk − subuh), per ilmu falak
+        const [fh, fm] = solatData.prayerTime.fajr.split(":").map(Number);
+        const [sh, sm] = solatData.prayerTime.syuruk.split(":").map(Number);
+        const dhuhaOffset = Math.round(((sh * 60 + sm) - (fh * 60 + fm)) / 3);
         timesByDay[day] = {
+          imsak: formatTime(adjustRawTime(solatData.prayerTime.fajr, -10)),
           subuh: formatTime(solatData.prayerTime.fajr),
           syuruk: formatTime(solatData.prayerTime.syuruk),
+          dhuha: formatTime(adjustRawTime(solatData.prayerTime.syuruk, dhuhaOffset)),
           zohor: formatTime(solatData.prayerTime.dhuhr),
           asar: formatTime(solatData.prayerTime.asr),
           maghrib: formatTime(solatData.prayerTime.maghrib),
@@ -257,7 +273,7 @@ export default function HomePage() {
 
         {/* Top bar */}
         {!isFocusMode && <div className="shrink-0 px-4 lg:px-10">
-          <div className="flex items-center justify-center py-4 gap-3">
+          <div className="flex items-center justify-center py-2 gap-3">
             <div className="hidden lg:block shrink-0">
               <ButtonGroup>
                 {(["yesterday", "today", "tomorrow"] as const).map((day) => (
@@ -390,29 +406,55 @@ export default function HomePage() {
 
         {/* Prayer strip — bottom */}
         {!isFocusMode && <div className="border-t border-border/40 shrink-0 text-center">
-          <div className="grid grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-4 lg:grid-cols-8">
             {PRAYERS.map((label, i) => {
               const isNext = nextPrayer.label === label && (isToday || isAutoTomorrow);
               const isPast = isToday && !isNext && !!currentTimes && parseTime(currentTimes[label] as string) < now;
-              const col = i % 3;
-              const isFirstRow = i < 3;
+              const col = i % 4;
+              const isFirstRow = i < 4;
+              const cellClass = [
+                "relative px-2 py-5 lg:py-6 flex flex-col items-center gap-1.5 transition-colors",
+                isNext ? "bg-primary/[0.05]" : "",
+                col < 3 ? "border-r border-border/40" : "",
+                isFirstRow ? "border-b border-border/40 lg:border-b-0" : "",
+                i < 7 ? "lg:border-r lg:border-border/40" : "",
+              ].join(" ");
+              const labelEl = (
+                <span className={`text-[11px] font-semibold tracking-wide flex items-center gap-1 ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/45"}`}>
+                  {capitalize(label)}
+                  {label === "dhuha" && <Info className="size-2.5 opacity-60" />}
+                </span>
+              );
+              const timeEl = (
+                <span className={`text-sm font-bold tabular-nums tracking-tight ${isNext ? "text-primary" : isPast ? "text-muted-foreground/40" : "text-foreground/80"}`}>
+                  {currentTimes ? currentTimes[label] : <Skeleton className="h-4 w-12" />}
+                </span>
+              );
+              if (label === "dhuha" && currentTimes) {
+                return (
+                  <Dialog key={label}>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className={`${cellClass} cursor-pointer hover:bg-accent/40 focus:outline-none focus-visible:bg-accent/40 text-center`}
+                      >
+                        {labelEl}
+                        {timeEl}
+                      </button>
+                    </DialogTrigger>
+                    <DhuhaCalcDialogContent
+                      subuh={currentTimes.subuh}
+                      syuruk={currentTimes.syuruk}
+                      dhuha={currentTimes.dhuha}
+                      dayLabel={selectedDay === "yesterday" ? "Semalam" : selectedDay === "today" ? "Hari Ini" : "Esok"}
+                    />
+                  </Dialog>
+                );
+              }
               return (
-                <div
-                  key={label}
-                  className={[
-                    "relative px-3 py-5 lg:py-6 flex flex-col items-center gap-1.5 transition-colors",
-                    isNext ? "bg-primary/[0.05]" : "",
-                    col < 2 ? "border-r border-border/40" : "",
-                    isFirstRow ? "border-b border-border/40 lg:border-b-0" : "",
-                    i < 5 ? "lg:border-r lg:border-border/40" : "",
-                  ].join(" ")}
-                >
-                  <span className={`text-[11px] font-semibold tracking-wide ${isNext ? "text-primary" : isPast ? "text-muted-foreground/30" : "text-muted-foreground/45"}`}>
-                    {capitalize(label)}
-                  </span>
-                  <span className={`text-sm font-bold tabular-nums tracking-tight ${isNext ? "text-primary" : isPast ? "text-muted-foreground/40" : "text-foreground/80"}`}>
-                    {currentTimes ? currentTimes[label] : <Skeleton className="h-4 w-12" />}
-                  </span>
+                <div key={label} className={cellClass}>
+                  {labelEl}
+                  {timeEl}
                 </div>
               );
             })}
@@ -425,6 +467,49 @@ export default function HomePage() {
   );
 }
 
+
+/* ---------------- Dhuha info ---------------- */
+
+function DhuhaCalcDialogContent({ subuh, syuruk, dhuha, dayLabel }: { subuh: string; syuruk: string; dhuha: string; dayLabel: string }) {
+  const subuhMin = displayTimeToMinutes(subuh);
+  const syurukMin = displayTimeToMinutes(syuruk);
+  const delta = syurukMin - subuhMin;
+  const third = Math.round(delta / 3);
+
+  return (
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>Cara Kiraan Waktu Dhuha</DialogTitle>
+        <DialogDescription>Berdasarkan formula falak</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-5 text-sm">
+        <div>
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-2">Formula</p>
+          <p className="tabular-nums">Dhuha = Syuruk + ⅓ × (Syuruk − Subuh)</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-2">Untuk {dayLabel}</p>
+          <div className="space-y-1 tabular-nums font-mono text-[13px]">
+            <p>= {syuruk} + ⅓ × ({syuruk} − {subuh})</p>
+            <p>= {syuruk} + ⅓ × {delta} min</p>
+            <p>= {syuruk} + {third} min</p>
+            <p className="text-primary font-semibold pt-1">= {dhuha}</p>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  );
+}
+
+function displayTimeToMinutes(t: string) {
+  const [hm, period] = t.split(" ");
+  const [hStr, mStr] = hm.split(":");
+  let h = Number(hStr);
+  const m = Number(mStr);
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
 
 /* ---------------- Countdown cards ---------------- */
 
