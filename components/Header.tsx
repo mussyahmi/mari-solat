@@ -69,6 +69,12 @@ export default function Header() {
                   </div>
                 </div>
                 <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Amalan</p>
+                  <div className="flex flex-col gap-3.5">
+                    <Link href="/tasbih" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Tasbih</Link>
+                  </div>
+                </div>
+                <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">Ilmu Solat</p>
                   <div className="flex flex-col gap-3.5">
                     <Link href="/rukun-solat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Rukun Solat</Link>

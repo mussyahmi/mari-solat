@@ -23,6 +23,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Amalan',
+    links: [
+      { href: '/tasbih', label: 'Tasbih' },
+    ],
+  },
+  {
     label: 'Ilmu Solat',
     links: [
       { href: '/rukun-solat', label: 'Rukun Solat' },
