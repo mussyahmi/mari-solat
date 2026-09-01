@@ -338,7 +338,7 @@ export default function HomePage() {
                     {currentTimes ? currentTimes[nextPrayer.label!] : '—'}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
-                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition">{zone}</Link>}
+                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition text-center text-balance max-w-[18rem] px-4 leading-relaxed">{zone}</Link>}
                 </>
               ) : (
                 <>
@@ -357,7 +357,7 @@ export default function HomePage() {
                     {currentTimes ? currentTimes[nextPrayer.label!] : <Skeleton className="h-4 w-20 inline-block" />}
                   </p>
                   {countdown && <CountdownFlip parts={countdown} />}
-                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition">{zone}</Link>}
+                  {zone && <Link href="/tetapan" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/50 uppercase tracking-widest mt-8 transition text-center text-balance max-w-[18rem] px-4 leading-relaxed">{zone}</Link>}
                 </>
               )}
             </div>
