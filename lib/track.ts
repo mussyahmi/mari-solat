@@ -13,12 +13,17 @@ function getOrCreateUUID(): string {
 /**
  * Ketepatan yang disimpan.
  *
- * Empat tempat perpuluhan ≈ 11 meter — cukup tepat untuk menunjuk ke rumah
- * seseorang, terikat pada UUID yang kekal. Peta dan kiraan zon di /pantau
- * kelihatan sama pada dua tempat perpuluhan (≈ 1.1 km), jadi itu sahaja yang
- * disimpan.
+ * Empat tempat perpuluhan ≈ 11 meter. Ini keputusan yang disengajakan: peta
+ * pelawat kehilangan butiran sebenar pada dua tempat perpuluhan (≈ 1.1 km),
+ * yang menjadikan setiap orang dalam satu kejiranan bertindih menjadi satu
+ * titik.
+ *
+ * Ketepatan itu hanya boleh diterima kerana bacaan koleksi ini kini ditutup
+ * sepenuhnya (lihat firestore.rules) dan hanya boleh dicapai melalui
+ * /api/pantau dengan UID pentadbir. Jika bacaan awam pernah dibuka semula,
+ * ini mesti turun semula.
  */
-const bulatkan = (n: number) => Math.round(n * 100) / 100;
+const bulatkan = (n: number) => Math.round(n * 10000) / 10000;
 
 const kunciHari = (d = new Date()) =>
   `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
