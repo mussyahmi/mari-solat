@@ -6,6 +6,8 @@ import AppShell from "@/components/AppShell";
 import WakeLock from "@/components/WakeLock";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import { Toaster } from "sonner";
+import WarnaTema from "@/components/WarnaTema";
+import { WARNA_TEMA } from "@/lib/warna-tema";
 
 // Satu keluarga huruf untuk keseluruhan aplikasi. Paksi saiz optik Fraunces
 // bermakna teks kecil dan angka kiraan detik yang besar mendapat potongan
@@ -19,7 +21,11 @@ const fraunces = Fraunces({
 
 export const viewport = {
   // maximumScale dibuang: menyekat zum ialah kegagalan kebolehcapaian.
-  themeColor: "#0b1310",
+  //
+  // Nilai ini hanyalah pengganti SSR: themeColor hanya boleh membawa satu
+  // warna, jadi ia mengambil tema lalai. WarnaTemaInit membetulkannya semasa
+  // HTML dihurai, dan WarnaTema mengekalkannya betul selepas itu.
+  themeColor: WARNA_TEMA.gelap,
 };
 
 export const metadata: Metadata = {
@@ -60,6 +66,18 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Berjalan semasa HTML dihurai, sebelum cat pertama, bersama skrip sebaris
+ * next-themes. Tanpanya pengguna mod cerah yang membuka aplikasi mendapat bar
+ * status gelap sehingga penghidratan selesai, kerana themeColor SSR di atas
+ * hanya boleh membawa satu nilai. Ia membaca kunci localStorage yang sama
+ * yang ditulis next-themes, jadi kedua-duanya bersetuju pada bingkai pertama.
+ */
+function WarnaTemaInit() {
+  const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',localStorage.getItem('theme')==='light'?'${WARNA_TEMA.cerah}':'${WARNA_TEMA.gelap}')}catch(e){}`;
+  return <script dangerouslySetInnerHTML={{ __html: js }} />;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -73,6 +91,8 @@ export default function RootLayout({
         {/* Aplikasi solat paling kerap dibuka pada subuh dan selepas isyak,
             jadi gelap ialah lalai yang jujur untuknya. */}
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <WarnaTemaInit />
+          <WarnaTema />
           <WakeLock />
           <UpdatePrompt />
           <AppShell>{children}</AppShell>
