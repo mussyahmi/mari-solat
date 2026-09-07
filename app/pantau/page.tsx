@@ -75,7 +75,13 @@ export default function PantauPage() {
     });
   }, []);
 
-  const uniqueUsers = new Set(rows.map(r => r.uuid)).size;
+  // Bukan "pengguna": UUID hidup dalam localStorage, jadi ia mengira profil
+  // pelayar yang belum dikosongkan. Aplikasi yang dipasang mendapat storan
+  // berasingan daripada Safari, tetingkap peribadi bermula kosong, dan ITP
+  // Safari memadam localStorage selepas tujuh hari tanpa interaksi — satu
+  // orang boleh muncul beberapa kali. "Peranti" ialah dakwaan yang paling
+  // hampir dengan apa yang data ini benar-benar tahu.
+  const perantiUnik = new Set(rows.map(r => r.uuid)).size;
   const zoneCount: Record<string, number> = {};
   for (const r of rows) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
   const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -132,9 +138,9 @@ export default function PantauPage() {
           {/* Bilangan pengguna unik ialah fakta halaman ini; dua nombor lain
               hanyalah konteks untuknya. */}
           <div className="flex flex-col items-start gap-2">
-            <p className="paparan text-2xl leading-none lg:text-3xl">Pengguna unik</p>
+            <p className="paparan text-2xl leading-none lg:text-3xl">Peranti unik</p>
             <p className="angka-paparan text-[22vw] leading-none sm:text-[16vw] lg:text-[9vw]">
-              {uniqueUsers}
+              {perantiUnik}
             </p>
           </div>
 
@@ -166,7 +172,7 @@ export default function PantauPage() {
           </section>
 
           <section className="mt-20 max-w-xl">
-            <h2 className="paparan text-2xl">Zon teratas</h2>
+            <h2 className="paparan text-2xl">Peranti mengikut zon</h2>
             <ol className="mt-5 divide-y divide-border/50 border-t border-border/50">
               {topZones.map(([zone, count], i) => (
                 <li key={zone} className="relative flex items-center justify-between gap-6 py-3.5">
@@ -269,7 +275,7 @@ export default function PantauPage() {
 function RangkaMuat() {
   return (
     <div>
-      <Skeleton className="h-8 w-44" />
+      <Skeleton className="h-8 w-40" />
       <Skeleton className="mt-4 h-[22vw] w-[24vw] sm:h-[16vw] lg:h-[9vw] lg:w-[10vw]" />
       <div className="mt-12 flex flex-wrap gap-x-12 gap-y-5 border-t border-border/60 pt-5">
         {[0, 1, 2].map(i => (
