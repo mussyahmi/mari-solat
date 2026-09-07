@@ -58,8 +58,12 @@ export type Visit = {
  * Ia datang melalui laluan pelayan yang mengesahkan token ID pemanggil.
  */
 export async function fetchVisits(idToken: string): Promise<Visit[]> {
+  // Bukan header Authorization. Cloud Run menganggap "Authorization: Bearer"
+  // sebagai token IAM Google, cuba mengesahkannya sebagai token itu, dan
+  // menolak permintaan dengan 401 sebelum bekas kita melihatnya — jadi token
+  // ID Firebase tidak pernah sampai ke laluan ini.
   const res = await fetch('/api/pantau', {
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: { 'X-Id-Token': idToken },
   });
   if (!res.ok) {
     throw new Error(res.status === 403 ? 'tidak-dibenarkan' : 'gagal');

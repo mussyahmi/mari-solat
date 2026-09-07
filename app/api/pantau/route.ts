@@ -17,8 +17,8 @@ export async function GET(request: Request) {
     .map(s => s.trim())
     .filter(Boolean);
 
-  const header = request.headers.get('authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  // Lihat lib/track.ts: Authorization dirampas oleh Cloud Run.
+  const token = request.headers.get('x-id-token') ?? '';
   if (!token || dibenarkan.length === 0) {
     return NextResponse.json({ error: 'Tidak dibenarkan.' }, { status: 403 });
   }
