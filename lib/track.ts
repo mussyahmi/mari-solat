@@ -11,19 +11,18 @@ function getOrCreateUUID(): string {
 }
 
 /**
- * Ketepatan yang disimpan.
+ * Koordinat disimpan tepat seperti yang diberikan oleh peranti, tanpa
+ * pembundaran.
  *
- * Empat tempat perpuluhan ≈ 11 meter. Ini keputusan yang disengajakan: peta
- * pelawat kehilangan butiran sebenar pada dua tempat perpuluhan (≈ 1.1 km),
- * yang menjadikan setiap orang dalam satu kejiranan bertindih menjadi satu
- * titik.
+ * Ini keputusan yang disengajakan dan bukan terlepas pandang. Ketepatan penuh
+ * bermakna setiap baris boleh menunjuk ke lokasi sebenar seseorang, jadi ia
+ * bergantung sepenuhnya pada bacaan koleksi ini kekal tertutup: lihat
+ * firestore.rules, di mana `allow read: if false`, dan /api/pantau yang
+ * menyaring melalui senarai putih ADMIN_UIDS.
  *
- * Ketepatan itu hanya boleh diterima kerana bacaan koleksi ini kini ditutup
- * sepenuhnya (lihat firestore.rules) dan hanya boleh dicapai melalui
- * /api/pantau dengan UID pentadbir. Jika bacaan awam pernah dibuka semula,
- * ini mesti turun semula.
+ * Jika bacaan awam pernah dibuka semula, atau data ini dieksport ke tempat
+ * lain, ketepatan ini mesti diturunkan dahulu.
  */
-const bulatkan = (n: number) => Math.round(n * 10000) / 10000;
 
 const kunciHari = (d = new Date()) =>
   `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -57,9 +56,7 @@ export async function trackVisit(zone: string, koordinat?: { lat: number; lng: n
       zone,
       timestamp: Timestamp.now(),
       ua: navigator.userAgent.slice(0, 400),
-      ...(koordinat
-        ? { lat: bulatkan(koordinat.lat), lng: bulatkan(koordinat.lng) }
-        : {}),
+      ...(koordinat ? { lat: koordinat.lat, lng: koordinat.lng } : {}),
     });
     localStorage.setItem(KUNCI_HARI, hariIni);
     if (koordinat) localStorage.setItem(KUNCI_KOORDINAT, hariIni);
