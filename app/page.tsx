@@ -341,14 +341,6 @@ export default function HalamanUtama() {
           {(
             <div className="grid gap-3 sm:grid-cols-3">
               <ModulRingkas
-                href="/arah-kiblat"
-                tajuk="Arah kiblat"
-                ikon={<Compass className="size-4" />}
-                nilai={kiblat === null ? "—" : `${Math.round(kiblat)}°`}
-                nota={kiblat === null ? "Benarkan lokasi untuk mengira" : `${namaArah(kiblat)} dari utara`}
-              />
-
-              <ModulRingkas
                 href="/kategori-solat"
                 tajuk="Kategori waktu"
                 ikon={<Layers className="size-4" />}
@@ -374,6 +366,14 @@ export default function HalamanUtama() {
                       ? <>Berakhir dalam <span className="tabular">{bakiMasaTeks(malam.tamat.getTime() - kini.getTime())}</span></>
                       : <>Hingga <span className="tabular">{fmtJam(malam.tamat)}</span></>
                 }
+              />
+
+              <ModulRingkas
+                href="/arah-kiblat"
+                tajuk="Arah kiblat"
+                ikon={<Compass className="size-4" />}
+                nilai={kiblat === null ? "—" : `${Math.round(kiblat)}°`}
+                nota={kiblat === null ? "Benarkan lokasi untuk mengira" : `${namaArah(kiblat)} dari utara`}
               />
             </div>
           )}

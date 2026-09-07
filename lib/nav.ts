@@ -19,11 +19,15 @@ export type NavGroup = {
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Waktu',
+    // Susunan mengikut jenis, bukan rawak: tiga yang pertama semuanya
+    // diterbitkan daripada waktu solat hari ini, jadi ia berkumpul di bawah
+    // Waktu Solat. Arah Kiblat menjawab soalan yang berbeza sama sekali —
+    // kedudukan, bukan masa — jadi ia datang selepas kumpulan itu.
     links: [
       { href: '/', label: 'Waktu Solat' },
-      { href: '/arah-kiblat', label: 'Arah Kiblat' },
       { href: '/kategori-solat', label: 'Kategori Waktu' },
       { href: '/satu-pertiga-malam', label: 'Satu Pertiga Malam' },
+      { href: '/arah-kiblat', label: 'Arah Kiblat' },
       { href: '/qada-solat', label: 'Qada Solat' },
     ],
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet';
 import { useTheme } from 'next-themes';
 import 'leaflet/dist/leaflet.css';
 
@@ -11,6 +11,22 @@ type Visit = {
   zone: string;
   timestamp: string;
 };
+
+/**
+ * Tatal roda hanya selepas peta diketik.
+ *
+ * Menghidupkannya secara kekal bermakna menatal melepasi peta merampas
+ * halaman; mematikannya sepenuhnya meninggalkan butang +/- sebagai satu-satunya
+ * cara mengezum pada desktop. Ketikan pertama menyatakan niat, dan menggerakkan
+ * tetikus keluar mengembalikan tatal kepada halaman.
+ */
+function ZumRoda() {
+  const peta = useMapEvents({
+    click: () => peta.scrollWheelZoom.enable(),
+    mouseout: () => peta.scrollWheelZoom.disable(),
+  });
+  return null;
+}
 
 export default function VisitorMap({ rows }: { rows: Visit[] }) {
   const { resolvedTheme } = useTheme();
@@ -33,6 +49,7 @@ export default function VisitorMap({ rows }: { rows: Visit[] }) {
       }}
       scrollWheelZoom={false}
     >
+      <ZumRoda />
       {/* Jubin CARTO kini memerlukan kunci API, jadi kembali ke OpenStreetMap
           tanpa kunci dan gelapkan jubin dengan penapis CSS untuk mod gelap. */}
       <TileLayer
