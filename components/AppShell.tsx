@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { MotionConfig } from 'motion/react';
 import Header from '@/components/Header';
 import { bacaCacheWaktu, fasaPada, type Fasa } from '@/lib/solat';
+import { trackVisitSenyap } from '@/lib/track';
 
 /**
  * Rangka aplikasi.
@@ -24,6 +25,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     kemas();
     const jam = setInterval(kemas, 60_000);
     return () => clearInterval(jam);
+  }, []);
+
+  // Jejak dari sini dan bukan dari halaman utama: rangka ini membalut setiap
+  // laluan, jadi orang yang mendarat terus pada qada, tasbih atau halaman ilmu
+  // akhirnya dikira juga.
+  useEffect(() => {
+    trackVisitSenyap();
   }, []);
 
   return (

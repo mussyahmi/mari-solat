@@ -50,8 +50,10 @@ export async function GET(request: Request) {
       const data = d.data();
       return {
         uuid: data.uuid,
-        lat: String(data.lat),
-        lng: String(data.lng),
+        // Baris tanpa lokasi kini sah; hantar rentetan kosong dan biarkan
+        // halaman memutuskan cara memaparkannya.
+        lat: data.lat === undefined ? '' : String(data.lat),
+        lng: data.lng === undefined ? '' : String(data.lng),
         zone: data.zone,
         ua: data.ua ?? '',
         timestamp: (data.timestamp as Timestamp).toDate().toISOString(),

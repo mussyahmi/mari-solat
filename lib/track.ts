@@ -23,25 +23,71 @@ const bulatkan = (n: number) => Math.round(n * 100) / 100;
 const kunciHari = (d = new Date()) =>
   `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
-export async function trackVisit(lat: number, lng: number, zone: string) {
-  // Dahulu ini membanding koordinat mentah, jadi peranti yang tidak bergerak
-  // tidak pernah menulis semula dan cap masanya membeku. Sekali sehari
-  // memberi "kali terakhir dilihat" yang benar-benar bergerak, dan pada dua
-  // tempat perpuluhan koordinat sendiri jarang berubah.
+const KUNCI_HARI = 'msolat_last_tracked_day';
+const KUNCI_KOORDINAT = 'msolat_last_tracked_coords';
+
+/**
+ * Rekod lawatan hari ini.
+ *
+ * Koordinat pilihan. Dahulunya ini hanya dipanggil dari dalam panggil balik
+ * kejayaan geolokasi pada halaman utama, jadi sesiapa yang menolak lokasi,
+ * memilih zon sendiri, atau mendarat terus pada mana-mana halaman lain tidak
+ * pernah dikira langsung — setiap nombor pada /pantau ialah lantai, bukan
+ * jumlah. Zon sahaja sudah memadai untuk merekod lawatan; koordinat menyusul
+ * apabila ia memang tersedia.
+ */
+export async function trackVisit(zone: string, koordinat?: { lat: number; lng: number }) {
   const hariIni = kunciHari();
-  if (localStorage.getItem('msolat_last_tracked_day') === hariIni) return;
+  const sudahHariIni = localStorage.getItem(KUNCI_HARI) === hariIni;
+  const koordinatHariIni = localStorage.getItem(KUNCI_KOORDINAT) === hariIni;
+
+  // Tulis sekali sehari, kecuali apabila koordinat tiba selepas baris hari ini
+  // sudah ditulis tanpanya — baris itu berbaloi dinaik taraf.
+  if (sudahHariIni && (!koordinat || koordinatHariIni)) return;
+
   try {
     const uuid = getOrCreateUUID();
     await setDoc(doc(db, 'visits', uuid), {
       uuid,
-      lat: bulatkan(lat),
-      lng: bulatkan(lng),
       zone,
       timestamp: Timestamp.now(),
       ua: navigator.userAgent.slice(0, 400),
+      ...(koordinat
+        ? { lat: bulatkan(koordinat.lat), lng: bulatkan(koordinat.lng) }
+        : {}),
     });
-    localStorage.setItem('msolat_last_tracked_day', hariIni);
+    localStorage.setItem(KUNCI_HARI, hariIni);
+    if (koordinat) localStorage.setItem(KUNCI_KOORDINAT, hariIni);
   } catch { /* senyap */ }
+}
+
+/**
+ * Rekod lawatan tanpa sekali-kali meminta kebenaran lokasi.
+ *
+ * Dipanggil dari rangka aplikasi, jadi ia berjalan pada setiap halaman.
+ * Koordinat hanya diambil jika kebenaran sudah diberi sebelum ini — gesaan
+ * lokasi pada setiap muat halaman ialah harga yang terlalu mahal untuk satu
+ * baris analitik.
+ */
+export async function trackVisitSenyap() {
+  const zone = localStorage.getItem('msolat_zone_code') ?? '';
+  if (localStorage.getItem(KUNCI_HARI) === kunciHari()) return;
+
+  let koordinat: { lat: number; lng: number } | undefined;
+  try {
+    const izin = await navigator.permissions?.query({ name: 'geolocation' });
+    if (izin?.state === 'granted') {
+      koordinat = await new Promise((selesai, gagal) =>
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => selesai({ lat: coords.latitude, lng: coords.longitude }),
+          gagal,
+          { timeout: 8000 }
+        )
+      );
+    }
+  } catch { /* tiada kebenaran, tiada koordinat — lawatan tetap direkod */ }
+
+  await trackVisit(zone, koordinat);
 }
 
 export type Visit = {

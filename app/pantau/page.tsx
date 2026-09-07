@@ -99,6 +99,27 @@ export default function PantauPage() {
   const masaTerawal = terkini.length ? tarikhPendek(terkini[terkini.length - 1].timestamp) : '—';
   const zonTertinggi = topZones[0]?.[1] ?? 0;
 
+  // Satu-satunya isyarat aktiviti sebenar yang boleh dijawab oleh jadual
+  // "kali terakhir dilihat" ini.
+  const MINGGU_MS = 7 * 24 * 60 * 60 * 1000;
+  const aktif7 = rows.filter(r => Date.now() - new Date(r.timestamp).getTime() < MINGGU_MS).length;
+
+  // User agent sudah disimpan pada setiap baris tetapi sebelum ini hanya
+  // kelihatan sebagai teks terpotong yang tiada siapa baca. Sebagai tiga
+  // nombor ia memberitahu di mana aplikasi ini perlu diuji.
+  const platform = (ua: string) => {
+    if (/iphone|ipad|ipod/i.test(ua)) return 'iOS';
+    if (/android/i.test(ua)) return 'Android';
+    if (/windows|macintosh|linux|cros/i.test(ua)) return 'Desktop';
+    return 'Lain';
+  };
+  const kiraPlatform: Record<string, number> = {};
+  for (const r of rows) {
+    const nama = platform(r.ua ?? '');
+    kiraPlatform[nama] = (kiraPlatform[nama] ?? 0) + 1;
+  }
+  const senaraiPlatform = Object.entries(kiraPlatform).sort((a, b) => b[1] - a[1]);
+
   return (
     <PageShell tajuk="Pantau" lede="Data pelawat MariSolat.">
       {!user && !loading ? (
@@ -151,6 +172,10 @@ export default function PantauPage() {
               tarikh yang benar-benar boleh dijawab oleh data ini. */}
           <dl className="mt-10 divide-y divide-border/50 border-t border-border/60 lg:flex lg:flex-wrap lg:gap-x-12 lg:divide-y-0 lg:pt-5">
             <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Aktif 7 hari</dt>
+              <dd className="angka-paparan text-2xl lg:mt-1">{aktif7}</dd>
+            </div>
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
               <dt className="text-sm text-muted-foreground">Zon berbeza</dt>
               <dd className="angka-paparan text-2xl lg:mt-1">{jumlahZon}</dd>
             </div>
@@ -194,6 +219,21 @@ export default function PantauPage() {
             </ol>
           </section>
 
+          {/* User agent sudah ada pada setiap baris tetapi hanya kelihatan
+              sebagai teks terpotong di dalam log. Sebagai tiga nombor ia
+              memberitahu di mana aplikasi ini perlu diuji. */}
+          <section className="mt-20 max-w-xl">
+            <h2 className="paparan text-2xl">Peranti mengikut platform</h2>
+            <dl className="mt-5 divide-y divide-border/50 border-t border-border/50">
+              {senaraiPlatform.map(([nama, kira]) => (
+                <div key={nama} className="flex items-baseline justify-between gap-6 py-3.5">
+                  <dt>{nama}</dt>
+                  <dd className="angka-paparan text-xl">{kira}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
           <section className="mt-20">
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="paparan text-2xl">Kali terakhir dilihat</h2>
@@ -223,14 +263,18 @@ export default function PantauPage() {
                       </td>
                       <td className="py-3 pr-6">{r.zone}</td>
                       <td className="tabular py-3 pr-6 font-mono text-muted-foreground">
-                        <a
-                          href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
-                        >
-                          {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
-                        </a>
+                        {r.lat && r.lng ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                          >
+                            {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                          </a>
+                        ) : (
+                          <span>Tiada lokasi</span>
+                        )}
                       </td>
                       <td className="py-3 pr-6 font-mono text-muted-foreground">{r.uuid.slice(0, 8)}…</td>
                       <td className="py-3"><UaCell ua={r.ua ?? ''} /></td>
@@ -250,14 +294,18 @@ export default function PantauPage() {
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 text-sm text-muted-foreground">
-                    <a
-                      href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="tabular font-mono underline-offset-4 hover:text-foreground hover:underline"
-                    >
-                      {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
-                    </a>
+                    {r.lat && r.lng ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tabular font-mono underline-offset-4 hover:text-foreground hover:underline"
+                      >
+                        {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                      </a>
+                    ) : (
+                      <span>Tiada lokasi</span>
+                    )}
                     <span className="font-mono">{r.uuid.slice(0, 8)}…</span>
                   </div>
                   <p className="mt-1 truncate font-mono text-sm text-muted-foreground">{r.ua}</p>

@@ -47,17 +47,27 @@ service cloud.firestore {
     match /visits/{uuid} {
       allow read: if false;
       allow create: if request.resource.data.uuid == uuid
-        && request.resource.data.lat is number
-        && request.resource.data.lng is number
-        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
-        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        // Koordinat kini pilihan: lawatan direkod walaupun lokasi ditolak,
+        // jadi baris tanpa lat/lng adalah sah.
+        && (!('lat' in request.resource.data) ||
+            (request.resource.data.lat is number
+             && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
+        && (!('lng' in request.resource.data) ||
+            (request.resource.data.lng is number
+             && request.resource.data.lng >= -180 && request.resource.data.lng <= 180))
         && request.resource.data.zone is string
         && request.resource.data.zone.size() <= 16
         && request.resource.data.ua is string
         && request.resource.data.ua.size() <= 400;
       allow update: if request.resource.data.uuid == uuid
-        && request.resource.data.lat is number
-        && request.resource.data.lng is number
+        // Koordinat kini pilihan: lawatan direkod walaupun lokasi ditolak,
+        // jadi baris tanpa lat/lng adalah sah.
+        && (!('lat' in request.resource.data) ||
+            (request.resource.data.lat is number
+             && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
+        && (!('lng' in request.resource.data) ||
+            (request.resource.data.lng is number
+             && request.resource.data.lng >= -180 && request.resource.data.lng <= 180))
         && request.resource.data.zone is string
         && request.resource.data.zone.size() <= 16
         && request.resource.data.ua is string

@@ -104,7 +104,7 @@ export default function HalamanUtama() {
           const res = await fetch(`https://api.waktusolat.app/zones/${latitude}/${longitude}`);
           const data = await res.json();
           if (!res.ok || "error" in data) return;
-          trackVisit(latitude, longitude, data.zone);
+          trackVisit(data.zone, { lat: latitude, lng: longitude });
           if (data.zone !== kod) await muatZon(data.zone, `${data.zone} ${data.district}`);
         } catch {
           /* senyap — zon tersimpan masih boleh digunakan */
@@ -132,7 +132,7 @@ export default function HalamanUtama() {
           const res = await fetch(`https://api.waktusolat.app/zones/${latitude}/${longitude}`);
           const data = await res.json();
           if (!res.ok || "error" in data) throw new Error();
-          trackVisit(latitude, longitude, data.zone);
+          trackVisit(data.zone, { lat: latitude, lng: longitude });
           await muatZon(data.zone, `${data.zone} ${data.district}`);
         } catch {
           toast.error("Zon untuk lokasi anda tidak ditemui. Pilih zon di Tetapan.");
