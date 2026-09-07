@@ -1,224 +1,285 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatTime } from '@/utils/format';
-import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
+import PageShell from '@/components/PageShell';
+import { formatTime } from '@/utils/format';
+import { bakiMasaTeks, fetchSolat, parseTime } from '@/lib/solat';
 
 const KATEGORI = [
-  { id: 'fadhilat', title: 'Waktu Fadhilat', description: 'Waktu paling awal selepas azan. Paling banyak pahala.' },
-  { id: 'ikhtiar', title: 'Waktu Ikhtiar', description: 'Kira-kira 15 minit selepas azan. Waktu yang diutamakan.' },
-  { id: 'jawaz', title: 'Waktu Jawaz', description: 'Waktu yang harus. Boleh sembahyang tapi bukan waktu terbaik.' },
-  { id: 'karahah', title: 'Waktu Karahah', description: 'Kira-kira 20 minit sebelum masuk waktu solat seterusnya. Makruh.' },
-  { id: 'tahrim', title: 'Waktu Tahrim', description: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.' },
+  { id: 'fadhilat', title: 'Fadhilat', description: 'Waktu paling awal selepas azan. Paling banyak pahala.' },
+  { id: 'ikhtiar', title: 'Ikhtiar', description: 'Kira-kira 15 minit selepas azan. Waktu yang diutamakan.' },
+  { id: 'jawaz', title: 'Jawaz', description: 'Waktu yang harus. Boleh sembahyang tapi bukan waktu terbaik.' },
+  { id: 'karahah', title: 'Karahah', description: 'Kira-kira 20 minit sebelum masuk waktu solat seterusnya. Makruh.' },
+  { id: 'tahrim', title: 'Tahrim', description: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.' },
 ] as const;
 
-type KategoriId = typeof KATEGORI[number]['id'];
-
-function parseTime(time: string, baseDate?: Date): Date {
-  const base = baseDate ? new Date(baseDate) : new Date();
-  const [hourStr, rest] = time.split(':');
-  const minute = Number(rest.split(' ')[0]);
-  const period = time.includes('PM') ? 'PM' : 'AM';
-  let hour = Number(hourStr);
-  if (period === 'PM' && hour !== 12) hour += 12;
-  if (period === 'AM' && hour === 12) hour = 0;
-  base.setHours(hour, minute, 0, 0);
-  return base;
-}
-
-async function fetchSolat(zone: string, date: Date) {
-  const res = await fetch(
-    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1}`
-  );
-  const data = await res.json();
-  if (!res.ok || data.status !== 'OK!') throw new Error();
-  return data;
-}
-
-function formatCountdown(ms: number) {
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  const parts: string[] = [];
-  if (h > 0) parts.push(`${h} jam`);
-  if (m > 0) parts.push(`${m} minit`);
-  parts.push(`${s} saat`);
-  return parts.join(' ');
-}
+type KategoriId = (typeof KATEGORI)[number]['id'];
 
 function fmt12(d: Date) {
   const h = d.getHours() % 12 || 12;
   const m = d.getMinutes().toString().padStart(2, '0');
-  const period = d.getHours() < 12 ? 'AM' : 'PM';
-  return `${h}:${m} ${period}`;
+  return `${h}:${m} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
 }
 
-// Fixed boundaries per window: 15 | 15 | middle | 20 | 5 minutes
-function getKategoriWindows(start: Date, end: Date): Record<KategoriId, { from: Date; to: Date }> {
-  const s = start.getTime();
-  const e = end.getTime();
-  const F = 15 * 60 * 1000;  // fadhilat: first 15 min
-  const I = 15 * 60 * 1000;  // ikhtiar: next 15 min
-  const K = 20 * 60 * 1000;  // karahah: last 20 min
-  const T = 5 * 60 * 1000;   // tahrim: last 5 min
+// Sempadan tetap bagi setiap julat: 15 | 15 | baki | 20 | 5 minit.
+function julatKategori(mula: Date, tamat: Date): Record<KategoriId, { dari: Date; ke: Date }> {
+  const s = mula.getTime();
+  const e = tamat.getTime();
+  const F = 15 * 60_000;
+  const I = 15 * 60_000;
+  const K = 20 * 60_000;
+  const T = 5 * 60_000;
   return {
-    fadhilat: { from: new Date(s),         to: new Date(s + F) },
-    ikhtiar:  { from: new Date(s + F),     to: new Date(s + F + I) },
-    jawaz:    { from: new Date(s + F + I), to: new Date(e - K) },
-    karahah:  { from: new Date(e - K),     to: new Date(e - T) },
-    tahrim:   { from: new Date(e - T),     to: new Date(e) },
+    fadhilat: { dari: new Date(s), ke: new Date(s + F) },
+    ikhtiar: { dari: new Date(s + F), ke: new Date(s + F + I) },
+    jawaz: { dari: new Date(s + F + I), ke: new Date(e - K) },
+    karahah: { dari: new Date(e - K), ke: new Date(e - T) },
+    tahrim: { dari: new Date(e - T), ke: new Date(e) },
   };
 }
 
 export default function KategoriSolatPage() {
-  const [loading, setLoading] = useState(true);
-  const [noZone, setNoZone] = useState(false);
-  const [error, setError] = useState(false);
-  const [now, setNow] = useState(new Date());
-  const [prayerWindows, setPrayerWindows] = useState<{ name: string; start: Date; end: Date }[]>([]);
+  const [memuat, setMemuat] = useState(true);
+  const [tiadaZon, setTiadaZon] = useState(false);
+  const [ralat, setRalat] = useState(false);
+  const [kini, setKini] = useState(() => new Date());
+  const [julatSolat, setJulatSolat] = useState<{ nama: string; mula: Date; tamat: Date }[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
+    const jam = setInterval(() => setKini(new Date()), 1000);
+    return () => clearInterval(jam);
   }, []);
 
   useEffect(() => {
-    const zoneCode = localStorage.getItem('msolat_zone_code');
-    if (!zoneCode) { setNoZone(true); setLoading(false); return; }
+    const zon = localStorage.getItem('msolat_zone_code');
+    if (!zon) {
+      setTiadaZon(true);
+      setMemuat(false);
+      return;
+    }
 
-    const load = async () => {
+    (async () => {
       try {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+        const hariIni = new Date();
+        const semalam = new Date(hariIni);
+        semalam.setDate(hariIni.getDate() - 1);
+        const esok = new Date(hariIni);
+        esok.setDate(hariIni.getDate() + 1);
 
         const [td, tm, yd] = await Promise.all([
-          fetchSolat(zoneCode, today),
-          fetchSolat(zoneCode, tomorrow),
-          fetchSolat(zoneCode, yesterday),
+          fetchSolat(zon, hariIni),
+          fetchSolat(zon, esok),
+          fetchSolat(zon, semalam),
         ]);
 
-        const subuh   = parseTime(formatTime(td.prayerTime.fajr));
-        const syuruk  = parseTime(formatTime(td.prayerTime.syuruk));
-        const zohor   = parseTime(formatTime(td.prayerTime.dhuhr));
-        const asar    = parseTime(formatTime(td.prayerTime.asr));
-        const maghrib = parseTime(formatTime(td.prayerTime.maghrib));
-        const isyak   = parseTime(formatTime(td.prayerTime.isha));
-        const subuhTm = parseTime(formatTime(tm.prayerTime.fajr), tomorrow);
+        const t = (raw: string) => parseTime(formatTime(raw));
+        const subuh = t(td.prayerTime.fajr);
+        const syuruk = t(td.prayerTime.syuruk);
+        const zohor = t(td.prayerTime.dhuhr);
+        const asar = t(td.prayerTime.asr);
+        const maghrib = t(td.prayerTime.maghrib);
+        const isyak = t(td.prayerTime.isha);
 
-        const ydIsyak = parseTime(formatTime(yd.prayerTime.isha), yesterday);
-
-        setPrayerWindows([
-          // Post-midnight window: yesterday's Isyak → today's Subuh
-          { name: 'Isyak',   start: ydIsyak,  end: subuh },
-          { name: 'Subuh',   start: subuh,    end: syuruk },
-          { name: 'Zohor',   start: zohor,    end: asar },
-          { name: 'Asar',    start: asar,     end: maghrib },
-          { name: 'Maghrib', start: maghrib,  end: isyak },
-          { name: 'Isyak',   start: isyak,    end: subuhTm },
+        setJulatSolat([
+          // Julat selepas tengah malam: isyak semalam hingga subuh hari ini.
+          { nama: 'Isyak', mula: parseTime(formatTime(yd.prayerTime.isha), semalam), tamat: subuh },
+          { nama: 'Subuh', mula: subuh, tamat: syuruk },
+          { nama: 'Zohor', mula: zohor, tamat: asar },
+          { nama: 'Asar', mula: asar, tamat: maghrib },
+          { nama: 'Maghrib', mula: maghrib, tamat: isyak },
+          { nama: 'Isyak', mula: isyak, tamat: parseTime(formatTime(tm.prayerTime.fajr), esok) },
         ]);
       } catch {
-        setError(true);
+        setRalat(true);
       } finally {
-        setLoading(false);
+        setMemuat(false);
       }
-    };
-    load();
+    })();
   }, []);
 
-  const currentWindow = prayerWindows.find(w => now >= w.start && now < w.end) ?? null;
-  const kategoriWindows = currentWindow ? getKategoriWindows(currentWindow.start, currentWindow.end) : null;
-  const currentKategori: KategoriId | null = kategoriWindows
-    ? (Object.entries(kategoriWindows).find(([, { from, to }]) => now >= from && now < to)?.[0] as KategoriId ?? null)
+  const semasa = julatSolat.find(w => kini >= w.mula && kini < w.tamat) ?? null;
+  const julat = semasa ? julatKategori(semasa.mula, semasa.tamat) : null;
+  const kategoriSemasa: KategoriId | null = julat
+    ? ((Object.entries(julat).find(([, { dari, ke }]) => kini >= dari && kini < ke)?.[0] as KategoriId) ?? null)
     : null;
-  const currentKategoriEnd = currentKategori && kategoriWindows ? kategoriWindows[currentKategori].to : null;
-  const countdownMs = currentKategoriEnd ? Math.max(currentKategoriEnd.getTime() - now.getTime(), 0) : 0;
+  const tamatKategori = kategoriSemasa && julat ? julat[kategoriSemasa].ke : null;
+  const bakiMs = tamatKategori ? Math.max(tamatKategori.getTime() - kini.getTime(), 0) : 0;
+
+  const indeksSemasa = kategoriSemasa ? KATEGORI.findIndex(k => k.id === kategoriSemasa) : -1;
+  const kategoriSeterusnya = indeksSemasa >= 0 ? KATEGORI[indeksSemasa + 1] ?? null : null;
+  const julatSeterusnya = julatSolat.find(w => w.mula > kini) ?? null;
+
+  const jumlahMs = semasa ? semasa.tamat.getTime() - semasa.mula.getTime() : 0;
+  const kadarKini = semasa ? ((kini.getTime() - semasa.mula.getTime()) / jumlahMs) * 100 : 0;
 
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Kategori Waktu</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">5 kategori waktu dalam setiap waktu solat fardu.</p>
-        </header>
-
-        {/* Live status */}
-        <div className="mb-12">
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-8 w-52" />
-              <Skeleton className="h-3 w-40" />
-            </div>
-          ) : noZone ? (
-            <p className="text-sm text-muted-foreground">
-              Tiada zon dipilih.{' '}
-              <Link href="/tetapan" className="text-primary">Pergi ke Tetapan →</Link>
-            </p>
-          ) : error ? (
-            <p className="text-sm text-muted-foreground">Gagal memuatkan data.</p>
-          ) : currentWindow && currentKategori ? (
-            <>
-              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">
-                Sekarang · {currentWindow.name}
-              </p>
-              <p className="text-4xl font-display tracking-tight">
-                {KATEGORI.find(k => k.id === currentKategori)!.title}
-              </p>
-              <p className="text-sm text-muted-foreground mt-3">
-                Bertukar dalam{' '}
-                <span className="font-semibold text-foreground tabular-nums">{formatCountdown(countdownMs)}</span>
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Sekarang</p>
-              <p className="text-3xl font-display tracking-tight text-muted-foreground/50">Di luar waktu solat</p>
-            </>
-          )}
+    <PageShell
+      tajuk="Kategori Waktu"
+      lede="Setiap waktu solat fardu terbahagi kepada lima kategori, dari yang paling afdal hingga yang hampir terlepas."
+    >
+      {memuat ? (
+        <div className="space-y-10">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-56" />
+            <Skeleton className="h-4 w-44" />
+          </div>
+          <Skeleton className="h-3 w-full rounded-full" />
+          <div className="space-y-6">
+            {[0, 1, 2].map(i => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
         </div>
-
-        {/* Kategori list */}
-        <div className="divide-y divide-border/50">
-          {KATEGORI.map((item, index) => {
-            const isActive = item.id === currentKategori;
-            const windows = kategoriWindows?.[item.id];
-            const dimmed = !isActive && !!currentKategori;
-            return (
-              <div
-                key={item.id}
-                className={`py-5 flex gap-4 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
-              >
-                <span className={`text-sm font-bold w-5 shrink-0 pt-0.5 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`}>
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`text-sm font-medium ${isActive ? 'text-primary' : ''}`}>{item.title}</p>
-                    {isActive && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                        Sekarang
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
-                  {windows && currentWindow && (
-                    <p className="text-xs text-muted-foreground/40 tabular-nums mt-1">
-                      {fmt12(windows.from)} – {fmt12(windows.to)}
-                    </p>
+      ) : tiadaZon ? (
+        <Panduan
+          tajuk="Pilih zon anda dahulu"
+          teks="Kategori waktu dikira daripada waktu solat zon anda."
+          pautan="Pergi ke Tetapan"
+        />
+      ) : ralat ? (
+        <Panduan
+          tajuk="Data tidak dapat dimuatkan"
+          teks="Sambungan ke pangkalan data waktu solat gagal. Semak sambungan internet anda, kemudian muat semula halaman."
+        />
+      ) : (
+        <div className="flex flex-col gap-10">
+          {/* Jawapan halaman ini ialah nama kategori — itu yang dicari orang.
+              Kiraan detik memberitahu bila ia bertukar. */}
+          <div className="flex flex-col items-start gap-2">
+            {semasa && kategoriSemasa ? (
+              <>
+                <p className="text-muted-foreground">Sekarang dalam waktu {semasa.nama}</p>
+                <p className="paparan text-[16vw] leading-none text-primary lg:text-[8vw]">
+                  {KATEGORI.find(k => k.id === kategoriSemasa)!.title}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {kategoriSeterusnya ? (
+                    <>
+                      Bertukar kepada {kategoriSeterusnya.title} dalam{' '}
+                      <span className="tabular font-semibold text-foreground">{bakiMasaTeks(bakiMs)}</span>
+                    </>
+                  ) : (
+                    <>
+                      Waktu {semasa.nama} tamat dalam{' '}
+                      <span className="tabular font-semibold text-foreground">{bakiMasaTeks(bakiMs)}</span>
+                    </>
                   )}
-                </div>
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">Sekarang</p>
+                <p className="paparan text-[12vw] leading-none text-muted-foreground lg:text-[6vw]">
+                  Di luar waktu solat
+                </p>
+                {julatSeterusnya && (
+                  <p className="mt-1 text-muted-foreground">
+                    Waktu {julatSeterusnya.nama} bermula{' '}
+                    <span className="tabular font-semibold text-foreground">{fmt12(julatSeterusnya.mula)}</span>
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {semasa && julat && (
+            <dl className="flex flex-wrap gap-x-12 gap-y-4 border-t border-border/60 pt-5">
+              <div>
+                <dt className="text-sm text-muted-foreground">Waktu</dt>
+                <dd className="paparan mt-1 text-2xl">{semasa.nama}</dd>
               </div>
-            );
-          })}
+              <div>
+                <dt className="text-sm text-muted-foreground">Bermula</dt>
+                <dd className="angka-paparan mt-1 text-2xl">{fmt12(semasa.mula)}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Berakhir</dt>
+                <dd className="angka-paparan mt-1 text-2xl">{fmt12(semasa.tamat)}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Kategori ini</dt>
+                <dd className="angka-paparan mt-1 text-2xl">
+                  {fmt12(julat[kategoriSemasa!].dari)} – {fmt12(julat[kategoriSemasa!].ke)}
+                </dd>
+              </div>
+            </dl>
+          )}
+
+          {/* Kategori ialah julat masa yang berturutan, jadi lebarnya
+              menunjukkan tempoh sebenar masing-masing. */}
+          {semasa && julat && (
+            <section>
+              <div className="relative flex h-3 overflow-hidden rounded-full bg-muted">
+                {KATEGORI.map(k => {
+                  const w = julat[k.id];
+                  const lebar = ((w.ke.getTime() - w.dari.getTime()) / jumlahMs) * 100;
+                  const aktif = k.id === kategoriSemasa;
+                  return (
+                    <div
+                      key={k.id}
+                      style={{ width: `${lebar}%` }}
+                      className={`h-full border-r border-background/70 last:border-r-0 ${
+                        aktif ? 'bg-primary' : 'bg-primary/25'
+                      }`}
+                    />
+                  );
+                })}
+                <div
+                  className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-background"
+                  style={{ left: `${Math.min(Math.max(kadarKini, 0), 100)}%` }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                <span className="tabular">{fmt12(semasa.mula)}</span>
+                <span className="tabular">{fmt12(semasa.tamat)}</span>
+              </div>
+            </section>
+          )}
+
+          <ol className="divide-y divide-border/50">
+            {KATEGORI.map(item => {
+              const aktif = item.id === kategoriSemasa;
+              const w = julat?.[item.id];
+              return (
+                <li key={item.id} className="flex gap-4 py-6">
+                  <span className={`mt-1.5 size-2 shrink-0 rounded-full ${aktif ? 'bg-primary' : 'bg-border'}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-3">
+                      <p className={`paparan text-lg ${aktif ? 'text-primary' : ''}`}>{item.title}</p>
+                      {w && (
+                        <p className="angka-paparan text-sm text-muted-foreground">
+                          {fmt12(w.dari)} – {fmt12(w.ke)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="mt-1 max-w-[52ch] leading-relaxed text-muted-foreground">{item.description}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
-      </main>
+      )}
+    </PageShell>
+  );
+}
+
+function Panduan({ tajuk, teks, pautan }: { tajuk: string; teks: string; pautan?: string }) {
+  return (
+    <div className="max-w-md">
+      <p className="paparan text-2xl ">{tajuk}</p>
+      <p className="mt-2 leading-relaxed text-muted-foreground">{teks}</p>
+      {pautan && (
+        <Link
+          href="/tetapan"
+          className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+        >
+          {pautan}
+        </Link>
+      )}
     </div>
   );
 }

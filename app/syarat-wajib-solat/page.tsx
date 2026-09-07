@@ -1,4 +1,6 @@
-import Sidebar from '@/components/Sidebar';
+import PageShell from '@/components/PageShell';
+import { SenaraiSkrol, ItemSkrol } from '@/components/SenaraiSkrol';
+
 
 const SYARAT_WAJIB: { name: string; note?: string }[] = [
   { name: 'Islam' },
@@ -21,43 +23,41 @@ const SYARAT_WAJIB: { name: string; note?: string }[] = [
 
 export default function SyaratWajibSolatPage() {
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Syarat Wajib Solat</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">7 syarat yang mewajibkan seseorang untuk menunaikan solat.</p>
-        </header>
-
-        <div className="divide-y divide-border/50">
-          {SYARAT_WAJIB.map((syarat, i) => (
-            <div key={syarat.name} className="flex gap-4 py-5">
-              <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right mt-0.5">{i + 1}</span>
-              <div className="min-w-0">
-                <p className="text-sm leading-snug">{syarat.name}</p>
-                {syarat.note && (
-                  <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{syarat.note}</p>
-                )}
-              </div>
+    <PageShell
+      tajuk="Syarat Wajib Solat"
+      lede="Tujuh syarat yang menjadikan solat wajib ke atas seseorang. Semuanya perlu dipenuhi serentak."
+    >
+      <SenaraiSkrol>
+      <ul className="divide-y divide-border/50">
+        {SYARAT_WAJIB.map(syarat => (
+          <ItemSkrol key={syarat.name} className="py-9 lg:py-11">
+            <div className="min-w-0">
+              <p className="text-xl font-medium leading-snug lg:text-2xl">{syarat.name}</p>
+              {syarat.note && (
+                <p className="mt-1 max-w-[58ch] leading-relaxed text-muted-foreground">{syarat.note}</p>
+              )}
             </div>
-          ))}
-        </div>
+          </ItemSkrol>
+        ))}
+      </ul>
+      </SenaraiSkrol>
 
-        {/* Video */}
-        <div className="mt-10">
-          <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Tonton</p>
-          <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border/40">
-            <iframe
-              src="https://www.youtube.com/embed/UJqkAkh37pE"
-              title="Syarat Wajib Solat"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full"
-            />
-          </div>
+      {/* Videonya menegak. Bingkai 16:9 selebar halaman hanya menghasilkan
+          palang hitam yang besar, jadi bingkai mengikut nisbah video itu
+          sendiri dan kadnya digugurkan seperti kad lain dalam aplikasi. */}
+      <section className="mt-20">
+        <h2 className="paparan text-2xl">Tonton penerangan</h2>
+        <div className="relative mt-5 aspect-[9/16] w-full max-w-xs overflow-hidden rounded-2xl">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/UJqkAkh37pE"
+            title="Penerangan syarat wajib solat"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 h-full w-full"
+          />
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

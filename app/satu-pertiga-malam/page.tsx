@@ -3,288 +3,310 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import PageShell from '@/components/PageShell';
 import { formatTime } from '@/utils/format';
-import Sidebar from '@/components/Sidebar';
+import { fetchSolat, parseTime, pecahMs } from '@/lib/solat';
 
-function parseTime(time: string, baseDate?: Date): Date {
-  const base = baseDate ? new Date(baseDate) : new Date();
-  const [hourStr, rest] = time.split(':');
-  const minute = Number(rest.split(' ')[0]);
-  const period = time.includes('PM') ? 'PM' : 'AM';
-  let hour = Number(hourStr);
-  if (period === 'PM' && hour !== 12) hour += 12;
-  if (period === 'AM' && hour === 12) hour = 0;
-  base.setHours(hour, minute, 0, 0);
-  return base;
-}
-
-async function fetchSolat(zone: string, date: Date) {
-  const res = await fetch(
-    `https://api.waktusolat.app/solat/${zone}/${date.getDate()}?year=${date.getFullYear()}&month=${date.getMonth() + 1}`
-  );
-  const data = await res.json();
-  if (!res.ok || data.status !== 'OK!') throw new Error();
-  return data;
-}
+type Keadaan = 'sebelum' | 'berlangsung' | 'tamat';
 
 function fmt12(d: Date) {
   const h = d.getHours() % 12 || 12;
-  const m = d.getMinutes().toString().padStart(2, '0');
-  return `${h}:${m}`;
-}
-
-function formatCountdown(ms: number) {
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  const parts: string[] = [];
-  if (h > 0) parts.push(`${h} jam`);
-  if (m > 0) parts.push(`${m} minit`);
-  parts.push(`${s} saat`);
-  return parts.join(' ');
+  return `${h}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
 export default function SatuPertigaMalamPage() {
-  const [loading, setLoading] = useState(true);
-  const [noZone, setNoZone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [now, setNow] = useState(new Date());
+  const [memuat, setMemuat] = useState(true);
+  const [tiadaZon, setTiadaZon] = useState(false);
+  const [ralat, setRalat] = useState(false);
+  const [kini, setKini] = useState(() => new Date());
 
-  const [maghribLabel, setMaghribLabel] = useState('');
-  const [subuhLabel, setSubuhLabel] = useState('');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [maghribDate, setMaghribDate] = useState<Date | null>(null);
-  const [durationMin, setDurationMin] = useState(0);
-  const [thirdMin, setThirdMin] = useState(0);
+  const [labelMaghrib, setLabelMaghrib] = useState('');
+  const [labelSubuh, setLabelSubuh] = useState('');
+  const [mulaSatuPertiga, setMulaSatuPertiga] = useState<Date | null>(null);
+  const [subuh, setSubuh] = useState<Date | null>(null);
+  const [maghrib, setMaghrib] = useState<Date | null>(null);
+  const [tempohMalam, setTempohMalam] = useState(0);
+  const [tempohSatuPertiga, setTempohSatuPertiga] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
+    const jam = setInterval(() => setKini(new Date()), 1000);
+    return () => clearInterval(jam);
   }, []);
 
   useEffect(() => {
-    const zoneCode = localStorage.getItem('msolat_zone_code');
-    if (!zoneCode) {
-      setNoZone(true);
-      setLoading(false);
+    const zon = localStorage.getItem('msolat_zone_code');
+    if (!zon) {
+      setTiadaZon(true);
+      setMemuat(false);
       return;
     }
 
-    const load = async () => {
+    (async () => {
       try {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+        const hariIni = new Date();
+        const semalam = new Date(hariIni);
+        semalam.setDate(hariIni.getDate() - 1);
+        const esok = new Date(hariIni);
+        esok.setDate(hariIni.getDate() + 1);
 
-        const [todayRes, tomorrowRes, yesterdayRes] = await Promise.all([
-          fetchSolat(zoneCode, today),
-          fetchSolat(zoneCode, tomorrow),
-          fetchSolat(zoneCode, yesterday),
+        const [td, tm, yd] = await Promise.all([
+          fetchSolat(zon, hariIni),
+          fetchSolat(zon, esok),
+          fetchSolat(zon, semalam),
         ]);
 
-        const todaySubuh = parseTime(formatTime(todayRes.prayerTime.fajr));
-        const isPostMidnight = new Date() < todaySubuh;
+        const subuhHariIni = parseTime(formatTime(td.prayerTime.fajr));
+        // Selepas tengah malam tetapi sebelum fajar, malam yang sedang
+        // berjalan ialah maghrib semalam hingga subuh hari ini.
+        const selepasTengahMalam = new Date() < subuhHariIni;
 
-        let maghrib: Date;
-        let subuh: Date;
-        let maghribLabel: string;
-        let subuhLabel: string;
+        const m = selepasTengahMalam
+          ? parseTime(formatTime(yd.prayerTime.maghrib), semalam)
+          : parseTime(formatTime(td.prayerTime.maghrib));
+        const s = selepasTengahMalam
+          ? subuhHariIni
+          : parseTime(formatTime(tm.prayerTime.fajr), esok);
 
-        if (isPostMidnight) {
-          // After midnight but before dawn — current night = yesterday's Maghrib → today's Subuh
-          maghrib = parseTime(formatTime(yesterdayRes.prayerTime.maghrib), yesterday);
-          subuh = todaySubuh;
-          maghribLabel = formatTime(yesterdayRes.prayerTime.maghrib);
-          subuhLabel = formatTime(todayRes.prayerTime.fajr);
-        } else {
-          // Daytime or evening — next night = today's Maghrib → tomorrow's Subuh
-          maghrib = parseTime(formatTime(todayRes.prayerTime.maghrib));
-          const subuhBase = new Date(today);
-          subuhBase.setDate(today.getDate() + 1);
-          subuh = parseTime(formatTime(tomorrowRes.prayerTime.fajr), subuhBase);
-          maghribLabel = formatTime(todayRes.prayerTime.maghrib);
-          subuhLabel = formatTime(tomorrowRes.prayerTime.fajr);
-        }
+        const malamMs = s.getTime() - m.getTime();
+        const satuPertigaMs = malamMs / 3;
 
-        const nightMs = subuh.getTime() - maghrib.getTime();
-        const thirdMs = nightMs / 3;
-        const start = new Date(subuh.getTime() - thirdMs);
-
-        setMaghribLabel(maghribLabel);
-        setSubuhLabel(subuhLabel);
-        setStartDate(start);
-        setEndDate(subuh);
-        setMaghribDate(maghrib);
-        setDurationMin(Math.round(nightMs / 60000));
-        setThirdMin(Math.round(thirdMs / 60000));
+        setLabelMaghrib(formatTime(selepasTengahMalam ? yd.prayerTime.maghrib : td.prayerTime.maghrib));
+        setLabelSubuh(formatTime(selepasTengahMalam ? td.prayerTime.fajr : tm.prayerTime.fajr));
+        setMaghrib(m);
+        setSubuh(s);
+        setMulaSatuPertiga(new Date(s.getTime() - satuPertigaMs));
+        setTempohMalam(Math.round(malamMs / 60_000));
+        setTempohSatuPertiga(Math.round(satuPertigaMs / 60_000));
       } catch {
-        setError('Gagal memuatkan data. Sila cuba semula.');
+        setRalat(true);
       } finally {
-        setLoading(false);
+        setMemuat(false);
       }
-    };
-
-    load();
+    })();
   }, []);
 
-  const status: 'before' | 'active' | 'ended' | null =
-    !startDate || !endDate ? null
-    : now < startDate ? 'before'
-    : now < endDate ? 'active'
-    : 'ended';
+  const keadaan: Keadaan | null =
+    !mulaSatuPertiga || !subuh ? null : kini < mulaSatuPertiga ? 'sebelum' : kini < subuh ? 'berlangsung' : 'tamat';
 
-  const timelineNowPct =
-    maghribDate && endDate
-      ? Math.min(Math.max(((now.getTime() - maghribDate.getTime()) / (endDate.getTime() - maghribDate.getTime())) * 100, 0), 100)
-      : null;
-
-  const thirdStartPct =
-    maghribDate && startDate && endDate
-      ? ((startDate.getTime() - maghribDate.getTime()) / (endDate.getTime() - maghribDate.getTime())) * 100
-      : null;
-
-  const countdownMs = startDate ? Math.max(startDate.getTime() - now.getTime(), 0) : 0;
-  const remainingMs = endDate ? Math.max(endDate.getTime() - now.getTime(), 0) : 0;
+  const julat = maghrib && subuh ? subuh.getTime() - maghrib.getTime() : 0;
+  const kadarKini =
+    maghrib && julat ? Math.min(Math.max(((kini.getTime() - maghrib.getTime()) / julat) * 100, 0), 100) : null;
+  const kadarMula =
+    maghrib && mulaSatuPertiga && julat ? ((mulaSatuPertiga.getTime() - maghrib.getTime()) / julat) * 100 : null;
 
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Satu Pertiga Malam</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">Waktu terbaik untuk qiamullail dan doa mustajab.</p>
-        </header>
-
-        {loading ? (
-          <div className="space-y-10">
-            {/* Main time display */}
-            <div className="space-y-3">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-14 w-72" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            {/* Timeline */}
-            <div>
-              <Skeleton className="h-1 w-full rounded-full" />
-              <div className="flex justify-between mt-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-            {/* Details rows */}
-            <div className="divide-y divide-border/50">
-              {[0, 1].map(i => (
-                <div key={i} className="flex justify-between py-3">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              ))}
-            </div>
+    <PageShell
+      tajuk="Satu Pertiga Malam"
+      lede="Satu pertiga malam terakhir — waktu qiamullail dan doa mustajab. Ia dikira daripada maghrib hingga subuh, bukan daripada tengah malam."
+    >
+      {memuat ? (
+        <div className="space-y-10">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-14 w-80" />
+            <Skeleton className="h-4 w-52" />
           </div>
-        ) : noZone ? (
-          <p className="text-sm text-muted-foreground">
-            Tiada zon dipilih.{' '}
-            <Link href="/tetapan" className="text-primary">Pergi ke Tetapan →</Link>
-          </p>
-        ) : error ? (
-          <p className="text-sm text-muted-foreground">{error}</p>
-        ) : (
-          <div className="space-y-10">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : tiadaZon ? (
+        <Panduan
+          tajuk="Pilih zon anda dahulu"
+          teks="Waktu satu pertiga malam dikira daripada waktu maghrib dan subuh zon anda."
+          pautan
+        />
+      ) : ralat ? (
+        <Panduan
+          tajuk="Data tidak dapat dimuatkan"
+          teks="Sambungan ke pangkalan data waktu solat gagal. Semak sambungan internet anda, kemudian muat semula halaman."
+        />
+      ) : (
+        <div className="flex flex-col gap-10">
+          {/* Fakta halaman ini bukan julat statik — ia berapa lama lagi.
+              Jadi ia mendapat layanan kiraan detik yang sama seperti hero
+              di halaman utama. */}
+          <div className="flex flex-col items-start gap-2">
+            <p className="paparan text-2xl leading-none lg:text-3xl">
+              {keadaan === 'berlangsung'
+                ? 'Berakhir dalam'
+                : keadaan === 'tamat'
+                  ? 'Telah berlalu'
+                  : 'Bermula dalam'}
+              <span className="tabular ml-3 font-sans text-base font-normal text-muted-foreground">
+                {fmt12(mulaSatuPertiga!)} – {fmt12(subuh!)} AM
+              </span>
+            </p>
 
-            {/* Main time display */}
-            <div>
-              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-4 font-semibold">
-                {status === 'active' ? 'Sedang Berlangsung' : status === 'ended' ? 'Telah Berlalu' : 'Malam ini'}
+            {keadaan === 'tamat' ? (
+              <p className="angka-paparan text-[14vw] leading-none text-muted-foreground lg:text-[8vw]">
+                &mdash;
               </p>
-              <p className="text-5xl lg:text-7xl font-display tracking-tight leading-none">
-                {fmt12(startDate!)}{' '}
-                <span className="text-3xl font-normal text-muted-foreground">–</span>{' '}
-                {fmt12(endDate!)}{' '}
-                <span className="text-2xl font-normal text-muted-foreground">AM</span>
-              </p>
-
-              <div className="mt-4 h-5">
-                {status === 'before' && (
-                  <p className="text-sm text-muted-foreground">
-                    Bermula dalam{' '}
-                    <span className="font-semibold text-foreground tabular-nums">{formatCountdown(countdownMs)}</span>
-                  </p>
-                )}
-                {status === 'active' && (
-                  <p className="text-sm font-medium" style={{ color: 'oklch(0.55 0.13 162)' }}>
-                    Berakhir dalam <span className="tabular-nums">{formatCountdown(remainingMs)}</span>
-                  </p>
-                )}
-                {status === 'ended' && (
-                  <p className="text-sm text-muted-foreground/50">Waktu 1/3 malam telah berakhir.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Timeline */}
-            {thirdStartPct !== null && timelineNowPct !== null && (
-              <div>
-                <div className="relative h-1 bg-muted rounded-full">
-                  {/* 1/3 malam highlight */}
-                  <div
-                    className="absolute top-0 h-full rounded-full"
-                    style={{
-                      left: `${thirdStartPct}%`,
-                      right: '0%',
-                      backgroundColor: status === 'active' ? 'oklch(0.55 0.13 162)' : undefined,
-                      opacity: status === 'active' ? 1 : 0.25,
-                      background: status !== 'active' ? 'var(--foreground)' : undefined,
-                    }}
-                  />
-                  {/* Current time dot */}
-                  {timelineNowPct > 0 && timelineNowPct < 100 && (
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-foreground ring-2 ring-background"
-                      style={{ left: `calc(${timelineNowPct}% - 4px)` }}
-                    />
-                  )}
-                </div>
-                <div className="flex justify-between mt-2">
-                  <span className="text-[10px] text-muted-foreground/40 tabular-nums">Maghrib · {maghribLabel}</span>
-                  <span className="text-[10px] text-muted-foreground/40 tabular-nums">Subuh · {subuhLabel}</span>
-                </div>
-              </div>
+            ) : (
+              <KiraTurun
+                ms={
+                  keadaan === 'berlangsung'
+                    ? subuh!.getTime() - kini.getTime()
+                    : mulaSatuPertiga!.getTime() - kini.getTime()
+                }
+                aktif={keadaan === 'berlangsung'}
+              />
             )}
 
-            {/* Details */}
-            <div className="divide-y divide-border/50">
-              <div className="flex justify-between py-4">
-                <span className="text-sm text-muted-foreground">Tempoh malam</span>
-                <span className="text-sm font-semibold tabular-nums">
-                  {Math.floor(durationMin / 60)} jam {durationMin % 60} minit
-                </span>
-              </div>
-              <div className="flex justify-between py-4">
-                <span className="text-sm text-muted-foreground">Tempoh 1/3 malam</span>
-                <span className="text-sm font-semibold tabular-nums">
-                  {Math.floor(thirdMin / 60)} jam {thirdMin % 60} minit
-                </span>
-              </div>
-            </div>
-
-            {/* Cara kiraan */}
-            <div>
-              <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-4 font-semibold">Cara Kiraan</p>
-              <ol className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">1</span><span>Kenal pasti waktu Maghrib dan Subuh esok</span></li>
-                <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">2</span><span>Kira tempoh malam: Subuh − Maghrib</span></li>
-                <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">3</span><span>Bahagikan kepada 3 bahagian sama rata</span></li>
-                <li className="flex gap-3"><span className="font-bold text-foreground/30 shrink-0">4</span><span>1/3 malam terakhir bermula pada Subuh − (tempoh 1/3 malam)</span></li>
-              </ol>
-            </div>
-
+            <p className="text-muted-foreground">
+              {keadaan === 'berlangsung'
+                ? 'Satu pertiga malam terakhir sedang berjalan.'
+                : keadaan === 'tamat'
+                  ? 'Waktu satu pertiga malam telah berakhir untuk malam ini.'
+                  : 'Sehingga masuk satu pertiga malam terakhir.'}
+            </p>
           </div>
-        )}
-      </main>
+
+          <dl className="flex flex-wrap gap-x-12 gap-y-4 border-t border-border/60 pt-5">
+            <div>
+              <dt className="text-sm text-muted-foreground">Maghrib</dt>
+              <dd className="angka-paparan mt-1 text-2xl">{labelMaghrib}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Subuh</dt>
+              <dd className="angka-paparan mt-1 text-2xl">{labelSubuh}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Tempoh malam</dt>
+              <dd className="angka-paparan mt-1 text-2xl">
+                {Math.floor(tempohMalam / 60)}j {tempohMalam % 60}m
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Satu pertiga malam</dt>
+              <dd className="angka-paparan mt-1 text-2xl">
+                {Math.floor(tempohSatuPertiga / 60)}j {tempohSatuPertiga % 60}m
+              </dd>
+            </div>
+          </dl>
+
+          {/* Jalur malam: satu garis masa nipis, bukan blok pekat. */}
+          {kadarMula !== null && (
+            <section>
+              <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                <div className="absolute inset-y-0 right-0 bg-primary" style={{ left: `${kadarMula}%` }} />
+                {keadaan !== 'tamat' && kadarKini !== null && (
+                  <div
+                    className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-background"
+                    style={{ left: `${Math.min(Math.max(kadarKini, 0), 100)}%` }}
+                  />
+                )}
+              </div>
+              <div className="mt-2 flex justify-between text-sm text-muted-foreground">
+                <span>Maghrib</span>
+                <span className="text-primary">Satu pertiga terakhir bermula {fmt12(mulaSatuPertiga!)}</span>
+                <span>Subuh</span>
+              </div>
+            </section>
+          )}
+
+          <section className="max-w-[68ch]">
+            <h2 className="paparan text-2xl">Cara ia dikira</h2>
+
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              Malam dalam kiraan ini bermula pada <span className="text-foreground">maghrib</span> dan
+              berakhir pada <span className="text-foreground">subuh</span> — bukan dari tengah malam.
+              Sebab itu waktu satu pertiga terakhir berubah sedikit setiap hari, mengikut peredaran
+              matahari di zon anda.
+            </p>
+
+            <h3 className="paparan mt-8 text-lg">Langkah demi langkah</h3>
+            <ol className="mt-3 space-y-4">
+              {[
+                {
+                  tajuk: 'Ambil waktu maghrib dan subuh',
+                  teks: `Maghrib malam ini ${labelMaghrib}, dan subuh esok ${labelSubuh}. Subuh yang digunakan ialah subuh keesokan harinya, kerana malam melangkaui tengah malam.`,
+                },
+                {
+                  tajuk: 'Kira tempoh malam',
+                  teks: `Subuh tolak maghrib. Untuk malam ini: ${labelSubuh} − ${labelMaghrib} = ${Math.floor(tempohMalam / 60)} jam ${tempohMalam % 60} minit.`,
+                },
+                {
+                  tajuk: 'Bahagi kepada tiga',
+                  teks: `Setiap satu pertiga ialah ${Math.floor(tempohSatuPertiga / 60)} jam ${tempohSatuPertiga % 60} minit. Ketiga-tiga bahagian sama panjang.`,
+                },
+                {
+                  tajuk: 'Tolak satu bahagian daripada subuh',
+                  teks: `${labelSubuh} tolak ${Math.floor(tempohSatuPertiga / 60)} jam ${tempohSatuPertiga % 60} minit = ${fmt12(mulaSatuPertiga!)} AM. Itulah permulaan sepertiga terakhir, dan ia berterusan sehingga masuk subuh.`,
+                },
+              ].map((langkah, i) => (
+                <li key={langkah.tajuk} className="flex gap-4">
+                  <span className="angka-paparan shrink-0 text-xl text-foreground/35">{i + 1}</span>
+                  <div>
+                    <p className="font-semibold">{langkah.tajuk}</p>
+                    <p className="mt-1 leading-relaxed text-muted-foreground">{langkah.teks}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <h3 className="paparan mt-8 text-lg">Kenapa bukan tengah malam?</h3>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Tengah malam jam 12:00 ialah pembahagian jam moden, bukan pembahagian malam. Kerana
+              panjang malam berubah sepanjang tahun, titik tengah malam yang sebenar jarang jatuh
+              tepat pada pukul 12. Untuk malam ini, pertengahan malam sebenarnya sekitar{' '}
+              <span className="text-foreground">
+                {fmt12(new Date(maghrib!.getTime() + (subuh!.getTime() - maghrib!.getTime()) / 2))}
+              </span>
+              .
+            </p>
+
+            <h3 className="paparan mt-8 text-lg">Kenapa waktu ini disebut</h3>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Satu pertiga malam terakhir ialah waktu yang digalakkan untuk qiamullail dan tahajud, dan
+              disebut dalam hadis sebagai waktu doa lebih hampir untuk dimakbulkan.
+            </p>
+
+            <p className="mt-6 text-sm text-muted-foreground">
+              Waktu dikira daripada data JAKIM untuk zon anda. Imsak dan dhuha di halaman lain juga
+              dikira daripada waktu yang sama.
+            </p>
+          </section>
+        </div>
+      )}
+    </PageShell>
+  );
+}
+
+function Panduan({ tajuk, teks, pautan }: { tajuk: string; teks: string; pautan?: boolean }) {
+  return (
+    <div className="max-w-md">
+      <p className="paparan text-2xl ">{tajuk}</p>
+      <p className="mt-2 leading-relaxed text-muted-foreground">{teks}</p>
+      {pautan && (
+        <Link
+          href="/tetapan"
+          className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+        >
+          Pergi ke Tetapan
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** Kiraan detik dalam layanan yang sama seperti hero halaman utama. */
+function KiraTurun({ ms, aktif }: { ms: number; aktif: boolean }) {
+  const { jam, minit, saat } = pecahMs(ms);
+  const unit = [
+    ...(jam > 0 ? [{ nilai: String(jam).padStart(2, '0'), label: 'jam' }] : []),
+    { nilai: String(minit).padStart(2, '0'), label: 'minit' },
+    { nilai: String(saat).padStart(2, '0'), label: 'saat' },
+  ];
+  return (
+    <div className="flex items-start gap-3 lg:gap-4">
+      {unit.map(({ nilai, label }) => (
+        <div key={label} className="flex flex-col items-center gap-1.5">
+          <span className={`angka-paparan text-[14vw] leading-none lg:text-[8vw] ${aktif ? 'text-primary' : ''}`}>
+            {nilai}
+          </span>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+      ))}
     </div>
   );
 }

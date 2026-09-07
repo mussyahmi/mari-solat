@@ -7,8 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Waktu Solat Malaysia',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#ffffff',
+    // Sepadan dengan --background dan --primary dalam globals.css.
+    background_color: '#0b1310',
+    theme_color: '#0b1310',
     orientation: 'portrait',
     icons: [
       {

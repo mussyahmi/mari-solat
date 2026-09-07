@@ -2,7 +2,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getFirestore } from 'firebase-admin/firestore';
 
-function getAdminApp() {
+export function adminApp() {
   if (getApps().length > 0) return getApps()[0];
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     const sa = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString());
@@ -12,7 +12,7 @@ function getAdminApp() {
 }
 
 export function adminDb() {
-  return getFirestore(getAdminApp());
+  return getFirestore(adminApp());
 }
 
 export async function sendPushNotification(
@@ -22,7 +22,7 @@ export async function sendPushNotification(
   data?: Record<string, string>,
 ): Promise<string[]> {
   if (tokens.length === 0) return [];
-  const messaging = getMessaging(getAdminApp());
+  const messaging = getMessaging(adminApp());
   const invalidTokens: string[] = [];
 
   for (let i = 0; i < tokens.length; i += 500) {

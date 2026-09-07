@@ -1,4 +1,6 @@
-import Sidebar from '@/components/Sidebar';
+import PageShell from '@/components/PageShell';
+import { SenaraiSkrol, ItemSkrol } from '@/components/SenaraiSkrol';
+
 
 const SYARAT_SAH: {
   name: string;
@@ -41,40 +43,39 @@ const SYARAT_SAH: {
 
 export default function SyaratSahSolatPage() {
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Syarat Sah Solat</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">5 syarat sah solat seseorang.</p>
-        </header>
-
-        <div className="divide-y divide-border/50">
-          {SYARAT_SAH.map((item, i) => (
-            <div key={item.name} className="flex gap-4 py-5">
-              <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right mt-0.5">{i + 1}</span>
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm font-medium leading-snug">{item.name}</p>
-                <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{item.desc}</p>
-                {item.quote && (
-                  <blockquote className="border-l-2 border-border pl-3 mt-2">
-                    <p className="text-xs text-muted-foreground/70 italic leading-relaxed">"{item.quote.text}"</p>
-                    <p className="text-xs text-muted-foreground/40 mt-1">{item.quote.source}</p>
-                  </blockquote>
-                )}
-              </div>
+    <PageShell
+      tajuk="Syarat Sah Solat"
+      lede="Lima syarat yang menentukan sama ada solat itu sah. Jika satu tidak dipenuhi, solat perlu diulang."
+    >
+      <SenaraiSkrol>
+      <ul className="divide-y divide-border/50">
+        {SYARAT_SAH.map(item => (
+          <ItemSkrol key={item.name} className="py-9 lg:py-12">
+            <div className="min-w-0">
+              <p className="text-xl font-medium leading-snug lg:text-2xl">{item.name}</p>
+              <p className="mt-1.5 max-w-[58ch] leading-relaxed text-muted-foreground">{item.desc}</p>
+              {item.quote && (
+                <blockquote className="mt-3 border-l-2 border-primary/30 pl-4">
+                  <p className="max-w-[54ch] text-sm italic leading-relaxed text-muted-foreground">
+                    {item.quote.text}
+                  </p>
+                  <cite className="mt-1.5 block text-xs not-italic text-muted-foreground">{item.quote.source}</cite>
+                </blockquote>
+              )}
             </div>
-          ))}
-        </div>
+          </ItemSkrol>
+        ))}
+      </ul>
+      </SenaraiSkrol>
 
-        {/* Nota */}
-        <div className="mt-8 rounded-lg bg-muted/50 border border-border/50 px-4 py-3">
-          <p className="text-xs text-muted-foreground/70 leading-relaxed">
-            <span className="font-semibold text-muted-foreground">Nota:</span> Sekiranya sesudah tamat solat lalu disedari salah satu syarat di atas tidak dipenuhi — misalnya didapati ada najis di sejadah — maka perlulah diulangi solat tersebut kerana ia tidak menepati syarat sah solat.
-          </p>
-        </div>
-      </main>
-    </div>
+      <section className="mt-20 max-w-[68ch]">
+        <h2 className="paparan text-2xl">Jika disedari selepas solat</h2>
+        <p className="mt-4 leading-relaxed text-muted-foreground">
+          Jika anda menyedari selepas selesai solat bahawa salah satu syarat ini tidak dipenuhi,
+          contohnya ada najis pada sejadah, solat itu perlu diulang kerana ia tidak menepati
+          syarat sah.
+        </p>
+      </section>
+    </PageShell>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ExternalLinkIcon, Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -12,7 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import Sidebar from '@/components/Sidebar';
+import PageShell from '@/components/PageShell';
 import { setManualZone } from '@/lib/zoneState';
 import {
   AZAN_PRAYERS, PRAYER_LABELS,
@@ -26,6 +27,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export default function TetapanPage() {
+  const router = useRouter();
   const [zone, setZone] = useState<string | null>(null);
   const [allZones, setAllZones] = useState<any[]>([]);
   const [showZoneSelector, setShowZoneSelector] = useState(false);
@@ -83,7 +85,8 @@ export default function TetapanPage() {
     saveZone(zoneData.jakimCode, `${zoneData.jakimCode} · ${zoneData.daerah}`, true);
     setShowZoneSelector(false);
     setSelectedNegeri('');
-    toast.success('Zon dikemaskini.');
+    toast.success(`Zon ditetapkan ke ${zoneData.daerah}.`);
+    router.push('/');
   };
 
   const detectLocation = () => {
@@ -100,7 +103,8 @@ export default function TetapanPage() {
           const data = await res.json();
           if (!res.ok || 'error' in data) throw new Error();
           saveZone(data.zone, `${data.zone} · ${data.district}`, false);
-          toast.success('Zon dikesan daripada lokasi anda.');
+          toast.success(`Zon dikesan: ${data.district}.`);
+          router.push('/');
         } catch {
           toast.error('Tiada zon ditemui untuk lokasi ini.');
         } finally {
@@ -179,161 +183,205 @@ export default function TetapanPage() {
 
   const negeriList = Array.from(new Set(allZones.map(z => z.negeri)));
 
+  // Zon disimpan sebagai "WLY01 · Kuala Lumpur". Rentetan titik-tengah itu
+  // ialah format storan, bukan sesuatu yang perlu dibaca begitu — jadi ia
+  // dipecahkan semula kepada nama dan kod.
+  const [kodZon, namaZon] = (() => {
+    if (!zone) return [null, null] as const;
+    const [kod, ...baki] = zone.split(' · ');
+    return baki.length ? ([kod, baki.join(' · ')] as const) : ([null, kod] as const);
+  })();
+
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
+    <PageShell
+      tajuk="Tetapan"
+      lede="Zon menentukan setiap waktu yang dipaparkan dalam aplikasi ini."
+    >
+      {/* Zon ialah satu-satunya fakta halaman ini, jadi ia diberi layanan
+          yang sama seperti nombor hero di halaman lain. */}
+      <div className="flex flex-col items-start gap-3">
+        <p className="paparan text-2xl leading-none lg:text-3xl">Zon anda</p>
+        {namaZon ? (
+          <>
+            <p className="paparan text-5xl leading-none lg:text-6xl">{namaZon}</p>
+            {kodZon && <p className="text-muted-foreground">{kodZon}</p>}
+          </>
+        ) : (
+          <p className="paparan text-5xl leading-none text-muted-foreground lg:text-6xl">
+            Belum dipilih
+          </p>
+        )}
+      </div>
 
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12 max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Tetapan</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">Urus zon waktu solat anda.</p>
-        </header>
+      <div className="mt-10 flex flex-wrap gap-3">
+        <button
+          onClick={() => { setSelectedNegeri(''); setShowZoneSelector(true); }}
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+        >
+          <PencilIcon className="size-4" />
+          Pilih zon
+        </button>
+        <button
+          onClick={detectLocation}
+          disabled={isLocating}
+          className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40"
+        >
+          {isLocating ? <Loader2Icon className="size-4 animate-spin" /> : <MapPinIcon className="size-4" />}
+          {isLocating ? 'Mengesan…' : 'Kesan dari lokasi semasa'}
+        </button>
+      </div>
 
-        <div className="divide-y divide-border/50">
-
-          {/* Zone */}
-          <div className="py-5">
-            <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Zon Waktu Solat</p>
-            <div className="flex items-center justify-between gap-4">
-              {zone
-                ? <p className="text-sm font-medium">{zone}</p>
-                : <p className="text-sm text-muted-foreground">Tiada zon dipilih</p>
-              }
-              <Button variant="outline" size="sm" className="shrink-0" onClick={() => { setSelectedNegeri(''); setShowZoneSelector(true); }}>
-                <PencilIcon className="size-3.5 mr-1.5" />Tukar
-              </Button>
-            </div>
+      {coords && (
+        <dl className="mt-10 max-w-md border-t border-border/60 pt-5">
+          <div className="flex items-baseline justify-between gap-6">
+            <dt className="text-sm text-muted-foreground">Lokasi dikesan</dt>
+            <dd className="tabular font-mono text-sm">
+              {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+            </dd>
           </div>
+        </dl>
+      )}
 
-          {/* Detect location */}
-          <div className="py-5">
-            <p className="text-xs text-muted-foreground/50 uppercase tracking-widest mb-3 font-semibold">Lokasi Semasa</p>
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">
-                {coords
-                  ? <span className="font-mono text-foreground">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
-                  : 'Kesan zon secara automatik berdasarkan lokasi semasa.'
-                }
-              </p>
-              <Button variant="outline" size="sm" onClick={detectLocation} disabled={isLocating} className="shrink-0">
-                {isLocating
-                  ? <><Loader2Icon className="animate-spin size-3.5 mr-1.5" />Mengesan...</>
-                  : <><MapPinIcon className="size-3.5 mr-1.5" />Guna Lokasi Semasa</>
-                }
-              </Button>
-            </div>
+      <section className="mt-20 max-w-[68ch]">
+        <h2 className="paparan text-2xl">Cara zon dipilih</h2>
+        <p className="mt-4 leading-relaxed text-muted-foreground">
+          JAKIM membahagikan Malaysia kepada zon waktu solat, setiap satu dengan
+          kod tersendiri seperti WLY01. Waktu berbeza beberapa minit antara zon
+          bersebelahan, jadi pilih zon tempat anda benar-benar berada.
+        </p>
+        <p className="mt-4 leading-relaxed text-muted-foreground">
+          Mengesan dari lokasi semasa akan memilih zon terdekat secara
+          automatik. Zon yang anda pilih sendiri tidak akan ditukar olehnya.
+        </p>
+      </section>
+
+      {/* Satu-satunya rujukan kepada aplikasi lain dalam keseluruhan MariSolat,
+          dan ia diletakkan di sini dengan sengaja: Tetapan ialah tempat orang
+          datang untuk melihat tentang aplikasi ini. Ia tidak diletakkan pada
+          halaman waktu solat, halaman ilmu atau tasbih — promosi di sebelah
+          kiraan detik azan atau bacaan zikir menjatuhkan nada aplikasi. */}
+      <section className="mt-20 max-w-[68ch]">
+        <h2 className="paparan text-2xl">Aplikasi lain</h2>
+        <a
+          href="https://kirapoket.web.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group mt-5 flex items-baseline justify-between gap-6 border-t border-border/50 py-4 transition-colors hover:text-primary"
+        >
+          <span className="min-w-0">
+            <span className="text-lg">KiraPoket</span>
+            <span className="mt-1 block leading-relaxed text-muted-foreground">
+              Jejak perbelanjaan mengikut kitaran gaji, bukan bulan kalendar.
+            </span>
+          </span>
+          <ExternalLinkIcon className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+        </a>
+      </section>
+
+      {/* Tetapan azan dan notifikasi push di bawah dimatikan sebelum kerja ini
+          bermula, jadi ia dibiarkan seperti asal — bukan keputusan reka bentuk.
+          Nyahkomen untuk menghidupkannya semula; gayanya perlu diselaraskan
+          dengan senarai halaman lain jika itu berlaku. */}
+
+      {/* Azan global toggle */}
+      {/* <div className="py-4">
+        <p className="mb-3 text-sm font-semibold text-muted-foreground">Azan</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm">Mainkan azan waktu solat</p>
+            <Switch checked={azanOn} onCheckedChange={v => { setGlobalAzanOn(v); setAzanOn(v); }} />
           </div>
-
-          {/* Azan global toggle */}
-          {/* <div className="py-4">
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan</p>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm">Mainkan azan waktu solat</p>
-                <Switch checked={azanOn} onCheckedChange={v => { setGlobalAzanOn(v); setAzanOn(v); }} />
-              </div>
-              {notifPermission !== 'granted' && (
-                <Button variant="outline" size="sm" onClick={handleRequestNotif}>
-                  Benarkan Notifikasi Pelayar
-                </Button>
-              )}
-            </div>
-          </div> */}
-
-          {/* Per-prayer azan toggles */}
-          {/* {azanOn && (
-            <div className="py-4">
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Azan Setiap Solat</p>
-              <div className="space-y-3">
-                {AZAN_PRAYERS.map(prayer => (
-                  <div key={prayer} className="flex items-center justify-between">
-                    <p className="text-sm">{PRAYER_LABELS[prayer]}</p>
-                    <Switch checked={prayerToggles[prayer] ?? true} onCheckedChange={v => togglePrayer(prayer, v)} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )} */}
-
-          {/* Push notifications */}
-          {/* {user && (
-            <div className="py-4">
-              <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Notifikasi Push</p>
-              <p className="text-xs text-muted-foreground/50 mb-3">Terima notifikasi walaupun aplikasi ditutup.</p>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Azan waktu solat</p>
-                    <p className="text-xs text-muted-foreground/50">Berdasarkan zon anda</p>
-                  </div>
-                  <Switch
-                    checked={pushAzanOn}
-                    disabled={pushLoading}
-                    onCheckedChange={v => savePushToken(v, pushQadaOn)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Peringatan qada harian</p>
-                    <p className="text-xs text-muted-foreground/50">Setiap hari jam 9 malam</p>
-                  </div>
-                  <Switch
-                    checked={pushQadaOn}
-                    disabled={pushLoading}
-                    onCheckedChange={v => savePushToken(pushAzanOn, v)}
-                  />
-                </div>
-              </div>
-            </div>
-          )} */}
-
+          {notifPermission !== 'granted' && (
+            <Button variant="outline" size="sm" onClick={handleRequestNotif}>
+              Benarkan Notifikasi Pelayar
+            </Button>
+          )}
         </div>
-      </main>
+      </div> */}
 
-      {/* Zone selector dialog */}
+      {/* Per-prayer azan toggles */}
+      {/* {azanOn && (
+        <div className="py-4">
+          <p className="mb-3 text-sm font-semibold text-muted-foreground">Azan Setiap Solat</p>
+          <div className="space-y-3">
+            {AZAN_PRAYERS.map(prayer => (
+              <div key={prayer} className="flex items-center justify-between">
+                <p className="text-sm">{PRAYER_LABELS[prayer]}</p>
+                <Switch checked={prayerToggles[prayer] ?? true} onCheckedChange={v => togglePrayer(prayer, v)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )} */}
+
+      {/* Push notifications */}
+      {/* {user && (
+        <div className="py-4">
+          <p className="mb-1 text-sm font-semibold text-muted-foreground">Notifikasi Push</p>
+          <p className="text-xs text-muted-foreground mb-3">Terima notifikasi walaupun aplikasi ditutup.</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm">Azan waktu solat</p>
+                <p className="text-xs text-muted-foreground">Berdasarkan zon anda</p>
+              </div>
+              <Switch checked={pushAzanOn} disabled={pushLoading} onCheckedChange={v => savePushToken(v, pushQadaOn)} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm">Peringatan qada harian</p>
+                <p className="text-xs text-muted-foreground">Setiap hari jam 9 malam</p>
+              </div>
+              <Switch checked={pushQadaOn} disabled={pushLoading} onCheckedChange={v => savePushToken(pushAzanOn, v)} />
+            </div>
+          </div>
+        </div>
+      )} */}
+
+      {/* Pemilih zon */}
       <Dialog open={showZoneSelector} onOpenChange={open => { setShowZoneSelector(open); if (!open) setSelectedNegeri(''); }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden">
           <DialogHeader>
-            {selectedNegeri ? (
-              <>
-                <DialogTitle>{selectedNegeri}</DialogTitle>
-                <DialogDescription asChild>
-                  <button className="text-left text-xs text-primary mt-0.5" onClick={() => setSelectedNegeri('')}>
-                    ← Kembali
-                  </button>
-                </DialogDescription>
-              </>
-            ) : (
-              <>
-                <DialogTitle>Pilih Zon</DialogTitle>
-                <DialogDescription>Pilih negeri dahulu.</DialogDescription>
-              </>
-            )}
+            <DialogTitle className="paparan text-2xl">
+              {selectedNegeri || 'Pilih zon'}
+            </DialogTitle>
+            <DialogDescription asChild>
+              {selectedNegeri ? (
+                <button
+                  className="text-left text-sm text-primary transition-opacity hover:opacity-80"
+                  onClick={() => setSelectedNegeri('')}
+                >
+                  ← Semua negeri
+                </button>
+              ) : (
+                <span>Pilih negeri dahulu.</span>
+              )}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="-mx-1 flex-1 overflow-y-auto px-1">
             {!selectedNegeri ? (
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="divide-y divide-border/50 border-t border-border/50">
                 {negeriList.map(negeri => (
                   <button
                     key={negeri}
                     onClick={() => setSelectedNegeri(negeri)}
-                    className="text-sm text-left px-3 py-2.5 rounded-lg border border-border hover:bg-muted transition"
+                    className="w-full py-3.5 text-left transition-colors hover:text-primary"
                   >
                     {negeri}
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="space-y-2 pt-1">
+              <div className="divide-y divide-border/50 border-t border-border/50">
                 {allZones.filter(z => z.negeri === selectedNegeri).map(z => (
                   <button
                     key={z.jakimCode}
                     onClick={() => handleZoneSelect(z)}
-                    className="w-full text-left px-3 py-2.5 rounded-lg border border-border hover:bg-muted transition"
+                    className="flex w-full items-baseline justify-between gap-6 py-3.5 text-left transition-colors hover:text-primary"
                   >
-                    <span className="text-sm font-medium">{z.jakimCode}</span>
-                    <span className="text-sm text-muted-foreground"> · {z.daerah}</span>
+                    <span className="min-w-0 truncate">{z.daerah}</span>
+                    <span className="shrink-0 text-sm text-muted-foreground">{z.jakimCode}</span>
                   </button>
                 ))}
               </div>
@@ -341,6 +389,6 @@ export default function TetapanPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

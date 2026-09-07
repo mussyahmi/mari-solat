@@ -33,15 +33,48 @@ export async function requestNotifPermission(): Promise<NotificationPermission> 
   return Notification.requestPermission();
 }
 
+// Rujukan kepada azan yang sedang berbunyi. Tanpa ini tiada apa yang
+// memegang objek Audio, jadi setelah ia bermula tiada cara untuk
+// menghentikannya selain menutup tab — dan azan berbunyi beberapa minit.
+let azanSemasa: HTMLAudioElement | null = null;
+let idToast: string | number | null = null;
+
+export function isAzanPlaying(): boolean {
+  return azanSemasa !== null;
+}
+
+export function stopAzan(): void {
+  if (azanSemasa) {
+    azanSemasa.pause();
+    azanSemasa.currentTime = 0;
+    azanSemasa = null;
+  }
+  if (idToast !== null) {
+    toast.dismiss(idToast);
+    idToast = null;
+  }
+}
+
 export function playAzan(isSubuh: boolean): void {
+  stopAzan();
   try {
     const audio = new Audio(isSubuh ? '/audio/azan-subuh.mp3' : '/audio/azan-standard.mp3');
-    audio.play().catch(() => { /* autoplay blocked */ });
-  } catch { /* silent */ }
+    azanSemasa = audio;
+    audio.addEventListener('ended', stopAzan, { once: true });
+    audio.play().catch(() => { /* main auto disekat pelayar */ });
+  } catch {
+    azanSemasa = null;
+  }
 }
 
 export function triggerAzan(prayer: string): void {
   const label = PRAYER_LABELS[prayer] ?? prayer;
   playAzan(prayer === 'subuh');
-  toast.info(`Waktu ${label}`, { description: `Sudah masuk waktu ${label}.`, duration: 10000 });
+  // Kekal sehingga ditolak: azan berbunyi lebih lama daripada mana-mana
+  // toast, jadi butang berhenti mesti kekal selagi bunyinya berjalan.
+  idToast = toast.info(`Waktu ${label}`, {
+    description: `Sudah masuk waktu ${label}.`,
+    duration: Infinity,
+    action: { label: 'Berhenti', onClick: stopAzan },
+  });
 }

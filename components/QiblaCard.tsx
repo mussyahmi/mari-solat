@@ -1,5 +1,8 @@
 "use client";
 
+import { motion } from 'motion/react';
+import { spring } from '@/lib/motion';
+
 type Props = {
   qibla: number;
   heading: number | null;
@@ -29,25 +32,26 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
   return (
     <svg
       viewBox="0 0 300 300"
-      className="w-56 h-56 sm:w-64 sm:h-64 lg:w-72 lg:h-72"
+      className="size-60 sm:size-72 lg:size-80"
       aria-label="Kompas Kiblat"
     >
       {/* Alignment glow */}
       {isAligned && (
         <circle cx={CX} cy={CY} r={R + 8} fill="none" strokeWidth={14}
-          className="stroke-emerald-400/15" />
+          className="stroke-primary/30" />
       )}
 
       {/* Rotating compass rose */}
-      <g style={{
-        transformOrigin: `${CX}px ${CY}px`,
-        transform: `rotate(${compassRotation}deg)`,
-        transition: 'transform 0.15s ease-out',
-      }}>
+      <motion.g
+        style={{ transformOrigin: `${CX}px ${CY}px` }}
+        animate={{ rotate: compassRotation }}
+        initial={false}
+        transition={spring.jarum}
+      >
         {/* Main ring */}
         <circle cx={CX} cy={CY} r={R} fill="none"
-          strokeWidth={isAligned ? 1.5 : 1}
-          className={isAligned ? "stroke-emerald-400" : "stroke-border"}
+          strokeWidth={isAligned ? 2.5 : 1.75}
+          className={isAligned ? "stroke-primary" : "stroke-border"}
           style={{ transition: 'stroke 0.5s ease' }}
         />
 
@@ -57,7 +61,7 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
             x1={px(angle, R - (major ? 14 : 7))} y1={py(angle, R - (major ? 14 : 7))}
             x2={px(angle, R)} y2={py(angle, R)}
             strokeWidth={major ? 1.5 : 1} strokeLinecap="round"
-            className={major ? "stroke-foreground/20" : "stroke-foreground/10"}
+            className={major ? "stroke-foreground/55" : "stroke-foreground/30"}
           />
         ))}
 
@@ -67,7 +71,7 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
             x={px(angle, R - 30)} y={py(angle, R - 30)}
             textAnchor="middle" dominantBaseline="middle"
             fontSize="11" fontWeight="600"
-            className="fill-muted-foreground/40"
+            className="fill-muted-foreground"
           >
             {label}
           </text>
@@ -76,30 +80,30 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
         {/* Qibla marker on the ring */}
         <polygon
           points={`${px(qibla, R - 8)},${py(qibla, R - 8)} ${px(qibla - 5, R - 26)},${py(qibla - 5, R - 26)} ${px(qibla + 5, R - 26)},${py(qibla + 5, R - 26)}`}
-          className={isAligned ? "fill-emerald-400" : "fill-emerald-500"}
+          className={isAligned ? "fill-primary" : "fill-hijau-500"}
           style={{ transition: 'fill 0.5s ease' }}
         />
-      </g>
+      </motion.g>
 
       {/* Fixed needle — always points up (toward screen top = current facing direction) */}
       <g>
         <line x1={CX} y1={CY - 10} x2={CX} y2={CY - (R - 28)}
           strokeWidth={2} strokeLinecap="round"
-          className="stroke-foreground/50"
+          className="stroke-foreground/80"
         />
         <polygon
           points={`${CX},${CY - (R - 12)} ${CX - 6},${CY - (R - 30)} ${CX + 6},${CY - (R - 30)}`}
-          className="fill-foreground/50"
+          className="fill-foreground/80"
         />
         <line x1={CX} y1={CY + 10} x2={CX} y2={CY + (R - 52)}
           strokeWidth={1.5} strokeLinecap="round"
-          className="stroke-foreground/15"
+          className="stroke-foreground/35"
         />
       </g>
 
       {/* Center dot */}
       <circle cx={CX} cy={CY} r={5} strokeWidth={1.5}
-        className="fill-background stroke-border/60"
+        className="fill-background stroke-border"
       />
     </svg>
   );

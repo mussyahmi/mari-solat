@@ -34,10 +34,34 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
-    // Visitor analytics — public read, anyone can write their own visit (by uuid doc ID)
+    // Analitik pelawat.
+    //
+    // Baca ditutup sepenuhnya: setiap baris membawa koordinat, UUID kekal dan
+    // user agent, jadi baca awam bermakna sesiapa sahaja dengan konfigurasi
+    // Firebase (yang dihantar dalam bundle klien) boleh menarik lokasi setiap
+    // pengguna. Halaman /pantau kini membacanya melalui Firebase Admin di
+    // pelayan, dengan UID pentadbir yang disenarai putih.
+    //
+    // Tulis kekal terbuka — pelawat tidak log masuk — tetapi kini disahkan,
+    // supaya koleksi ini tidak boleh diisi dengan baris rekaan.
     match /visits/{uuid} {
-      allow read: if true;
-      allow create: if true;
+      allow read: if false;
+      allow create: if request.resource.data.uuid == uuid
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.zone is string
+        && request.resource.data.zone.size() <= 16
+        && request.resource.data.ua is string
+        && request.resource.data.ua.size() <= 400;
+      allow update: if request.resource.data.uuid == uuid
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.zone is string
+        && request.resource.data.zone.size() <= 16
+        && request.resource.data.ua is string
+        && request.resource.data.ua.size() <= 400;
     }
 
     // Global chat — any auth user can read/create, update for reports/moderation, owner can delete

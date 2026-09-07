@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { RukunBadge, TYPE_META, type RukunType } from '@/components/RukunBadge';
-import Sidebar from '@/components/Sidebar';
+import { motion } from 'motion/react';
+import { spring } from '@/lib/motion';
+import { RukunLabel, type RukunType } from '@/components/RukunBadge';
+import PageShell from '@/components/PageShell';
+import { SenaraiSkrol, ItemSkrol } from '@/components/SenaraiSkrol';
 
 const RUKUN_SOLAT: { name: string; type: RukunType; note?: string }[] = [
   { name: 'Berdiri bagi yang mampu', type: "fi'li" },
@@ -36,69 +39,64 @@ export default function RukunSolatPage() {
   const visible = filter === 'all' ? RUKUN_SOLAT : RUKUN_SOLAT.filter(r => r.type === filter);
 
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Rukun Solat</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">13 perkara yang wajib dilakukan dalam solat.</p>
-
-          {/* Category descriptions */}
-          <div className="flex flex-col gap-1 mt-3">
-            {(Object.entries(TYPE_META) as [RukunType, typeof TYPE_META[RukunType]][]).map(([type, meta]) => (
-              <div key={type} className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className={`font-semibold px-1.5 py-0.5 rounded w-12 text-center shrink-0 ${meta.className}`}>{meta.label}</span>
-                {meta.description}
-              </div>
-            ))}
-          </div>
-
-        </header>
-
-        {/* Filter tabs */}
-        <div className="flex gap-1.5 mb-6">
-          {FILTERS.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-                filter === f.id
-                  ? 'bg-foreground text-background'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
+    <PageShell
+      tajuk="Rukun Solat"
+      lede="Tiga belas perkara yang wajib dilakukan dalam solat. Tidak seperti senarai lain, rukun ini satu urutan — ia dilakukan mengikut susunan."
+    >
+      {/* Baris tab yang sama seperti halaman lain. Legenda kategori yang dulu
+          berdiri di atasnya dibuang — makna setiap kategori kini duduk terus
+          di bawah nama rukun, di tempat ia benar-benar diperlukan. */}
+      <div className="-ml-3 flex items-center border-b border-border/60 lg:-ml-3.5">
+        {FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            aria-pressed={filter === f.id}
+            className="group relative px-3 py-3 text-sm transition-colors lg:px-3.5"
+          >
+            {filter === f.id && (
+              <motion.span
+                layoutId="tabRukun"
+                className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
+                transition={spring.susunAtur}
+              />
+            )}
+            <span className={filter === f.id ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
               {f.label}
-            </button>
-          ))}
-        </div>
+            </span>
+          </button>
+        ))}
+      </div>
 
-        {/* List */}
-        <div className="divide-y divide-border/50">
-          {visible.map(item => {
-            const globalIndex = RUKUN_SOLAT.indexOf(item);
-            return (
-              <div key={item.name} className="flex items-center justify-between py-5 gap-4">
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right">
-                    {globalIndex + 1}
-                  </span>
-                  <span className="text-sm leading-snug">
+      {/* Tiga belas rukun ialah satu urutan, jadi kaunter melekat menjejak
+          kedudukan pembaca di dalamnya semasa mereka menatal. */}
+      <SenaraiSkrol className="mt-10">
+        <ol className="divide-y divide-border/50">
+          {visible.map(item => (
+            <ItemSkrol
+              key={item.name}
+              className="py-9 lg:py-11"
+            >
+              <div className="flex min-w-0 items-baseline gap-5">
+                <span className="angka-paparan w-8 shrink-0 text-right text-xl text-muted-foreground">
+                  {RUKUN_SOLAT.indexOf(item) + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="text-xl leading-snug lg:text-2xl">
                     {item.name}
-                    {item.note && <sup className="ml-0.5 text-muted-foreground/40">*</sup>}
+                    {item.note && <sup className="ml-0.5 text-muted-foreground">*</sup>}
                   </span>
-                </div>
-                <RukunBadge type={item.type} />
+                  <RukunLabel type={item.type} />
+                </span>
               </div>
-            );
-          })}
-        </div>
+            </ItemSkrol>
+          ))}
+        </ol>
+      </SenaraiSkrol>
 
-        {/* Footnote */}
-        <p className="text-xs text-muted-foreground/40 mt-6">
-          * tama'ninah — berhenti seketika (sekadar menyebut subhanallah)
-        </p>
-      </main>
-    </div>
+      <p className="mt-6 text-sm text-muted-foreground">
+        * tama&rsquo;ninah — berhenti seketika, sekadar menyebut subhanallah.
+      </p>
+    </PageShell>
   );
 }

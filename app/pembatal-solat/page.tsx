@@ -1,4 +1,7 @@
-import Sidebar from '@/components/Sidebar';
+import { X } from 'lucide-react';
+import PageShell from '@/components/PageShell';
+import { SenaraiSkrol, ItemSkrol } from '@/components/SenaraiSkrol';
+
 
 const PEMBATAL_SOLAT = [
   'Keluar atau kedatangan hadas besar atau kecil.',
@@ -16,24 +19,22 @@ const PEMBATAL_SOLAT = [
 
 export default function PembatalSolatPage() {
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 px-4 py-10 lg:px-10 lg:py-12">
-        <header className="mb-10">
-          <h1 className="text-3xl font-display tracking-tight">Pembatal Solat</h1>
-          <p className="text-sm text-muted-foreground/70 mt-2">11 perkara yang membatalkan solat.</p>
-        </header>
-
-        <div className="divide-y divide-border/50">
-          {PEMBATAL_SOLAT.map((item, i) => (
-            <div key={i} className="flex gap-4 py-5">
-              <span className="text-sm font-bold text-muted-foreground/30 w-5 shrink-0 text-right mt-0.5">{i + 1}</span>
-              <p className="text-sm leading-relaxed">{item}</p>
-            </div>
+    <PageShell
+      tajuk="Pembatal Solat"
+      lede="Sebelas perkara yang membatalkan solat. Jika salah satu berlaku, solat perlu diulang dari awal."
+    >
+      {/* Ini satu senarai perkara, bukan urutan langkah — jadi nombor tidak
+          sesuai. Tanda silang menyampaikan maksudnya terus. */}
+      <SenaraiSkrol>
+        <ul className="divide-y divide-border/50">
+          {PEMBATAL_SOLAT.map(item => (
+            <ItemSkrol key={item} className="flex gap-4 py-9 lg:py-11">
+              <X className="mt-1.5 size-4 shrink-0 text-destructive" aria-hidden />
+              <p className="max-w-[62ch] text-xl leading-relaxed lg:text-2xl">{item}</p>
+            </ItemSkrol>
           ))}
-        </div>
-      </main>
-    </div>
+        </ul>
+      </SenaraiSkrol>
+    </PageShell>
   );
 }

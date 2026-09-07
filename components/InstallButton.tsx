@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ShareIcon, SquarePlusIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -8,11 +9,25 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// Ikon sebaris memberi pembaca sesuatu untuk dipadankan pada skrin, bukan
+// penerangan tentang ikon untuk dihuraikan sendiri.
+const LANGKAH_IOS = [
+  <>
+    Tekan <ShareIcon className="inline size-4 align-text-bottom" />{' '}
+    <b className="font-semibold text-foreground">Share</b> pada bar bawah Safari.
+  </>,
+  <>
+    Skrol ke bawah dan pilih <SquarePlusIcon className="inline size-4 align-text-bottom" />{' '}
+    <b className="font-semibold text-foreground">Add to Home Screen</b>.
+  </>,
+  <>Tekan <b className="font-semibold text-foreground">Add</b> untuk mengesahkan.</>,
+];
+
 export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIos, setIsIos] = useState(false);
   const [showIosDialog, setShowIosDialog] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(true); // assume installed until checked
+  const [isStandalone, setIsStandalone] = useState(true); // andaikan sudah diinstall sehingga disemak
 
   useEffect(() => {
     const standalone =
@@ -21,31 +36,38 @@ export default function InstallButton() {
 
     if (standalone) return;
 
+    // Pemeriksaan ini memerlukan window, jadi ia tidak boleh berlaku semasa
+    // render pertama tanpa memecahkan penghidratan. Menetapkan keadaan di sini
+    // ialah pembetulan sekali sahaja, bukan render bertingkat.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsStandalone(false);
 
     const ua = navigator.userAgent;
-    const isAndroid = /Android/i.test(ua);
     const isIOS =
       /iphone|ipad|ipod/i.test(ua) &&
       !(window as { MSStream?: unknown }).MSStream &&
       !/crios|fxios|opios|mercury/i.test(ua);
 
-    if (isAndroid) {
-      const handler = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
-      };
-      window.addEventListener('beforeinstallprompt', handler);
-      return () => window.removeEventListener('beforeinstallprompt', handler);
+    if (isIOS) {
+      setIsIos(true);
+      return;
     }
 
-    if (isIOS) setIsIos(true);
+    // Dahulunya pendengar ini hanya didaftarkan pada Android, jadi Chrome dan
+    // Edge pada desktop tidak pernah melihat pilihan install walaupun ia
+    // disokong sepenuhnya di sana. Setiap platform bukan iOS mendapatnya.
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   if (isStandalone) return null;
   if (!isIos && !deferredPrompt) return null;
 
-  const handleInstall = async () => {
+  const install = async () => {
     if (isIos) {
       setShowIosDialog(true);
       return;
@@ -59,8 +81,8 @@ export default function InstallButton() {
   return (
     <>
       <button
-        onClick={handleInstall}
-        className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+        onClick={install}
+        className="text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         Install MariSolat
       </button>
@@ -68,25 +90,29 @@ export default function InstallButton() {
       <Dialog open={showIosDialog} onOpenChange={setShowIosDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Install MariSolat</DialogTitle>
-            <DialogDescription>
-              Ikuti langkah berikut untuk install MariSolat pada iPhone atau iPad anda.
+            <DialogTitle className="paparan text-2xl">Install MariSolat</DialogTitle>
+            {/* Menyatakan sebab ada tiga langkah lebih berguna daripada
+                menyuruh pembaca mengikut langkah yang sudah kelihatan. */}
+            {/* Butang tidak pernah memberi sebab untuk mengetiknya. Baris
+                pertama ialah sebab; baris kedua sebab ada tiga langkah. */}
+            <DialogDescription className="leading-relaxed">
+              MariSolat terbuka skrin penuh tanpa bar pelayar, dengan ikonnya
+              sendiri pada skrin utama. Safari tiada butang install, jadi ia
+              dibuat melalui menu Kongsi.
             </DialogDescription>
           </DialogHeader>
-          <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="shrink-0 font-semibold text-foreground">1.</span>
-              <span>Tekan ikon <span className="font-medium text-foreground">Share</span> (kotak dengan anak panah ke atas) di bar bawah Safari.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 font-semibold text-foreground">2.</span>
-              <span>Skrol ke bawah dan pilih <span className="font-medium text-foreground">&ldquo;Add to Home Screen&rdquo;</span>.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 font-semibold text-foreground">3.</span>
-              <span>Tekan <span className="font-medium text-foreground">Add</span> untuk mengesahkan.</span>
-            </li>
+
+          <ol className="divide-y divide-border/50 border-t border-border/50">
+            {LANGKAH_IOS.map((langkah, i) => (
+              <li key={i} className="flex gap-4 py-4 text-left">
+                <span className="angka-paparan w-4 shrink-0 text-lg text-muted-foreground">{i + 1}</span>
+                <span className="leading-relaxed text-muted-foreground">{langkah}</span>
+              </li>
+            ))}
           </ol>
+
+          {/* Nama menu iOS kekal dalam bahasa Inggeris kerana itulah yang
+              benar-benar tertera pada skrin. */}
         </DialogContent>
       </Dialog>
     </>

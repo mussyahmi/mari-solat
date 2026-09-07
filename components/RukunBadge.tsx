@@ -1,47 +1,38 @@
-'use client';
-
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState } from "react";
-
 type RukunType = "fi'li" | 'qauli' | 'qalbi';
 
-const TYPE_META: Record<RukunType, { label: string; description: string; className: string }> = {
+/**
+ * Tiga kategori rukun.
+ *
+ * Sebelum ini setiap satu ialah cip berwarna penuh dengan tooltip, dan
+ * maknanya diulang tiga kali: dalam legenda di atas halaman, pada cip itu
+ * sendiri, dan sekali lagi di dalam tooltip. Ia kini satu label kecil di bawah
+ * nama rukun — warna kekal membezakan kategori, tetapi tanpa cip mahupun
+ * legenda berasingan.
+ */
+const TYPE_META: Record<RukunType, { label: string; description: string; warna: string }> = {
   "fi'li": {
     label: "Fi'li",
-    description: "Perbuatan",
-    className: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    description: 'perbuatan',
+    warna: 'text-rukun-filii',
   },
   qauli: {
-    label: "Qauli",
-    description: "Diucap dengan lidah",
-    className: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    label: 'Qauli',
+    description: 'diucap dengan lidah',
+    warna: 'text-rukun-qauli',
   },
   qalbi: {
-    label: "Qalbi",
-    description: "Diingat dalam hati",
-    className: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+    label: 'Qalbi',
+    description: 'diingat dalam hati',
+    warna: 'text-rukun-qalbi',
   },
 };
 
-export function RukunBadge({ type }: { type: RukunType }) {
-  const [open, setOpen] = useState(false);
+export function RukunLabel({ type }: { type: RukunType }) {
   const meta = TYPE_META[type];
   return (
-    <TooltipProvider>
-      <Tooltip open={open} onOpenChange={setOpen}>
-        <TooltipTrigger asChild>
-          <button
-            onClick={() => setOpen(prev => !prev)}
-            className={`text-[11px] font-medium px-2 py-0.5 rounded shrink-0 ${meta.className}`}
-          >
-            {meta.label}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-56 text-center">
-          <p>{meta.description}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <span className={`mt-2 block text-sm ${meta.warna}`}>
+      {meta.label} — {meta.description}
+    </span>
   );
 }
 

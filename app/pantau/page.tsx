@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, type User } from 'firebase/auth';
+import { auth } from '@/firebase';
 import { fetchVisits } from '@/lib/track';
-import Sidebar from '@/components/Sidebar';
+
+import PageShell from '@/components/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const VisitorMap = dynamic(() => import('@/components/VisitorMap'), { ssr: false });
 
@@ -33,7 +37,7 @@ function UaCell({ ua }: { ua: string }) {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)} className="text-left text-muted-foreground/60 hover:text-foreground transition font-mono">
+      <button onClick={() => setOpen(v => !v)} className="text-left text-muted-foreground hover:text-foreground transition font-mono">
         {short}
       </button>
       {open && (
@@ -49,12 +53,26 @@ export default function PantauPage() {
   const [rows, setRows] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [ditolak, setDitolak] = useState(false);
 
+  // Data ini tidak lagi boleh dibaca dari klien, jadi halaman perlu token ID
+  // untuk memintanya daripada pelayan. Hanya UID dalam ADMIN_UIDS diterima.
   useEffect(() => {
-    fetchVisits()
-      .then(setRows)
-      .catch(() => setError('Gagal memuatkan data.'))
-      .finally(() => setLoading(false));
+    return onAuthStateChanged(auth, async u => {
+      setUser(u);
+      if (!u) { setLoading(false); return; }
+      setLoading(true);
+      try {
+        setRows(await fetchVisits(await u.getIdToken()));
+        setDitolak(false);
+      } catch (e) {
+        if ((e as Error).message === 'tidak-dibenarkan') setDitolak(true);
+        else setError('Gagal memuatkan data.');
+      } finally {
+        setLoading(false);
+      }
+    });
   }, []);
 
   const uniqueUsers = new Set(rows.map(r => r.uuid)).size;
@@ -62,80 +80,207 @@ export default function PantauPage() {
   for (const r of rows) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
   const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  if (loading) return <div className="min-h-screen lg:flex"><Sidebar /><div className="p-10 text-sm text-muted-foreground">Memuatkan...</div></div>;
-  if (error) return <div className="min-h-screen lg:flex"><Sidebar /><div className="p-10 text-sm text-destructive">{error}</div></div>;
+  const jumlahZon = Object.keys(zoneCount).length;
+
+  const terkini = [...rows].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  const HAD_LOG = 50;
+  const logDipapar = terkini.slice(0, HAD_LOG);
+  const tarikhPendek = (iso: string) =>
+    new Date(iso).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+  const masaTerkini = terkini[0] ? tarikhPendek(terkini[0].timestamp) : '—';
+  const masaTerawal = terkini.length ? tarikhPendek(terkini[terkini.length - 1].timestamp) : '—';
+  const zonTertinggi = topZones[0]?.[1] ?? 0;
 
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-      <main className="flex-1 min-w-0 px-6 py-10 max-w-5xl mx-auto lg:mx-0 lg:max-w-none">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Pantau</h1>
-          <p className="text-sm text-muted-foreground mb-8">Data pelawat MariSolat</p>
+    <PageShell tajuk="Pantau" lede="Data pelawat MariSolat.">
+      {!user && !loading ? (
+        <div className="max-w-md">
+          <p className="paparan text-2xl">Halaman peribadi</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Data pelawat mengandungi lokasi dan peranti pengguna, jadi ia hanya
+            dibuka kepada akaun yang dibenarkan.
+          </p>
+          <button
+            onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
+            className="mt-6 inline-flex rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+          >
+            Log masuk
+          </button>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-          <div className="border border-border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Pengguna Unik</p>
-            <p className="text-3xl font-bold">{uniqueUsers}</p>
+      ) : ditolak && user ? (
+        <div className="max-w-md">
+          <p className="paparan text-2xl">Akaun ini tiada akses</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Akaun yang log masuk tidak berada dalam senarai pentadbir. UID ini
+            perlu dimasukkan ke dalam pemboleh ubah persekitaran ADMIN_UIDS.
+          </p>
+          {/* Tanpa ini tiada cara untuk mengetahui UID sendiri, jadi senarai
+              putih yang kosong tidak boleh diisi buat kali pertama. */}
+          <p className="mt-4 break-all font-mono text-sm">{user.uid}</p>
+        </div>
+      ) : loading ? (
+        <RangkaMuat />
+      ) : error ? (
+        <div className="max-w-md">
+          <p className="paparan text-2xl">Data tidak dimuatkan</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">{error}</p>
+        </div>
+      ) : (
+        <>
+          {/* Bilangan pengguna unik ialah fakta halaman ini; dua nombor lain
+              hanyalah konteks untuknya. */}
+          <div className="flex flex-col items-start gap-2">
+            <p className="paparan text-2xl leading-none lg:text-3xl">Pengguna unik</p>
+            <p className="angka-paparan text-[22vw] leading-none sm:text-[16vw] lg:text-[9vw]">
+              {uniqueUsers}
+            </p>
           </div>
-          <div className="border border-border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Zon Berbeza</p>
-            <p className="text-3xl font-bold">{Object.keys(zoneCount).length}</p>
-          </div>
-        </div>
 
-        <div className="mb-10">
-          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peta Pelawat</p>
-          <VisitorMap rows={rows} />
-        </div>
+          {/* "Jumlah lawatan" pernah berada di sini, tetapi ia mustahil berbeza
+              daripada bilangan pengguna unik: setiap penulisan menimpa satu
+              dokumen bagi setiap UUID, jadi koleksi ini ialah jadual "kali
+              terakhir dilihat", bukan log lawatan. Ia digantikan dengan julat
+              tarikh yang benar-benar boleh dijawab oleh data ini. */}
+          <dl className="mt-10 divide-y divide-border/50 border-t border-border/60 lg:flex lg:flex-wrap lg:gap-x-12 lg:divide-y-0 lg:pt-5">
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Zon berbeza</dt>
+              <dd className="angka-paparan text-2xl lg:mt-1">{jumlahZon}</dd>
+            </div>
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Direkod sejak</dt>
+              <dd className="text-lg lg:mt-1">{masaTerawal}</dd>
+            </div>
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Terakhir dilihat</dt>
+              <dd className="text-lg lg:mt-1">{masaTerkini}</dd>
+            </div>
+          </dl>
 
-        <div className="mb-10">
-          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Zon Teratas</p>
-          <div className="divide-y divide-border/50">
-            {topZones.map(([zone, count]) => (
-              <div key={zone} className="flex items-center justify-between py-2">
-                <span className="text-sm">{zone}</span>
-                <span className="text-sm text-muted-foreground">{count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+          <section className="mt-20">
+            <h2 className="paparan text-2xl">Peta pelawat</h2>
+            <div className="mt-5 overflow-hidden rounded-2xl">
+              <VisitorMap rows={rows} />
+            </div>
+          </section>
 
-        <div>
-          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Log Terkini</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-muted-foreground/50 border-b border-border/50">
-                  <th className="pb-2 pr-4 font-medium">Masa</th>
-                  <th className="pb-2 pr-4 font-medium">Zon</th>
-                  <th className="pb-2 pr-4 font-medium">Koordinat</th>
-                  <th className="pb-2 pr-4 font-medium">UUID</th>
-                  <th className="pb-2 font-medium">UA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {[...rows].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((r, i) => (
-                  <tr key={i}>
-                    <td className="py-2 pr-4 text-muted-foreground whitespace-nowrap">
-                      {new Date(r.timestamp).toLocaleString('ms-MY')}
-                    </td>
-                    <td className="py-2 pr-4">{r.zone}</td>
-                    <td className="py-2 pr-4 font-mono text-muted-foreground">
-                      <a href={`https://www.google.com/maps?q=${r.lat},${r.lng}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">
-                        {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
-                      </a>
-                    </td>
-                    <td className="py-2 pr-4 text-muted-foreground/50 font-mono">{r.uuid.slice(0, 8)}…</td>
-                    <td className="py-2"><UaCell ua={r.ua ?? ''} /></td>
+          <section className="mt-20 max-w-xl">
+            <h2 className="paparan text-2xl">Zon teratas</h2>
+            <ol className="mt-5 divide-y divide-border/50 border-t border-border/50">
+              {topZones.map(([zone, count], i) => (
+                <li key={zone} className="relative flex items-center justify-between gap-6 py-3.5">
+                  {/* Ukuran kadar sebagai garis nipis di dasar baris. Blok
+                      penuh di belakang teks terbaca seperti sorotan, bukan bar. */}
+                  <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0">
+                    <span
+                      className="block h-px bg-primary"
+                      style={{ width: zonTertinggi ? `${(count / zonTertinggi) * 100}%` : 0 }}
+                    />
+                  </span>
+                  <span className="flex min-w-0 items-baseline gap-4">
+                    <span className="angka-paparan w-5 shrink-0 text-muted-foreground">{i + 1}</span>
+                    <span className="truncate">{zone}</span>
+                  </span>
+                  <span className="angka-paparan shrink-0 text-xl">{count}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="mt-20">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="paparan text-2xl">Kali terakhir dilihat</h2>
+              <p className="text-sm text-muted-foreground">
+                {logDipapar.length} daripada {rows.length}
+              </p>
+            </div>
+
+            {/* Lima lajur data hanya muat pada skrin lebar. Pada telefon jadual
+                yang sama menjadi senarai berbaris, bukan skrol mendatar. */}
+            <div className="mt-5 hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-muted-foreground">
+                    <th className="py-2.5 pr-6 font-normal">Masa</th>
+                    <th className="py-2.5 pr-6 font-normal">Zon</th>
+                    <th className="py-2.5 pr-6 font-normal">Koordinat</th>
+                    <th className="py-2.5 pr-6 font-normal">UUID</th>
+                    <th className="py-2.5 font-normal">Pelayar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {logDipapar.map((r, i) => (
+                    <tr key={i}>
+                      <td className="whitespace-nowrap py-3 pr-6 text-muted-foreground">
+                        {new Date(r.timestamp).toLocaleString('ms-MY')}
+                      </td>
+                      <td className="py-3 pr-6">{r.zone}</td>
+                      <td className="tabular py-3 pr-6 font-mono text-muted-foreground">
+                        <a
+                          href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                        >
+                          {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                        </a>
+                      </td>
+                      <td className="py-3 pr-6 font-mono text-muted-foreground">{r.uuid.slice(0, 8)}…</td>
+                      <td className="py-3"><UaCell ua={r.ua ?? ''} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-5 divide-y divide-border/50 border-t border-border/50 lg:hidden">
+              {logDipapar.map((r, i) => (
+                <div key={i} className="py-4">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="font-semibold">{r.zone}</span>
+                    <span className="shrink-0 text-sm text-muted-foreground">
+                      {new Date(r.timestamp).toLocaleString('ms-MY')}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 text-sm text-muted-foreground">
+                    <a
+                      href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tabular font-mono underline-offset-4 hover:text-foreground hover:underline"
+                    >
+                      {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lng).toFixed(4)}
+                    </a>
+                    <span className="font-mono">{r.uuid.slice(0, 8)}…</span>
+                  </div>
+                  <p className="mt-1 truncate font-mono text-sm text-muted-foreground">{r.ua}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+    </PageShell>
+  );
+}
+
+/** Rangka muat mengikut susun atur sebenar: nombor hero, baris meta, peta. */
+function RangkaMuat() {
+  return (
+    <div>
+      <Skeleton className="h-8 w-44" />
+      <Skeleton className="mt-4 h-[22vw] w-[24vw] sm:h-[16vw] lg:h-[9vw] lg:w-[10vw]" />
+      <div className="mt-12 flex flex-wrap gap-x-12 gap-y-5 border-t border-border/60 pt-5">
+        {[0, 1, 2].map(i => (
+          <div key={i}>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-2 h-7 w-16" />
           </div>
-        </div>
-      </main>
+        ))}
+      </div>
+      <Skeleton className="mt-16 h-8 w-40" />
+      <Skeleton className="mt-5 h-[420px] w-full rounded-2xl" />
     </div>
   );
 }

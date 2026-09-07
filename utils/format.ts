@@ -29,14 +29,17 @@ export function formatGregorianDate(gregorian: string) {
   const gDay = gDate.getDate();
   const gMonth = gregorianMonthsBM[gDate.getMonth()];
   const gYear = gDate.getFullYear();
-  return `${gDay} ${gMonth} ${gYear} Miladi`;
+  // Akhiran "Miladi"/"Hijri" dahulunya dibakar ke dalam nilai, jadi ia
+  // mengulang label yang berdiri betul-betul di atasnya. Label kini yang
+  // menamakan kalendar; nilai hanya membawa tarikh.
+  return `${gDay} ${gMonth} ${gYear}`;
 }
 
 export function formatHijriDate(hijri: string) {
   const [hYear, hMonthStr, hDayStr] = hijri.split("-");
   const hMonth = hijriMonthsBM[Number(hMonthStr) - 1];
   const hDay = Number(hDayStr);
-  return `${hDay} ${hMonth} ${hYear} Hijri`;
+  return `${hDay} ${hMonth} ${hYear}`;
 }
 
 const shortMonthsBM = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogs","Sep","Okt","Nov","Dis"];

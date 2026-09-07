@@ -1,17 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'motion/react';
+import { amiri } from './amiri';
+import { berperingkat, naikMasuk, spring } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Minus, RotateCcw, Maximize2, Minimize2, ListPlus, Check } from 'lucide-react';
-import Sidebar from '@/components/Sidebar';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { Minus, RotateCcw, Check } from 'lucide-react';
 
 type Preset = {
   id: string;
@@ -68,11 +62,9 @@ function saveState(state: StoredState) {
 export default function TasbihPage() {
   const [hydrated, setHydrated] = useState(false);
   const [state, setState] = useState<StoredState>({ active: 'selawat', counts: {}, cycles: {} });
-  const [focusMode, setFocusMode] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
   const [pulseKey, setPulseKey] = useState(0);
   const [completeKey, setCompleteKey] = useState(0);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Hydrate from localStorage (deferred to effect to avoid SSR/CSR mismatch)
   useEffect(() => {
@@ -85,12 +77,6 @@ export default function TasbihPage() {
   useEffect(() => {
     if (hydrated) saveState(state);
   }, [state, hydrated]);
-
-  // Focus mode chrome control
-  useEffect(() => {
-    document.body.classList.toggle('focus-mode', focusMode);
-    return () => document.body.classList.remove('focus-mode');
-  }, [focusMode]);
 
   // Disarm reset after a moment
   useEffect(() => {
@@ -166,7 +152,6 @@ export default function TasbihPage() {
 
   const switchPreset = (id: string) => {
     setState(prev => ({ ...prev, active: id }));
-    setSheetOpen(false);
   };
 
   // Keyboard support
@@ -186,88 +171,78 @@ export default function TasbihPage() {
   }, [increment, decrement]);
 
   // SVG ring math
+  /** Zikir yang pernah dikira — satu-satunya yang berbaloi disenaraikan. */
+  const tersimpan = PRESETS.filter(
+    p => (state.counts[p.id] ?? 0) > 0 || (state.cycles[p.id] ?? 0) > 0
+  );
+
   const RING_RADIUS = 138;
   const RING_CIRC = 2 * Math.PI * RING_RADIUS;
   const dashOffset = RING_CIRC * (1 - progress);
 
   return (
-    <div className="min-h-full lg:flex">
-      {!focusMode && <Sidebar />}
-
-      <main
-        className={`flex-1 min-w-0 flex flex-col ${
-          focusMode
-            ? 'px-4 py-6 h-[100dvh]'
-            : 'px-4 py-8 lg:px-10 lg:py-10 max-w-3xl mx-auto lg:mx-0 lg:max-w-none'
-        }`}
+    <div className={`${amiri.variable}`}>
+      <motion.main
+        variants={berperingkat()}
+        initial="sembunyi"
+        animate="tunjuk"
+        className="mx-auto w-full max-w-7xl px-5 pb-16 pt-4 lg:px-10"
       >
-        {!focusMode && (
-          <header className="mb-6 lg:mb-8">
-            <h1 className="text-3xl font-display tracking-tight">Tasbih</h1>
-            <p className="text-sm text-muted-foreground/70 mt-2">
-              Tekan untuk kira selawat, zikir, atau tasbih harian.
-            </p>
-          </header>
-        )}
+        <motion.header variants={naikMasuk}>
+          <h1 className="paparan text-4xl lg:text-5xl">Tasbih</h1>
+          <p className="mt-3 max-w-[52ch] text-pretty text-lg leading-relaxed text-muted-foreground">
+            Tekan untuk kira selawat, zikir, atau tasbih harian.
+          </p>
+        </motion.header>
 
-        {/* Preset chips */}
-        {!focusMode && (
-          <div className="mb-2 -mx-4 lg:mx-0">
-            <div
-              className="flex gap-2 overflow-x-auto px-4 lg:px-0 pb-2"
-              style={{ scrollbarWidth: 'none' }}
-            >
-              {PRESETS.map(p => {
-                const active = p.id === preset.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => switchPreset(p.id)}
-                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                      active
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Main counter area */}
-        <div className="flex-1 flex flex-col items-center justify-center select-none">
-          {/* Preset meta */}
-          <div className="text-center mb-6 lg:mb-8 min-h-[3.5rem]">
-            {preset.arabic && (
-              <p
-                dir="rtl"
-                lang="ar"
-                className="text-xl lg:text-2xl text-foreground/80 leading-relaxed"
-                style={{ fontFamily: 'var(--font-display)' }}
+        {/* Pemilih zikir menggunakan baris tab yang sama seperti halaman utama
+            dan qada, bukan cip berwarna yang hanya wujud di halaman ini. */}
+        <motion.div
+          variants={naikMasuk}
+          className="-mx-5 mt-10 overflow-x-auto px-5 lg:mx-0 lg:px-0"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          <div className="-ml-3 flex w-max items-center border-b border-border/60 lg:-ml-3.5">
+            {PRESETS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => switchPreset(p.id)}
+                className="group relative shrink-0 px-3 py-3 text-sm whitespace-nowrap transition-colors lg:px-3.5"
               >
-                {preset.arabic}
-              </p>
-            )}
-            <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest font-semibold mt-2">
-              {preset.name}
-              {hasTarget && <span className="text-muted-foreground/40"> · sasaran {preset.target}</span>}
-            </p>
+                {p.id === preset.id && (
+                  <motion.span
+                    layoutId="tabZikir"
+                    className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
+                    transition={spring.susunAtur}
+                  />
+                )}
+                <span className={p.id === preset.id ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
+                  {p.name}
+                </span>
+              </button>
+            ))}
           </div>
+        </motion.div>
 
-          {/* Cycle dots */}
-          <CycleDots cycles={cycles} />
+        <motion.div variants={naikMasuk} className="flex select-none flex-col items-center pt-12">
+          {/* Lafaz ialah perkara yang dibaca, jadi ia mendapat saiz sebenar
+              dan bukan sekadar kapsyen di atas bulatan. */}
+          {preset.arabic ? (
+            <p dir="rtl" lang="ar" className="font-arab max-w-[22ch] text-center text-3xl leading-[1.9] lg:text-4xl">
+              {preset.arabic}
+            </p>
+          ) : (
+            <p className="paparan text-2xl">Kiraan bebas</p>
+          )}
 
-          {/* Tap circle */}
-          <button
+          <motion.button
             type="button"
             onClick={increment}
-            className="relative my-6 group focus:outline-none"
+            whileTap={{ scale: 0.955 }}
+            transition={spring.ketik}
+            className="group relative mt-10 w-[min(74vw,320px)] rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
             aria-label="Tambah kiraan"
           >
-            {/* Outer pulse on cycle complete */}
             <span
               key={`complete-${completeKey}`}
               className="pointer-events-none absolute inset-0 rounded-full"
@@ -277,41 +252,19 @@ export default function TasbihPage() {
               }}
             />
 
-            {/* SVG progress ring */}
-            <svg
-              width="300"
-              height="300"
-              viewBox="0 0 300 300"
-              className="block transition-transform duration-100 group-active:scale-[0.985]"
-            >
-              {/* Outer decorative ring (faint) */}
+            <svg viewBox="0 0 300 300" className="block w-full" aria-hidden>
               <circle
-                cx="150"
-                cy="150"
-                r="148"
+                cx="150" cy="150" r={RING_RADIUS}
                 fill="none"
-                stroke="oklch(from var(--border) l c h / 0.5)"
-                strokeWidth="1"
-                strokeDasharray="1 4"
-              />
-              {/* Track */}
-              <circle
-                cx="150"
-                cy="150"
-                r={RING_RADIUS}
-                fill="none"
-                stroke="oklch(from var(--muted-foreground) l c h / 0.15)"
+                stroke="oklch(from var(--muted-foreground) l c h / 0.18)"
                 strokeWidth="2"
               />
-              {/* Progress */}
               {hasTarget && (
                 <circle
-                  cx="150"
-                  cy="150"
-                  r={RING_RADIUS}
+                  cx="150" cy="150" r={RING_RADIUS}
                   fill="none"
                   stroke="var(--primary)"
-                  strokeWidth="3"
+                  strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={RING_CIRC}
                   strokeDashoffset={dashOffset}
@@ -319,177 +272,114 @@ export default function TasbihPage() {
                   style={{ transition: 'stroke-dashoffset 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                 />
               )}
-              {/* Inner fill — subtle gradient */}
               <defs>
                 <radialGradient id="inner-fill" cx="50%" cy="40%" r="60%">
-                  <stop offset="0%" stopColor="oklch(from var(--primary) l c h / 0.06)" />
+                  <stop offset="0%" stopColor="oklch(from var(--primary) l c h / 0.07)" />
                   <stop offset="100%" stopColor="oklch(from var(--primary) l c h / 0)" />
                 </radialGradient>
               </defs>
               <circle cx="150" cy="150" r={RING_RADIUS - 6} fill="url(#inner-fill)" />
             </svg>
 
-            {/* Count overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span
                 key={`count-${pulseKey}`}
-                className="font-display tabular-nums leading-none text-foreground"
+                className="angka-paparan leading-none"
                 style={{
-                  fontSize: count >= 1000 ? '5rem' : count >= 100 ? '6rem' : '7rem',
+                  fontSize:
+                    count >= 1000 ? 'clamp(3rem, 12vw, 5rem)'
+                      : count >= 100 ? 'clamp(3.5rem, 15vw, 6rem)'
+                        : 'clamp(4rem, 18vw, 7rem)',
                   animation: pulseKey > 0 ? 'digitIn 180ms cubic-bezier(0.34, 1.56, 0.64, 1)' : undefined,
                 }}
               >
                 {count}
               </span>
-              <span className="text-2xl text-muted-foreground/40 tabular-nums mt-1" style={{ fontFamily: 'var(--font-display)' }}>
-                {toArabic(count)}
-              </span>
+              {/* Sifar dalam angka Arab ialah satu titik, yang di bawah angka
+                  besar hanya kelihatan seperti habuk — jadi ia bermula pada 1. */}
+              {count > 0 && (
+                <span dir="rtl" lang="ar" className="font-arab mt-2 text-2xl text-muted-foreground">
+                  {toArabic(count)}
+                </span>
+              )}
             </div>
-          </button>
+          </motion.button>
 
-          {/* Hint */}
-          <p className="text-[11px] text-muted-foreground/50 uppercase tracking-widest font-semibold mt-2">
-            {hasTarget ? `${preset.target - count} lagi untuk lengkap` : 'Tekan di mana-mana sahaja'}
-          </p>
-        </div>
+          <div className="mt-12 flex items-center gap-3">
+            <button
+              onClick={decrement}
+              disabled={count === 0}
+              aria-label="Tolak satu"
+              className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-30"
+            >
+              <Minus className="size-4" />
+              Tolak
+            </button>
+            <button
+              onClick={handleReset}
+              aria-label={resetArmed ? 'Tekan sekali lagi untuk sahkan' : 'Kosongkan kiraan'}
+              className={`flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm transition-colors ${
+                resetArmed
+                  ? 'border-primary bg-accent text-accent-foreground'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              {resetArmed ? <Check className="size-4" /> : <RotateCcw className="size-4" />}
+              {resetArmed ? 'Pasti?' : 'Kosongkan'}
+            </button>
+          </div>
+        </motion.div>
 
-        {/* Bottom actions */}
-        <div className={`shrink-0 ${focusMode ? 'mt-4' : 'mt-8'} flex items-center justify-center gap-1.5`}>
-          <ActionButton onClick={decrement} disabled={count === 0} label="Tolak satu">
-            <Minus className="size-4" />
-          </ActionButton>
+        <motion.dl
+          variants={naikMasuk}
+          className="mx-auto mt-14 max-w-md divide-y divide-border/50 border-t border-border/60 sm:flex sm:justify-center sm:gap-x-12 sm:divide-y-0 sm:pt-5"
+        >
+          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
+            <dt className="text-sm text-muted-foreground">Sasaran</dt>
+            <dd className="angka-paparan text-2xl sm:mt-1">{hasTarget ? preset.target : '—'}</dd>
+          </div>
+          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
+            <dt className="text-sm text-muted-foreground">Baki</dt>
+            <dd className="angka-paparan text-2xl sm:mt-1">{hasTarget ? preset.target - count : '—'}</dd>
+          </div>
+          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
+            <dt className="text-sm text-muted-foreground">Pusingan</dt>
+            <dd className="angka-paparan text-2xl sm:mt-1">{cycles}</dd>
+          </div>
+        </motion.dl>
 
-          <ActionButton
-            onClick={handleReset}
-            label={resetArmed ? 'Tekan sekali lagi untuk sahkan' : 'Kosongkan'}
-            variant={resetArmed ? 'warn' : 'default'}
-          >
-            {resetArmed ? <Check className="size-4" /> : <RotateCcw className="size-4" />}
-            {resetArmed && <span className="ml-2 text-xs">Pasti?</span>}
-          </ActionButton>
-
-          {!focusMode && (
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger asChild>
+        {/* Sebelum ini senarai ini tersembunyi di dalam helaian "Pilih" yang
+            hanya mengulang baris tab di atas. Ia kini kekal di halaman. */}
+        {tersimpan.length > 0 && (
+          <motion.section variants={naikMasuk} className="mx-auto mt-20 max-w-md">
+            <h2 className="paparan text-2xl">Kiraan tersimpan</h2>
+            <div className="mt-5 divide-y divide-border/50 border-t border-border/50">
+              {tersimpan.map(p => (
                 <button
-                  className="flex items-center gap-2 h-10 px-3.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-medium"
-                  aria-label="Pilih zikir"
+                  key={p.id}
+                  onClick={() => switchPreset(p.id)}
+                  className="flex w-full items-center justify-between gap-6 py-4 text-left"
                 >
-                  <ListPlus className="size-4" />
-                  <span>Pilih</span>
+                  <span className={p.id === preset.id ? 'font-semibold text-primary' : 'transition-colors hover:text-foreground'}>
+                    {p.name}
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="angka-paparan text-xl">{state.counts[p.id] ?? 0}</span>
+                    {p.target > 0 && (
+                      <span className="text-sm text-muted-foreground"> / {p.target}</span>
+                    )}
+                    {(state.cycles[p.id] ?? 0) > 0 && (
+                      <span className="ml-3 text-sm text-muted-foreground">
+                        {state.cycles[p.id]} pusingan
+                      </span>
+                    )}
+                  </span>
                 </button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl">
-                <SheetHeader>
-                  <SheetTitle className="font-display tracking-tight text-2xl">Pilih Zikir</SheetTitle>
-                  <SheetDescription>Tukar zikir aktif. Kiraan setiap zikir disimpan berasingan.</SheetDescription>
-                </SheetHeader>
-                <div className="divide-y divide-border/50 px-4 pb-6">
-                  {PRESETS.map(p => {
-                    const active = p.id === preset.id;
-                    const pCount = state.counts[p.id] ?? 0;
-                    const pCycles = state.cycles[p.id] ?? 0;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => switchPreset(p.id)}
-                        className="w-full text-left py-4 flex items-center justify-between gap-4 group"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-medium ${active ? 'text-primary' : 'text-foreground group-hover:text-primary transition-colors'}`}>
-                              {p.name}
-                            </span>
-                            {active && <Check className="size-3.5 text-primary" />}
-                          </div>
-                          {p.arabic && (
-                            <p
-                              dir="rtl"
-                              lang="ar"
-                              className="text-base text-muted-foreground/70 mt-1 truncate"
-                              style={{ fontFamily: 'var(--font-display)' }}
-                            >
-                              {p.arabic}
-                            </p>
-                          )}
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs tabular-nums text-muted-foreground">
-                            {pCount}{p.target > 0 && <span className="text-muted-foreground/40"> / {p.target}</span>}
-                          </p>
-                          {pCycles > 0 && (
-                            <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                              {pCycles} pusingan
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
-          )}
-
-          <ActionButton onClick={() => setFocusMode(f => !f)} label={focusMode ? 'Keluar mod fokus' : 'Mod fokus'}>
-            {focusMode ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-          </ActionButton>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function ActionButton({
-  children,
-  onClick,
-  disabled,
-  label,
-  variant = 'default',
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  label: string;
-  variant?: 'default' | 'warn';
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-      className={`flex items-center justify-center h-10 min-w-10 px-3 rounded-full transition-colors text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed ${
-        variant === 'warn'
-          ? 'bg-primary/15 text-primary'
-          : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function CycleDots({ cycles }: { cycles: number }) {
-  if (cycles <= 0) {
-    return <div className="h-2" />;
-  }
-  // Show up to 7 dots, then "+N" overflow
-  const visible = Math.min(cycles, 7);
-  const overflow = cycles - visible;
-  return (
-    <div className="flex items-center gap-1.5 h-2">
-      {Array.from({ length: visible }).map((_, i) => (
-        <span
-          key={i}
-          className="size-1.5 rounded-full bg-primary/70"
-        />
-      ))}
-      {overflow > 0 && (
-        <span className="ml-1 text-[10px] tabular-nums text-muted-foreground/60 font-semibold">
-          +{overflow}
-        </span>
-      )}
+              ))}
+            </div>
+          </motion.section>
+        )}
+      </motion.main>
     </div>
   );
 }

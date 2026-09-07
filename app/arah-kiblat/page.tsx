@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Loader2Icon, MapPinIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import QiblaCard from '@/components/QiblaCard';
-import Sidebar from '@/components/Sidebar';
+import PageShell from '@/components/PageShell';
+import { namaArah } from '@/lib/kiblat';
 
 function getQiblaBearing(lat: number, lng: number) {
   const kLat = 21.422487, kLng = 39.826206;
@@ -117,91 +118,134 @@ export default function ArahKiblatPage() {
     if (!isAligned) alignedRef.current = false;
   }, [isAligned]);
 
+  // DeviceOrientationEvent tidak wujud di pelayan, jadi membacanya semasa
+  // render pertama menyebabkan HTML pelayan dan klien tidak sepadan.
+  const [dipasang, setDipasang] = useState(false);
+  useEffect(() => setDipasang(true), []);
+
   const needsPermissionButton =
+    dipasang &&
     typeof DeviceOrientationEvent !== 'undefined' &&
-    typeof (DeviceOrientationEvent as any).requestPermission === 'function' &&
+    typeof (DeviceOrientationEvent as { requestPermission?: unknown }).requestPermission === 'function' &&
     !motionGranted;
 
   return (
-    <div className="h-full flex flex-col lg:flex-row overflow-hidden">
-      <Sidebar />
-
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
-
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-4 lg:px-10 py-4 border-b border-border/40 shrink-0 gap-3">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight">Arah Kiblat</h1>
-            <p className="text-xs text-muted-foreground/50 mt-0.5">Kompas berorientasikan Kaabah</p>
-          </div>
-          {needsPermissionButton && (
-            <Button size="sm" variant="outline" onClick={requestPermission}>
-              Aktifkan Kompas
-            </Button>
-          )}
+    <PageShell
+      tajuk="Arah Kiblat"
+      lede="Pusingkan peranti anda sehingga jarum bertemu penanda Kaabah."
+      aksi={
+        needsPermissionButton ? (
+          <Button size="sm" variant="outline" onClick={requestPermission}>
+            Aktifkan kompas
+          </Button>
+        ) : undefined
+      }
+    >
+      {locLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2Icon className="size-4 animate-spin" />
+          <span>Mengesan lokasi anda…</span>
         </div>
+      ) : locError ? (
+        <div className="max-w-md">
+          <p className="paparan text-2xl">Lokasi tidak dikesan</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">{locError}</p>
+          <button
+            onClick={() => location.reload()}
+            className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+          >
+            Cuba lagi
+          </button>
+        </div>
+      ) : coords ? (
+        <div className="flex flex-col gap-10">
+          {/* Bearing ialah fakta halaman ini — ia mendapat layanan yang sama
+              seperti kiraan detik di halaman utama. Kompas duduk di sebelahnya
+              sebagai alat, bukan sebagai hero. */}
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
+            <div className="flex min-w-0 flex-col items-start gap-2">
+              <p className="paparan text-2xl leading-none lg:text-3xl">
+                Kiblat
+                {isAligned && (
+                  <span className="ml-3 align-middle font-sans text-sm font-semibold text-primary">
+                    anda menghadapnya
+                  </span>
+                )}
+              </p>
+              <p
+                className={`angka-paparan text-[22vw] leading-none sm:text-[16vw] lg:text-[9vw] ${
+                  isAligned ? 'text-primary' : ''
+                }`}
+              >
+                {Math.round(qibla)}°
+              </p>
+              <p className="text-muted-foreground">{namaArah(qibla)} dari arah utara</p>
+            </div>
 
-        {/* Hero — compass */}
-        <div className="flex-1 flex items-center justify-center px-4 py-10">
-          {locLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2Icon className="animate-spin size-4" />
-              <span>Mengesan lokasi...</span>
-            </div>
-          ) : locError ? (
-            <div className="flex flex-col items-center gap-4 text-center max-w-xs">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <MapPinIcon className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Lokasi tidak dikesan</p>
-                <p className="text-xs text-muted-foreground mt-1">{locError}</p>
-              </div>
-            </div>
-          ) : coords ? (
-            <div className="flex flex-col items-center gap-6">
+            <div className="shrink-0 self-center">
               <QiblaCard qibla={qibla} heading={heading} isAligned={isAligned} />
-              {isAligned && (
-                <p className="text-sm font-medium text-emerald-500 tabular-nums">
-                  Menghadap Kiblat
-                </p>
-              )}
-              {heading === null && motionGranted && (
-                <p className="text-xs text-muted-foreground/50">
-                  Sensor kompas tidak tersedia pada peranti ini.
-                </p>
-              )}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Bottom strip */}
-        {coords && (
-          <div className="border-t border-border/40 grid grid-cols-2 divide-x divide-border/40 shrink-0">
-            <div className="px-6 py-6">
-              <p className="text-xs text-muted-foreground/40 mb-1.5 font-medium uppercase tracking-widest">Kiblat</p>
-              <p className="text-3xl font-bold tabular-nums tracking-tight">{Math.round(qibla)}°</p>
-              <p className="text-xs text-muted-foreground/40 mt-1">dari arah Utara</p>
-            </div>
-            <div className="px-6 py-6">
-              <p className="text-xs text-muted-foreground/40 mb-1.5 font-medium uppercase tracking-widest">Arah semasa</p>
-              {normalizedHeading !== null ? (
-                <>
-                  <p className={`text-3xl font-bold tabular-nums tracking-tight ${isAligned ? 'text-emerald-500' : ''}`}>
-                    {Math.round(normalizedHeading)}°
-                  </p>
-                  <p className={`text-xs mt-1 ${isAligned ? 'text-emerald-500/70' : 'text-muted-foreground/40'}`}>
-                    {isAligned ? 'Menghadap Kiblat' : 'pusingkan peranti'}
-                  </p>
-                </>
-              ) : (
-                <p className="text-3xl font-bold tabular-nums text-muted-foreground/40">—</p>
-              )}
             </div>
           </div>
-        )}
 
-      </main>
-    </div>
+          <dl className="flex flex-wrap gap-x-12 gap-y-4 border-t border-border/60 pt-5">
+            <div>
+              <dt className="text-sm text-muted-foreground">Arah anda</dt>
+              <dd className={`angka-paparan mt-1 text-2xl ${isAligned ? 'text-primary' : ''}`}>
+                {normalizedHeading !== null ? `${Math.round(normalizedHeading)}°` : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Beza sudut</dt>
+              <dd className={`angka-paparan mt-1 text-2xl ${isAligned ? 'text-primary' : ''}`}>
+                {alignmentError !== null ? `${Math.round(alignmentError)}°` : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Kompas</dt>
+              <dd className="mt-1 text-lg">
+                {heading !== null ? 'Aktif' : motionGranted ? 'Tiada sensor' : 'Belum diaktifkan'}
+              </dd>
+            </div>
+          </dl>
+
+          <section className="max-w-[68ch]">
+            <h2 className="paparan text-2xl">Cara arah ini dikira</h2>
+
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              Arah ini dikira sebagai laluan terpendek di atas permukaan bumi dari kedudukan anda ke
+              Kaabah di Makkah (21.4225° U, 39.8262° T). Kerana bumi sfera, laluan terpendek itu
+              bukan garis lurus di atas peta rata.
+            </p>
+
+            <h3 className="paparan mt-8 text-lg">Nombor boleh dipercayai, kompas bergantung telefon</h3>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Bacaan {Math.round(qibla)}° dikira daripada koordinat anda dan tidak berubah melainkan
+              anda berpindah tempat. Kompas yang berputar di atas pula bergantung pada sensor magnet
+              telefon, dan sensor itu mudah terganggu.
+            </p>
+
+            <ul className="mt-4 space-y-3 text-muted-foreground">
+              {[
+                'Sarung telefon bermagnet, meja besi, kereta dan peralatan elektrik boleh menyimpangkan bacaan berpuluh darjah.',
+                'Lambaikan telefon dalam bentuk angka lapan beberapa kali sebelum membaca — itu membetulkan semula bacaan sensor.',
+                'Berdiri jauh sedikit daripada struktur besi, dan pegang telefon rata.',
+              ].map(t => (
+                <li key={t} className="flex gap-3">
+                  <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                  <span className="leading-relaxed">{t}</span>
+                </li>
+              ))}
+            </ul>
+
+            <h3 className="paparan mt-8 text-lg">Jika ragu</h3>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Bandingkan dengan arah saf di masjid atau surau berdekatan — itu rujukan yang sudah
+              disemak. Aplikasi ini membantu anda menganggar, bukan menggantikan pengesahan di
+              tempat solat.
+            </p>
+          </section>
+        </div>
+      ) : null}
+    </PageShell>
   );
 }

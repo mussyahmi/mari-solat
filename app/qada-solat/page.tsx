@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { motion } from 'motion/react';
+import { berperingkat, naikMasuk, spring } from '@/lib/motion';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, collection, getDocs,
@@ -9,193 +11,23 @@ import {
   query, where, writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from '@/firebase';
-import Sidebar from '@/components/Sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ExternalLink, Loader2, RefreshCcw } from "lucide-react";
+import { Loader2, RefreshCcw } from "lucide-react";
 import { isInAppBrowser } from "@/lib/utils";
+import InAppBrowserBanner from '@/components/InAppBrowserBanner';
+import {
+  PRAYERS, DEFAULT, REPORT_THRESHOLD, DAILY_REPORT_LIMIT, MUTE_DURATIONS_MIN,
+  EDIT_DELETE_LIMIT_MS, CHALLENGE_START, MALAY_MONTHS_FULL,
+  generateAlias, todayStr, monthKey, daysBetween,
+  formatMalayDateTime, estimateCompletion, isMonthComplete,
+  lastDayOfMonth, getLbValue,
+  type Prayer, type QadaCounts, type Tab, type LbView,
+  type Participant, type RankedParticipant, type ChatMessage,
+} from '@/lib/qada';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-const PRAYERS = ['subuh', 'zohor', 'asar', 'maghrib', 'isyak'] as const;
-type Prayer = typeof PRAYERS[number];
-type QadaCounts = Record<Prayer, number>;
-type Tab = 'rekod' | 'cabaran' | 'chat';
-type LbView = 'streak' | 'qada' | 'hari';
-
-const DEFAULT: QadaCounts = { subuh: 0, zohor: 0, asar: 0, maghrib: 0, isyak: 0 };
-
-type Participant = {
-  uid: string;
-  alias: string;
-  streak: number;
-  longestStreak: number;
-  activeDays: number;
-  totalQada: number;
-  lastLogDate: string;
-  qadaDone: boolean;
-  mutedUntil?: Timestamp;
-  muteCount?: number;
-};
-
-type RankedParticipant = Participant & { rank: number };
-
-type ChatMessage = {
-  id: string;
-  uid: string;
-  alias: string;
-  text: string;
-  createdAt: Timestamp | null;
-  editedAt?: Timestamp | null;
-  hidden: boolean;
-  reports: string[];
-};
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const REPORT_THRESHOLD = 5;
-const DAILY_REPORT_LIMIT = 3;
-const MUTE_DURATIONS_MIN = [60, 180, 360, 720, 1440];
-const EDIT_DELETE_LIMIT_MS = 5 * 60 * 1000;
-const CHALLENGE_START = { year: 2026, month: 4 };
-
-const MALAY_MONTHS = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogs', 'Sep', 'Okt', 'Nov', 'Dis'];
-const MALAY_MONTHS_FULL = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
-
-const ALIAS_ADJ = [
-  'Berani', 'Bijak', 'Cekal', 'Gigih', 'Ikhlas', 'Mulia', 'Sabar', 'Setia',
-  'Tabah', 'Warak', 'Rajin', 'Tekun', 'Amanah', 'Soleh', 'Tawadu', 'Jujur',
-  'Redha', 'Syukur', 'Khusyuk', 'Tawakkal', 'Lembut', 'Dermawan', 'Adil',
-  'Teguh', 'Tulus', 'Kasih', 'Istiqamah', 'Sayang', 'Murni', 'Suci',
-];
-const ALIAS_NOUN = [
-  'Harimau', 'Helang', 'Kancil', 'Singa', 'Badak', 'Gajah', 'Rusa', 'Merpati',
-  'Lebah', 'Unta', 'Monyet', 'Zirafah', 'Penyu', 'Kucing', 'Merak',
-  'Musang', 'Kumbang', 'Kuda', 'Jerung', 'Sotong', 'Kambing', 'Ketam',
-  'Beruang', 'Arnab', 'Tupai', 'Kijang', 'Kerbau', 'Itik', 'Landak', 'Haruan',
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function generateAlias() {
-  const adj = ALIAS_ADJ[Math.floor(Math.random() * ALIAS_ADJ.length)];
-  const noun = ALIAS_NOUN[Math.floor(Math.random() * ALIAS_NOUN.length)];
-  return `${noun}${adj}`;
-}
-
-function localDateStr(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function todayStr() { return localDateStr(new Date()); }
-
-function monthKey(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function daysBetween(a: string, b: string): number {
-  if (!a || !b) return 999;
-  const dateA = new Date(a + 'T00:00:00');
-  const dateB = new Date(b + 'T00:00:00');
-  return Math.round((dateB.getTime() - dateA.getTime()) / 86400000);
-}
-
-function formatMalayDateTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const period = h < 12 ? 'AM' : 'PM';
-  return `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]}, ${h % 12 || 12}:${m} ${period}`;
-}
-
-function formatMalayDate(date: Date) {
-  return `${date.getDate()} ${MALAY_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-function estimateCompletion(total: number, rate: number): { label: string; date: string } | null {
-  if (total <= 0 || rate <= 0) return null;
-  const days = Math.ceil(total / rate);
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  let label: string;
-  if (days === 1) label = 'Esok';
-  else if (days < 30) label = `${days} hari lagi`;
-  else if (days < 365) {
-    const mo = Math.floor(days / 30), rem = days % 30;
-    label = rem > 0 ? `${mo} bulan ${rem} hari lagi` : `${mo} bulan lagi`;
-  } else {
-    const yr = Math.floor(days / 365), mo = Math.floor((days % 365) / 30), rem = days % 365 % 30;
-    if (mo > 0 && rem > 0) label = `${yr} tahun ${mo} bulan ${rem} hari lagi`;
-    else if (mo > 0) label = `${yr} tahun ${mo} bulan lagi`;
-    else if (rem > 0) label = `${yr} tahun ${rem} hari lagi`;
-    else label = `${yr} tahun lagi`;
-  }
-  return { label, date: formatMalayDate(date) };
-}
-
-function isMonthComplete(mk: string): boolean {
-  const [year, month] = mk.split('-').map(Number);
-  const firstOfNext = new Date(year, month, 1);
-  firstOfNext.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today >= firstOfNext;
-}
-
-function lastDayOfMonth(mk: string): string {
-  const [year, month] = mk.split('-').map(Number);
-  const d = new Date(year, month, 0);
-  return `${d.getDate()} ${MALAY_MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function getLbValue(p: Participant, view: LbView) {
-  if (view === 'streak') return p.longestStreak;
-  if (view === 'qada') return p.totalQada;
-  return p.activeDays;
-}
-
-function InAppBrowserBanner() {
-  const url = typeof window !== "undefined" ? window.location.href : "https://kirapoket.web.app";
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const el = document.createElement("textarea");
-      el.value = url;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        <ExternalLink className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Buka dalam pelayar untuk log masuk</p>
-          <p className="text-xs text-amber-800/80 dark:text-amber-300/70 leading-relaxed">
-            Log masuk dengan Google tidak berfungsi dalam pelayar dalaman ini. Buka MariSolat dalam Safari atau Chrome untuk teruskan.
-          </p>
-        </div>
-      </div>
-      <button
-        onClick={handleCopy}
-        className="inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-amber-500 text-white text-sm font-semibold px-4 hover:bg-amber-600 transition-colors w-full"
-      >
-        {copied ? "Disalin!" : "Salin pautan"}
-      </button>
-    </div>
-  );
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function QadaSolatPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -816,684 +648,625 @@ export default function QadaSolatPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  const rightTab: 'cabaran' | 'chat' = tab === 'chat' ? 'chat' : 'cabaran';
+
+  const TAB_LABEL: [Tab, string][] = [
+    ['rekod', 'Rekod'],
+    ['cabaran', 'Cabaran'],
+    ['chat', 'Sembang'],
+  ];
 
   return (
-    <div className="h-full flex flex-col lg:flex-row overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-
-          {/* ── LEFT PANEL: Rekod ────────────────────────────────────────── */}
-          <div className={`lg:w-[380px] lg:shrink-0 lg:flex-none lg:border-r lg:border-border/30 flex flex-col overflow-hidden ${tab !== 'rekod' ? 'hidden lg:flex' : 'flex flex-1'}`}>
-            <div className="hidden lg:flex px-8 border-b border-border/30 shrink-0">
-              <span className="px-5 py-4 text-sm font-medium border-b-2 border-primary -mb-px text-foreground">Rekod</span>
+    <motion.main
+      variants={berperingkat()}
+      initial="sembunyi"
+      animate="tunjuk"
+      className="mx-auto w-full max-w-7xl px-5 pb-16 pt-4 lg:px-10"
+    >
+      {loading ? (
+        <RangkaMuat />
+      ) : !user ? (
+        /* ── Belum log masuk ──────────────────────────────────────────────── */
+        <motion.div variants={naikMasuk} className="max-w-xl">
+          <h1 className="paparan text-4xl lg:text-5xl">Jejak qada anda</h1>
+          <p className="mt-3 text-pretty text-lg leading-relaxed text-muted-foreground">
+            Simpan kiraan solat yang tertinggal, tetapkan kadar harian, dan lihat anggaran tarikh
+            anda selesai. Sertai cabaran bulanan jika mahu ditemani.
+          </p>
+          {inAppBrowser ? (
+            <div className="mt-8 max-w-md">
+              <InAppBrowserBanner />
             </div>
-            <div className="flex-1 overflow-y-auto px-5 sm:px-7 lg:px-8 py-10 lg:py-14">
-
-              {loading ? (
-                <div>
-                  <div className="flex items-center justify-center mb-6 pb-6 border-b border-border/40 gap-2.5">
-                    <Skeleton className="size-7 rounded-full" />
-                    <Skeleton className="h-4 w-28" />
-                  </div>
-                  <div className="divide-y divide-border/50">
-                    {PRAYERS.map(p => (
-                      <div key={p} className="flex items-center justify-between py-4">
-                        <Skeleton className="h-4 w-14" />
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="size-9 rounded-full" />
-                          <Skeleton className="h-5 w-8" />
-                          <Skeleton className="size-9 rounded-full" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-8 pt-6 border-t border-border/40 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-3 w-14" />
-                      <Skeleton className="h-8 w-12" />
-                    </div>
-                  </div>
-                </div>
-              ) : !user ? (
-                <div className="flex flex-col items-center py-10 gap-5 text-center">
-                  <p className="text-sm text-foreground/60">
-                    Log masuk untuk menyimpan rekod qada dan sertai cabaran bulanan bersama komuniti.
-                  </p>
-                  {inAppBrowser ? (
-                    <div className="anim-fade-up" style={{ animationDelay: "340ms" }}>
-                      <InAppBrowserBanner />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={login}
-                      className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-border/60 text-sm text-foreground/70 hover:text-foreground hover:border-border transition"
-                    >
-                      <GoogleIcon />
-                      Log Masuk dengan Google
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {/* User row */}
-                  <div className="flex items-center justify-center mb-6 pb-6 border-b border-border/40">
-                    <button
-                      onClick={() => { setPreviewAlias(''); setShowAliasDialog(true); }}
-                      className="flex items-center gap-2.5 text-sm font-medium hover:text-primary transition text-left"
-                    >
-                      {user.photoURL && (
-                        <img src={user.photoURL} alt="" className="size-7 rounded-full" referrerPolicy="no-referrer" />
-                      )}
-                      {alias}
-                    </button>
-                  </div>
-
-                  {/* Prayer list */}
-                  <div className="divide-y divide-border/50">
-                    {PRAYERS.map(prayer => (
-                      <div key={prayer} className="flex items-center justify-between py-4">
-                        <span className="text-sm font-medium capitalize">{prayer}</span>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateCount(prayer, -1)}
-                            disabled={counts[prayer] === 0}
-                            className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition disabled:opacity-25"
-                          >−</button>
-                          {editingPrayer === prayer ? (
-                            <input
-                              type="number"
-                              value={editValue}
-                              onChange={e => setEditValue(e.target.value)}
-                              onBlur={() => commitPrayerEdit(prayer)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') commitPrayerEdit(prayer);
-                                if (e.key === 'Escape') setEditingPrayer(null);
-                              }}
-                              className="w-12 text-base font-bold tabular-nums text-center bg-transparent border-b border-border focus:outline-none"
-                              autoFocus min={0}
-                            />
-                          ) : (
-                            <button
-                              onClick={() => { setEditingPrayer(prayer); setEditValue(String(counts[prayer])); }}
-                              className="text-base font-bold tabular-nums min-w-8 text-center hover:text-primary transition"
-                            >{counts[prayer]}</button>
-                          )}
-                          <button
-                            onClick={() => updateCount(prayer, 1)}
-                            className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition"
-                          >+</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Total + Estimation */}
-                  <div className="mt-8 pt-6 border-t border-border/40 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Jumlah</p>
-                      <p className="text-3xl font-bold tabular-nums">{total}</p>
-                    </div>
-                    {total > 0 && (
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Kadar Harian</p>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateRate(-1)}
-                            disabled={dailyRate <= 1}
-                            className="text-foreground/40 hover:text-foreground transition disabled:opacity-25 text-lg leading-none"
-                          >−</button>
-                          <span className="text-sm font-bold tabular-nums min-w-6 text-center">{dailyRate}</span>
-                          <button
-                            onClick={() => updateRate(1)}
-                            className="text-foreground/40 hover:text-foreground transition text-lg leading-none"
-                          >+</button>
-                        </div>
-                      </div>
-                    )}
-                    {estimation && (
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="flex items-center justify-between w-full">
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Anggaran Selesai</p>
-                          <p className="text-xs text-foreground/50">{estimation.date}</p>
-                        </div>
-                        <p className="text-2xl font-bold text-center">{estimation.label}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Daily log */}
-                  <div className="mt-10 pt-8 border-t border-border/40">
-                    {!doneToday && !showLogForm && total > 0 && (
-                      <button
-                        onClick={openLogForm}
-                        disabled={saving}
-                        className="w-full py-3 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
-                      >Selesai hari ini</button>
-                    )}
-
-                    {showLogForm && (
-                      <div className="space-y-4">
-                        <p className="text-sm text-foreground/60">{doneToday ? 'Edit log hari ini' : 'Berapa qada hari ini?'}</p>
-                        <div className="divide-y divide-border/50">
-                          {(() => {
-                            const formMax = doneToday
-                              ? PRAYERS.reduce((acc, p) => ({ ...acc, [p]: counts[p] + todayLog[p] }), {} as QadaCounts)
-                              : counts;
-                            return PRAYERS.filter(p => formMax[p] > 0).map(prayer => (
-                              <div key={prayer} className="flex items-center justify-between py-4">
-                                <span className="text-sm font-medium capitalize">{prayer}</span>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.max(0, p[prayer] - 1) }))}
-                                    disabled={logInputs[prayer] === 0}
-                                    className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition disabled:opacity-25"
-                                  >−</button>
-                                  <span className="text-base font-bold tabular-nums min-w-8 text-center">{logInputs[prayer]}</span>
-                                  <button
-                                    onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.min(formMax[prayer], p[prayer] + 1) }))}
-                                    disabled={logInputs[prayer] >= formMax[prayer]}
-                                    className="size-9 rounded-full border border-border/50 flex items-center justify-center text-lg text-foreground/50 hover:text-foreground hover:border-border transition disabled:opacity-25"
-                                  >+</button>
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                        <div className="flex gap-3 pt-1">
-                          <button
-                            onClick={confirmLog}
-                            disabled={saving || PRAYERS.every(p => logInputs[p] === 0)}
-                            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
-                          >Sahkan</button>
-                          <button
-                            onClick={() => { setShowLogForm(false); setLogInputs(todayLog); }}
-                            className="px-5 py-2.5 rounded-xl text-sm text-foreground/60 hover:text-foreground border border-border/50 transition"
-                          >Batal</button>
-                        </div>
-                      </div>
-                    )}
-
-                    {doneToday && !showLogForm && (
-                      <div className="flex flex-col gap-3">
-                        <p className="text-xs text-foreground/40 text-center">Log hari ini selesai</p>
-                        {(total > 0 || preLogCounts !== null) && (
-                          <div className="flex gap-3">
-                            {total > 0 && (
-                              <button
-                                onClick={() => { setLogInputs(todayLog); setShowLogForm(true); }}
-                                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
-                              >Edit</button>
-                            )}
-                            {preLogCounts !== null && (
-                              <button
-                                onClick={undoToday}
-                                className="px-5 py-2.5 rounded-xl text-sm text-foreground/60 hover:text-foreground border border-border/50 transition"
-                              >Batal</button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {total > 0 && lastUpdatedPrayer && lastUpdatedAt && (
-                      <p className="text-xs text-foreground/35 mt-4 text-center">
-                        Dikemaskini · <span className="capitalize">{lastUpdatedPrayer}</span> · {formatMalayDateTime(lastUpdatedAt)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Empty state */}
-                  {total === 0 && (
-                    <p className="text-xs text-foreground/40 mt-6 text-center">Masukkan berapa solat yang perlu diqada di atas.</p>
-                  )}
-                </>
+          ) : (
+            <button
+              onClick={login}
+              className="mt-8 inline-flex items-center gap-2.5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+            >
+              <GoogleIcon />
+              Log masuk dengan Google
+            </button>
+          )}
+          <p className="mt-4 text-sm text-muted-foreground">
+            Rekod anda disimpan pada akaun anda sahaja.
+          </p>
+        </motion.div>
+      ) : (
+        <>
+          <motion.header variants={naikMasuk} className="mb-12 flex items-start justify-between gap-6">
+            <h1 className="paparan text-4xl lg:text-5xl">Qada Solat</h1>
+            <button
+              onClick={() => { setPreviewAlias(''); setShowAliasDialog(true); }}
+              className="flex shrink-0 items-center gap-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {user.photoURL && (
+                <img src={user.photoURL} alt="" className="size-6 rounded-full" referrerPolicy="no-referrer" />
               )}
-            </div>
-          </div>
+              {alias}
+            </button>
+          </motion.header>
 
-          {/* ── RIGHT PANEL: Cabaran / Chat ──────────────────────────────── */}
-          <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${tab === 'rekod' ? 'hidden lg:flex' : 'flex'}`}>
+          {/* Baki qada ialah satu-satunya fakta halaman ini. Ia mendapat
+              layanan yang sama seperti kiraan detik di halaman utama; segala
+              yang lain di bawah hanyalah cara untuk menurunkan nombor ini. */}
+          <motion.div variants={naikMasuk} className="flex flex-col items-start gap-2">
+            <p className="paparan text-2xl leading-none lg:text-3xl">Baki qada</p>
+            <p className={`angka-paparan text-[22vw] leading-none sm:text-[16vw] lg:text-[9vw] ${total === 0 ? 'text-primary' : ''}`}>
+              {total}
+            </p>
+            <p className="text-muted-foreground">
+              {total === 0 ? 'Tiada baki tertinggal.' : 'solat lagi untuk diqada'}
+            </p>
+          </motion.div>
 
-            {/* Desktop sub-tab */}
-            {user && (
-              <div className="hidden lg:flex gap-0 px-8 border-b border-border/30 shrink-0">
-                {(['cabaran', 'chat'] as const).map(t => (
+          {/* Pada telefon tiga item ini membalut jadi 2 + 1 yang senget, jadi
+              ia menjadi senarai berbaris seperti senarai lain dalam aplikasi.
+              Pada desktop ia kembali menjadi satu baris meta. */}
+          <motion.dl
+            variants={naikMasuk}
+            className="mt-10 divide-y divide-border/50 border-t border-border/60 lg:flex lg:flex-wrap lg:gap-x-12 lg:divide-y-0 lg:pt-5"
+          >
+            {total > 0 && (
+              <div className="flex items-center justify-between py-3.5 lg:block lg:py-0">
+                <dt className="text-sm text-muted-foreground">Kadar harian</dt>
+                <dd className="flex items-center gap-4 lg:mt-1">
                   <button
-                    key={t}
-                    onClick={() => { if (t === 'chat') setUnreadChat(false); setTab(t); }}
-                    className={`px-5 py-4 text-sm transition border-b-2 -mb-px relative ${rightTab === t
-                      ? 'border-primary text-foreground font-medium'
-                      : 'border-transparent text-foreground/50 hover:text-foreground'
-                      }`}
-                  >
-                    {t === 'cabaran' ? 'Cabaran' : 'Sembang'}
-                    {t === 'chat' && unreadChat && rightTab !== 'chat' && (
-                      <span className="absolute top-3 ml-1 size-1.5 rounded-full bg-primary inline-block" />
-                    )}
-                  </button>
-                ))}
+                    onClick={() => updateRate(-1)}
+                    disabled={dailyRate <= 1}
+                    aria-label="Kurangkan kadar harian"
+                    className="text-xl leading-none text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25"
+                  >−</button>
+                  <span className="angka-paparan text-2xl">{dailyRate}</span>
+                  <button
+                    onClick={() => updateRate(1)}
+                    aria-label="Tambah kadar harian"
+                    className="text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
+                  >+</button>
+                </dd>
               </div>
             )}
+            {/* Satu-satunya baris meta yang membawa frasa dan bukan nombor.
+                Dimampatkan ke lajur kanan ia membalut jadi dua baris senget,
+                jadi ia bertindan ke bawah label sebaliknya. */}
+            {estimation && (
+              <div className="py-3.5 lg:py-0">
+                <dt className="text-sm text-muted-foreground">Anggaran selesai</dt>
+                <dd className="mt-1">
+                  <span className="angka-paparan text-2xl">{estimation.label}</span>
+                  <span className="ml-3 text-sm text-muted-foreground">{estimation.date}</span>
+                </dd>
+              </div>
+            )}
+            {myChallenge && (
+              <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+                <dt className="text-sm text-muted-foreground">Streak</dt>
+                <dd className="lg:mt-1">
+                  <span className="angka-paparan text-2xl">{myChallenge.streak}</span>
+                  <span className="ml-2 text-sm text-muted-foreground">hari</span>
+                </dd>
+              </div>
+            )}
+          </motion.dl>
 
-            {/* Right panel body */}
-            <div className={`flex-1 min-h-0 ${rightTab === 'chat' && user ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+          <motion.div variants={naikMasuk} className="mt-16">
+            <div className="-ml-3 flex items-center border-b border-border/60 lg:-ml-3.5">
+              {TAB_LABEL.map(([t, label]) => (
+                <button
+                  key={t}
+                  onClick={() => { if (t === 'chat') setUnreadChat(false); setTab(t); }}
+                  className="group relative px-3 py-3 text-sm transition-colors lg:px-3.5"
+                >
+                  {tab === t && (
+                    <motion.span
+                      layoutId="tabQada"
+                      className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
+                      transition={spring.susunAtur}
+                    />
+                  )}
+                  <span className={tab === t ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
+                    {label}
+                  </span>
+                  {t === 'chat' && unreadChat && tab !== 'chat' && (
+                    <span className="ml-1.5 inline-block size-1.5 rounded-full bg-primary align-top" />
+                  )}
+                </button>
+              ))}
+            </div>
 
-              {!user ? (
-                <div className="px-5 lg:px-12 py-16 text-center">
-                  <p className="text-sm text-foreground/50">Log masuk untuk menyertai cabaran dan berbual.</p>
+            {/* ── Rekod ──────────────────────────────────────────────────── */}
+            {tab === 'rekod' ? (
+              <div className="max-w-xl pt-10">
+                <h2 className="paparan text-2xl">Solat yang tertinggal</h2>
+                <p className="mt-2 text-muted-foreground">
+                  Ketik nombor untuk menaip terus.
+                </p>
+
+                <div className="mt-6 divide-y divide-border/50 border-t border-border/50">
+                  {PRAYERS.map(prayer => (
+                    <div key={prayer} className="flex items-center justify-between py-4">
+                      <span className="capitalize">{prayer}</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => updateCount(prayer, -1)}
+                          disabled={counts[prayer] === 0}
+                          aria-label={`Kurangkan ${prayer}`}
+                          className="flex size-9 items-center justify-center rounded-full border border-border/50 text-lg transition-colors hover:border-border hover:bg-muted disabled:opacity-25"
+                        >−</button>
+                        {editingPrayer === prayer ? (
+                          <input
+                            type="number"
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={() => commitPrayerEdit(prayer)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') commitPrayerEdit(prayer);
+                              if (e.key === 'Escape') setEditingPrayer(null);
+                            }}
+                            className="angka-paparan w-14 border-b border-border bg-transparent text-center text-xl focus:outline-none"
+                            autoFocus min={0}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { setEditingPrayer(prayer); setEditValue(String(counts[prayer])); }}
+                            className="angka-paparan min-w-10 text-center text-xl transition-colors hover:text-primary"
+                          >{counts[prayer]}</button>
+                        )}
+                        <button
+                          onClick={() => updateCount(prayer, 1)}
+                          aria-label={`Tambah ${prayer}`}
+                          className="flex size-9 items-center justify-center rounded-full border border-border/50 text-lg transition-colors hover:border-border hover:bg-muted"
+                        >+</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-              ) : rightTab === 'cabaran' ? (
-                <div className="px-5 sm:px-7 lg:px-12 py-10 lg:py-14">
-                  <div className="space-y-14">
+                {total === 0 && !doneToday && (
+                  <p className="mt-6 text-muted-foreground">
+                    Masukkan berapa solat yang perlu diqada di atas.
+                  </p>
+                )}
 
-                    {/* My stats */}
+                {/* Log harian */}
+                <div className="mt-12">
+                  {!doneToday && !showLogForm && total > 0 && (
+                    <button
+                      onClick={openLogForm}
+                      disabled={saving}
+                      className="inline-flex rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90 disabled:opacity-40"
+                    >Selesai hari ini</button>
+                  )}
+
+                  {showLogForm && (
                     <div>
-                      {myChallenge && <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-4">Macam Mana Bulan Ni?</p>}
-                      {myChallenge ? (
-                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                          {[
-                            { label: 'Streak Semasa', value: myChallenge.streak },
-                            { label: 'Streak Terpanjang', value: myChallenge.longestStreak },
-                            { label: 'Qada Selesai', value: myChallenge.totalQada },
-                            { label: 'Hari Aktif', value: myChallenge.activeDays },
-                          ].map(stat => (
-                            <div key={stat.label} className="bg-muted/30 rounded-2xl px-4 py-6 text-center">
-                              <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
-                              <p className="text-xs text-foreground/40 mt-1">{stat.label}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-foreground/60">
-                          Belum join lagi. Log qada dalam tab <span className="font-medium text-foreground/80">Rekod</span> untuk masuk cabaran bulan ini.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Leaderboard */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">Siapa Paling Rajin?</p>
-                        <select
-                          value={lbMonth}
-                          onChange={e => setLbMonth(e.target.value)}
-                          className="text-xs text-foreground/60 bg-transparent border-none focus:outline-none cursor-pointer"
-                        >
-                          {monthOptions.map(o => (
-                            <option key={o.key} value={o.key}>{o.label}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {!isMonthComplete(lbMonth) ? (
-                        <p className="text-sm text-foreground/55 py-10 text-center">
-                          Keputusan bulan ini akan keluar selepas {lastDayOfMonth(lbMonth)}.<br />Tunggu dulu!
-                        </p>
-                      ) : (
-                        <>
-                          <div className="flex gap-1 mb-5 p-1 bg-muted/30 rounded-xl">
-                            {([['streak', 'Streak'], ['qada', 'Qada'], ['hari', 'Hari Aktif']] as [LbView, string][]).map(([v, label]) => (
-                              <button
-                                key={v}
-                                onClick={() => setLbView(v)}
-                                className={`flex-1 py-1.5 text-xs rounded-lg transition ${lbView === v
-                                  ? 'bg-background shadow-sm font-medium text-foreground'
-                                  : 'text-foreground/50 hover:text-foreground'
-                                  }`}
-                              >{label}</button>
-                            ))}
-                          </div>
-
-                          {loadingLb ? (
-                            <div className="space-y-3">
-                              {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="flex items-center gap-3 py-2.5">
-                                  <Skeleton className="h-3.5 w-5" />
-                                  <Skeleton className="h-3.5 w-32" />
-                                  <Skeleton className="h-3.5 w-12 ml-auto" />
-                                </div>
-                              ))}
-                            </div>
-                          ) : rankedLb.length === 0 ? (
-                            <p className="text-sm text-foreground/50 py-10">
-                              Belum ada peserta lagi. Jadi yang pertama!
-                            </p>
-                          ) : (
-                            <div>
-                              <div className="flex items-center gap-3 pb-2 border-b border-border/40">
-                                <span className="w-5 shrink-0" />
-                                <span className="text-xs text-foreground/50 flex-1">Peserta</span>
-                                <span className="text-xs text-foreground/50">
-                                  {lbView === 'streak' ? 'Streak' : lbView === 'qada' ? 'Qada' : 'Hari Aktif'}
-                                </span>
-                              </div>
-                              <div className="divide-y divide-border/50">
-                                {rankedLb.map(p => {
-                                  const isMe = p.uid === user.uid;
-                                  const val = getLbValue(p, lbView);
-                                  return (
-                                    <div key={p.uid} className={`flex items-center gap-3 py-3 ${isMe ? 'text-primary' : ''}`}>
-                                      <span className="text-xs text-foreground/45 w-5 tabular-nums text-right shrink-0">{p.rank}</span>
-                                      <span className={`text-sm flex-1 truncate ${isMe ? 'font-semibold' : ''}`}>
-                                        {p.alias}
-                                        {p.qadaDone && (
-                                          <span className="ml-2 text-[10px] text-primary/60 font-normal">Qada Selesai</span>
-                                        )}
-                                      </span>
-                                      <span className="text-sm font-bold tabular-nums">{val}</span>
-                                    </div>
-                                  );
-                                })}
-                                {!rankedLb.find(p => p.uid === user.uid) && myChallenge && lbMonth === monthKey() && (
-                                  <>
-                                    <div className="border-t border-dashed border-border/30 my-1" />
-                                    <div className="flex items-center gap-3 py-3 text-primary/70">
-                                      <span className="text-xs w-5 text-right shrink-0">—</span>
-                                      <span className="text-sm flex-1 font-semibold truncate">{alias}</span>
-                                      <span className="text-sm font-bold tabular-nums">{getLbValue(myChallenge, lbView)}</span>
-                                    </div>
-                                  </>
-                                )}
+                      <h3 className="paparan text-xl">
+                        {doneToday ? 'Edit log hari ini' : 'Berapa qada hari ini?'}
+                      </h3>
+                      <div className="mt-5 divide-y divide-border/50 border-t border-border/50">
+                        {(() => {
+                          const formMax = doneToday
+                            ? PRAYERS.reduce((acc, p) => ({ ...acc, [p]: counts[p] + todayLog[p] }), {} as QadaCounts)
+                            : counts;
+                          return PRAYERS.filter(p => formMax[p] > 0).map(prayer => (
+                            <div key={prayer} className="flex items-center justify-between py-4">
+                              <span className="capitalize">{prayer}</span>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.max(0, p[prayer] - 1) }))}
+                                  disabled={logInputs[prayer] === 0}
+                                  aria-label={`Kurangkan log ${prayer}`}
+                                  className="flex size-9 items-center justify-center rounded-full border border-border/50 text-lg transition-colors hover:border-border hover:bg-muted disabled:opacity-25"
+                                >−</button>
+                                <span className="angka-paparan min-w-10 text-center text-xl">{logInputs[prayer]}</span>
+                                <button
+                                  onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.min(formMax[prayer], p[prayer] + 1) }))}
+                                  disabled={logInputs[prayer] >= formMax[prayer]}
+                                  aria-label={`Tambah log ${prayer}`}
+                                  className="flex size-9 items-center justify-center rounded-full border border-border/50 text-lg transition-colors hover:border-border hover:bg-muted disabled:opacity-25"
+                                >+</button>
                               </div>
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Info sections */}
-                    <div className="pt-8 border-t border-border/30 space-y-10">
-                      <div>
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Kenapa Ada Cabaran Ini?</p>
-                        <p className="text-sm text-foreground/70 leading-relaxed">
-                          Cabaran ini bukan tentang siapa yang paling hebat — bila kita tengok ada kawan-kawan yang turut serta, kita pun jadi lebih bersemangat. Log sahaja, in shaa Allah mereka pun akan ikut sama.
-                        </p>
+                          ));
+                        })()}
                       </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Peringatan Niat</p>
-                        <p className="text-sm text-foreground/70 leading-relaxed">
-                          Betulkan semula niat — buat kerana Allah, bukan kerana nak naik tangga. Jadikan streak dan kedudukan sebagai pemangkin semangat, bukan matlamat.
-                        </p>
+                      <div className="mt-6 flex gap-3">
+                        <button
+                          onClick={confirmLog}
+                          disabled={saving || PRAYERS.every(p => logInputs[p] === 0)}
+                          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90 disabled:opacity-40"
+                        >Sahkan</button>
+                        <button
+                          onClick={() => { setShowLogForm(false); setLogInputs(todayLog); }}
+                          className="rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted"
+                        >Batal</button>
                       </div>
-
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Cara Sertai</p>
-                          <ul className="space-y-2.5">
-                            {[
-                              'Log setiap hari — Buat 1 log sehari untuk streak. Masih boleh edit semula untuk hari yang sama.',
-                              'Jaga streak — Jika terlepas 2 hari berturut-turut, streak semasa akan reset ke 0.',
-                              'Reset bulanan — Jumlah streak semasa, streak terpanjang, qada selesai dan hari aktif akan reset setiap awal bulan. Mulakan bulan baru dengan semangat baru!',
-                            ].map(rule => (
-                              <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                <span>{rule}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">3 Kategori Tangga</p>
-                          <ul className="space-y-2.5">
-                            {[
-                              'Streak Terpanjang — Menunjukkan siapa yang paling konsisten log setiap hari tanpa terlepas.',
-                              'Jumlah Qada — Mengira siapa yang paling banyak menyelesaikan qada solat sepanjang cabaran.',
-                              'Hari Aktif — Memaparkan siapa yang paling kerap log, tanpa mengira streak.',
-                            ].map(rule => (
-                              <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                                <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                                <span>{rule}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-3">Ruang Sembang</p>
-                        <ul className="space-y-2.5">
-                          {[
-                            'Edit & Padam — Mesej sendiri boleh diedit atau dipadam dalam masa 5 minit.',
-                            'Lapor Mesej — Tekan mesej pengguna lain untuk lapor. Mesej dengan laporan mencukupi akan disembunyikan.',
-                            'Had Laporan — Boleh lapor maksimum 3 mesej sehari. Laporan boleh dibatalkan.',
-                            'Penyimpanan — Mesej lama dipadam selepas 30 hari.',
-                            'Etika — Jaga adab dan perasaan sesama pengguna.',
-                          ].map(rule => (
-                            <li key={rule} className="text-sm text-foreground/65 flex gap-2.5">
-                              <span className="shrink-0 text-foreground/30 mt-0.5">·</span>
-                              <span>{rule}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Nama Samaran</p>
-                        <p className="text-sm text-foreground/65 mt-2">
-                          Nama samaran anda boleh ditukar bila-bila masa — ketik nama anda dalam tab Rekod.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              ) : (
-                /* ── Chat ───────────────────────────────────────────────── */
-                <>
-                  {reportCountToday > 0 && (
-                    <div className="px-5 lg:px-8 py-3 border-b border-border/30 shrink-0 flex justify-end">
-                      <p className="text-xs text-foreground/45">Laporan: {reportCountToday}/{DAILY_REPORT_LIMIT}</p>
                     </div>
                   )}
 
-                  <div className="flex-1 overflow-y-auto px-5 lg:px-8 py-2 space-y-0.5">
+                  {doneToday && !showLogForm && (total > 0 || preLogCounts !== null) && (
+                    <div className="flex gap-3">
+                      {total > 0 && (
+                        <button
+                          onClick={() => { setLogInputs(todayLog); setShowLogForm(true); }}
+                          className="rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted"
+                        >Edit log hari ini</button>
+                      )}
+                      {preLogCounts !== null && (
+                        <button
+                          onClick={undoToday}
+                          className="rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted"
+                        >Batal log</button>
+                      )}
+                    </div>
+                  )}
+
+                  {total > 0 && lastUpdatedPrayer && lastUpdatedAt && (
+                    <p className="mt-6 text-sm text-muted-foreground">
+                      Dikemas kini pada <span className="capitalize">{lastUpdatedPrayer}</span>, {formatMalayDateTime(lastUpdatedAt)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            /* ── Cabaran ────────────────────────────────────────────────── */
+            ) : tab === 'cabaran' ? (
+              <div className="pt-10">
+                <h2 className="paparan text-2xl">Bulan ini</h2>
+                {myChallenge ? (
+                  <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border/60 pt-5 lg:flex lg:flex-wrap lg:gap-x-12 lg:gap-y-5">
+                    {[
+                      { label: 'Streak semasa', value: myChallenge.streak },
+                      { label: 'Streak terpanjang', value: myChallenge.longestStreak },
+                      { label: 'Qada selesai', value: myChallenge.totalQada },
+                      { label: 'Hari aktif', value: myChallenge.activeDays },
+                    ].map(stat => (
+                      <div key={stat.label}>
+                        <dt className="text-sm text-muted-foreground">{stat.label}</dt>
+                        <dd className="angka-paparan mt-1 text-3xl">{stat.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="mt-3 max-w-[62ch] text-muted-foreground">
+                    Belum sertai. Log qada dalam tab Rekod untuk masuk cabaran bulan ini.
+                  </p>
+                )}
+
+                {/* Tangga */}
+                <div className="mt-16 max-w-2xl">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h2 className="paparan text-2xl">Tangga peserta</h2>
+                    <select
+                      value={lbMonth}
+                      onChange={e => setLbMonth(e.target.value)}
+                      className="cursor-pointer border-none bg-transparent text-sm text-muted-foreground focus:outline-none"
+                    >
+                      {monthOptions.map(o => (
+                        <option key={o.key} value={o.key}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {!isMonthComplete(lbMonth) ? (
+                    <p className="mt-4 max-w-[62ch] text-muted-foreground">
+                      Keputusan bulan ini keluar selepas {lastDayOfMonth(lbMonth)}.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="-ml-3 mt-4 flex items-center">
+                        {([['streak', 'Streak'], ['qada', 'Qada'], ['hari', 'Hari aktif']] as [LbView, string][]).map(([v, label]) => (
+                          <button
+                            key={v}
+                            onClick={() => setLbView(v)}
+                            className={`px-3 py-1.5 text-sm transition-colors ${
+                              lbView === v ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >{label}</button>
+                        ))}
+                      </div>
+
+                      {loadingLb ? (
+                        <div className="mt-6 border-t border-border/50">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="flex items-center gap-4 border-b border-border/50 py-4">
+                              <Skeleton className="h-4 w-5" />
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="ml-auto h-6 w-10" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : rankedLb.length === 0 ? (
+                        <p className="mt-4 text-muted-foreground">Belum ada peserta. Jadi yang pertama.</p>
+                      ) : (
+                        <div className="mt-6 divide-y divide-border/50 border-t border-border/50">
+                          {rankedLb.map(p => {
+                            const isMe = p.uid === user.uid;
+                            return (
+                              <div key={p.uid} className={`flex items-center gap-4 py-4 ${isMe ? 'text-primary' : ''}`}>
+                                <span className="angka-paparan w-6 shrink-0 text-right text-lg text-muted-foreground">{p.rank}</span>
+                                <span className={`min-w-0 flex-1 truncate ${isMe ? 'font-semibold' : ''}`}>
+                                  {p.alias}
+                                  {p.qadaDone && (
+                                    <span className="ml-3 text-sm text-primary">qada selesai</span>
+                                  )}
+                                </span>
+                                <span className="angka-paparan text-2xl">{getLbValue(p, lbView)}</span>
+                              </div>
+                            );
+                          })}
+                          {!rankedLb.find(p => p.uid === user.uid) && myChallenge && lbMonth === monthKey() && (
+                            <div className="flex items-center gap-4 py-4 text-primary">
+                              <span className="w-6 shrink-0 text-right text-muted-foreground">—</span>
+                              <span className="min-w-0 flex-1 truncate font-semibold">{alias}</span>
+                              <span className="angka-paparan text-2xl">{getLbValue(myChallenge, lbView)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Nota */}
+                <div className="mt-20 max-w-[68ch]">
+                  <h2 className="paparan text-2xl">Kenapa ada cabaran ini</h2>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    Bila kita nampak ada orang lain yang turut serta, kita pun jadi lebih
+                    bersemangat. Log sahaja, in shaa Allah mereka pun akan ikut sama.
+                  </p>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    Betulkan semula niat — buat kerana Allah, bukan kerana nak naik tangga. Streak
+                    dan kedudukan ialah pemangkin semangat, bukan matlamat.
+                  </p>
+
+                  <h3 className="paparan mt-10 text-lg">Cara ia dikira</h3>
+                  <ul className="mt-4 space-y-3 leading-relaxed text-muted-foreground">
+                    {[
+                      'Satu log sehari sudah memadai untuk streak. Log yang sama masih boleh diedit pada hari itu.',
+                      'Terlepas dua hari berturut-turut, streak semasa kembali ke sifar.',
+                      'Semua kiraan cabaran bermula semula setiap awal bulan.',
+                      'Streak terpanjang menunjukkan siapa paling konsisten; jumlah qada menunjukkan siapa paling banyak selesai; hari aktif menunjukkan siapa paling kerap log.',
+                    ].map(nota => (
+                      <li key={nota} className="flex gap-3">
+                        <span className="shrink-0" aria-hidden>·</span>
+                        <span>{nota}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <h3 className="paparan mt-10 text-lg">Adab ruang sembang</h3>
+                  <ul className="mt-4 space-y-3 leading-relaxed text-muted-foreground">
+                    {[
+                      'Mesej sendiri boleh diedit atau dipadam dalam masa 5 minit.',
+                      'Ketik mesej orang lain untuk melaporkannya. Mesej yang cukup laporan akan disembunyikan.',
+                      'Had tiga laporan sehari, dan laporan boleh dibatalkan.',
+                      'Mesej lama dipadam selepas 30 hari.',
+                    ].map(nota => (
+                      <li key={nota} className="flex gap-3">
+                        <span className="shrink-0" aria-hidden>·</span>
+                        <span>{nota}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <h3 className="paparan mt-10 text-lg">Nama samaran</h3>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    Nama sebenar anda tidak pernah dipaparkan. Ketik nama samaran di atas untuk
+                    menukarnya bila-bila masa.
+                  </p>
+                </div>
+              </div>
+
+            /* ── Sembang ────────────────────────────────────────────────── */
+            ) : (
+              <div className="pt-10">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 className="paparan text-2xl">Sembang</h2>
+                  {reportCountToday > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Laporan: {reportCountToday}/{DAILY_REPORT_LIMIT}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-6 flex max-w-2xl flex-col rounded-2xl border border-border/50">
+                  <div className="flex h-[55vh] min-h-80 flex-col justify-end overflow-y-auto px-4 py-4">
                     {messages.length === 0 ? (
-                      <p className="text-sm text-foreground/45 text-center py-16">
+                      <p className="py-16 text-center text-muted-foreground">
                         Tiada mesej lagi. Mulakan perbualan.
                       </p>
                     ) : (
-                      messages.map(msg => {
-                        if (msg.hidden && msg.uid !== user.uid) return null;
-                        const isMe = msg.uid === user.uid;
-                        const iReported = msg.reports.includes(user.uid);
-                        const ts = msg.createdAt ? new Date(msg.createdAt.toMillis()) : null;
-                        const ageMs = msg.createdAt ? Date.now() - msg.createdAt.toMillis() : Infinity;
-                        const canEditDelete = isMe && !msg.hidden && ageMs < EDIT_DELETE_LIMIT_MS;
-                        const isEditingThis = editingMsgId === msg.id;
-                        return (
-                          <div key={msg.id} className={`flex flex-col gap-0.5 py-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                            {!isMe && (
-                              <span className="text-[11px] text-foreground/50 px-1">{msg.alias}</span>
-                            )}
-                            {isEditingThis ? (
-                              <div className={`flex items-center gap-2 max-w-[78%] ${isMe ? 'flex-row-reverse' : ''}`}>
-                                <input
-                                  type="text"
-                                  value={editMsgInput}
-                                  onChange={e => setEditMsgInput(e.target.value)}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') editMessage(msg);
-                                    if (e.key === 'Escape') setEditingMsgId(null);
+                      <div className="space-y-1">
+                        {messages.map(msg => {
+                          if (msg.hidden && msg.uid !== user.uid) return null;
+                          const isMe = msg.uid === user.uid;
+                          const iReported = msg.reports.includes(user.uid);
+                          const ts = msg.createdAt ? new Date(msg.createdAt.toMillis()) : null;
+                          const ageMs = msg.createdAt ? Date.now() - msg.createdAt.toMillis() : Infinity;
+                          const canEditDelete = isMe && !msg.hidden && ageMs < EDIT_DELETE_LIMIT_MS;
+                          const isEditingThis = editingMsgId === msg.id;
+                          return (
+                            <div key={msg.id} className={`flex flex-col gap-0.5 py-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
+                              {!isMe && (
+                                <span className="px-1 text-sm text-muted-foreground">{msg.alias}</span>
+                              )}
+                              {isEditingThis ? (
+                                <div className={`flex max-w-[78%] items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                  <input
+                                    type="text"
+                                    value={editMsgInput}
+                                    onChange={e => setEditMsgInput(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') editMessage(msg);
+                                      if (e.key === 'Escape') setEditingMsgId(null);
+                                    }}
+                                    onBlur={() => editMessage(msg)}
+                                    maxLength={300}
+                                    className="min-w-0 flex-1 rounded-2xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm focus:outline-none"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onMouseDown={e => { e.preventDefault(); setConfirmAction({ type: 'delete', msg }); setEditingMsgId(null); }}
+                                    className="shrink-0 text-sm text-destructive transition-colors hover:text-destructive/80"
+                                  >Padam</button>
+                                </div>
+                              ) : (
+                                <div
+                                  onClick={() => {
+                                    if (canEditDelete) { setEditingMsgId(msg.id); setEditMsgInput(msg.text); }
+                                    else if (!isMe && !msg.hidden) {
+                                      iReported
+                                        ? reportMessage(msg)
+                                        : setConfirmAction({ type: 'report', msg });
+                                    }
                                   }}
-                                  onBlur={() => editMessage(msg)}
-                                  maxLength={300}
-                                  className="px-3 py-2 rounded-2xl text-sm bg-primary/10 border border-primary/30 focus:outline-none min-w-0 flex-1"
-                                  autoFocus
-                                />
-                                <button
-                                  onMouseDown={e => { e.preventDefault(); setConfirmAction({ type: 'delete', msg }); setEditingMsgId(null); }}
-                                  className="shrink-0 text-destructive/50 hover:text-destructive transition text-xs"
-                                >Padam</button>
-                              </div>
-                            ) : (
-                              <div
-                                onClick={() => {
-                                  if (canEditDelete) { setEditingMsgId(msg.id); setEditMsgInput(msg.text); }
-                                  else if (!isMe && !msg.hidden) {
-                                    iReported
-                                      ? reportMessage(msg)
-                                      : setConfirmAction({ type: 'report', msg });
-                                  }
-                                }}
-                                className={`px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-[78%] ${canEditDelete || (!isMe && !msg.hidden) ? 'cursor-pointer active:opacity-70' : ''} transition-opacity ${isMe
-                                  ? 'bg-primary/10 text-foreground rounded-br-sm'
-                                  : msg.hidden
-                                    ? 'bg-muted/20 text-foreground/40 italic rounded-bl-sm'
-                                    : 'bg-muted/40 text-foreground rounded-bl-sm'
-                                  }`}
-                              >
-                                {msg.hidden && msg.uid === user.uid ? '[Mesej ini disembunyikan]' : msg.text}
-                              </div>
-                            )}
-                            {ts && (
-                              <span className="text-[10px] text-foreground/35 px-1">
-                                {ts.getHours() % 12 || 12}:{String(ts.getMinutes()).padStart(2, '0')} {ts.getHours() < 12 ? 'AM' : 'PM'}
-                                {msg.editedAt && <span className="ml-1">(diedit)</span>}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })
+                                  className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed transition-opacity ${canEditDelete || (!isMe && !msg.hidden) ? 'cursor-pointer active:opacity-70' : ''} ${isMe
+                                    ? 'rounded-br-sm bg-accent text-accent-foreground'
+                                    : msg.hidden
+                                      ? 'rounded-bl-sm bg-muted italic text-muted-foreground'
+                                      : 'rounded-bl-sm bg-muted'
+                                    }`}
+                                >
+                                  {msg.hidden && msg.uid === user.uid ? '[Mesej ini disembunyikan]' : msg.text}
+                                </div>
+                              )}
+                              {ts && (
+                                <span className="px-1 text-xs text-muted-foreground">
+                                  {ts.getHours() % 12 || 12}:{String(ts.getMinutes()).padStart(2, '0')} {ts.getHours() < 12 ? 'AM' : 'PM'}
+                                  {msg.editedAt && <span className="ml-1">(diedit)</span>}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                     <div ref={messagesEndRef} />
                   </div>
 
                   {confirmAction && (
-                    <div className="shrink-0 mx-5 lg:mx-8 mb-2 px-4 py-3.5 bg-muted/60 rounded-2xl border border-border/40">
-                      <p className="text-sm font-medium mb-1">
+                    <div className="mx-4 mb-3 rounded-2xl bg-muted px-4 py-3.5">
+                      <p className="font-semibold">
                         {confirmAction.type === 'delete' ? 'Padam mesej ini?' : 'Lapor mesej ini?'}
                       </p>
-                      <p className="text-xs text-foreground/50 mb-3 line-clamp-2">"{confirmAction.msg.text}"</p>
-                      <div className="flex gap-2">
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{confirmAction.msg.text}</p>
+                      <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => {
                             if (confirmAction.type === 'delete') deleteMessage(confirmAction.msg.id);
                             else reportMessage(confirmAction.msg);
                             setConfirmAction(null);
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${confirmAction.type === 'delete'
-                            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                          className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${confirmAction.type === 'delete'
+                            ? 'bg-destructive text-background hover:bg-destructive/90'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
                             }`}
                         >
                           {confirmAction.type === 'delete' ? 'Ya, padam' : 'Ya, lapor'}
                         </button>
                         <button
                           onClick={() => setConfirmAction(null)}
-                          className="px-3 py-1.5 rounded-lg text-xs text-foreground/50 hover:text-foreground border border-border/40 transition"
+                          className="rounded-full border border-border px-4 py-1.5 text-sm transition-colors hover:bg-muted"
                         >Batal</button>
                       </div>
                     </div>
                   )}
 
-                  <div className="shrink-0 px-5 lg:px-8 py-4 border-t border-border/30">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={chatInput}
-                        onChange={e => setChatInput(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-                        }}
-                        placeholder="Tulis mesej..."
-                        maxLength={300}
-                        className="flex-1 text-sm bg-transparent border-none focus:outline-none text-foreground placeholder:text-foreground/30"
-                      />
-                      <button
-                        onClick={sendChat}
-                        disabled={!chatInput.trim() || sendingChat}
-                        className="text-primary hover:text-primary/80 transition disabled:opacity-30 shrink-0"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
-                          <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
-                        </svg>
-                      </button>
-                    </div>
+                  <div className="flex shrink-0 gap-3 border-t border-border/50 px-4 py-3">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+                      }}
+                      placeholder="Tulis mesej…"
+                      maxLength={300}
+                      className="flex-1 border-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                    />
+                    <button
+                      onClick={sendChat}
+                      disabled={!chatInput.trim() || sendingChat}
+                      aria-label="Hantar mesej"
+                      className="shrink-0 text-primary transition-opacity hover:opacity-80 disabled:opacity-30"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
+                        <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
+                      </svg>
+                    </button>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
 
-        </div>
-
-        {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
-        {user && (
-          <nav className="lg:hidden shrink-0 flex border-t border-border/30 bg-background">
-            {(['rekod', 'cabaran', 'chat'] as Tab[]).map(t => (
-              <button
-                key={t}
-                onClick={() => { if (t === 'chat') setUnreadChat(false); setTab(t); }}
-                className={`flex-1 py-3.5 text-xs font-medium transition relative ${tab === t ? 'text-primary' : 'text-foreground/40 hover:text-foreground'}`}
-              >
-                {t === 'rekod' ? 'Rekod' : t === 'cabaran' ? 'Cabaran' : 'Sembang'}
-                {t === 'chat' && unreadChat && tab !== 'chat' && (
-                  <span className="absolute top-2.5 right-[calc(50%-14px)] size-1.5 rounded-full bg-primary" />
-                )}
-              </button>
-            ))}
-          </nav>
-        )}
-
-      </main>
-
-      {/* ── Alias Dialog ─────────────────────────────────────────────────────── */}
+      {/* ── Dialog nama samaran ──────────────────────────────────────────── */}
       <Dialog open={showAliasDialog} onOpenChange={setShowAliasDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Nama Samaran</DialogTitle>
+            <DialogTitle className="paparan text-2xl">Nama samaran</DialogTitle>
           </DialogHeader>
-          <div className="space-y-5 pt-1">
-            <div className="bg-muted/30 rounded-2xl px-5 py-4 flex items-center justify-center">
-              <div className="flex items-center gap-2">
-                <p className="text-xl font-bold">{previewAlias || alias}</p>
-                <button
-                  onClick={generateFreeAlias}
-                  disabled={aliasChecking}
-                  className="text-foreground/45 hover:text-foreground transition disabled:opacity-40"
-                >
-                  {aliasChecking ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <RefreshCcw className="size-4" />
-                  )}
-                </button>
-              </div>
+          <div className="pt-2">
+            <div className="flex items-center gap-3 border-y border-border/60 py-5">
+              <p className="paparan flex-1 text-2xl">{previewAlias || alias}</p>
+              <button
+                onClick={generateFreeAlias}
+                disabled={aliasChecking}
+                aria-label="Jana nama lain"
+                className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+              >
+                {aliasChecking ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="size-4" />
+                )}
+              </button>
             </div>
-            <div className="flex gap-3 pt-1">
+            <div className="mt-6 flex gap-3">
               <button
                 onClick={() => saveAlias(previewAlias)}
                 disabled={aliasChecking || !previewAlias || previewAlias === alias}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition disabled:opacity-40"
+                className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
               >
                 Guna
               </button>
               <button
                 onClick={() => setShowAliasDialog(false)}
-                className="px-5 py-2.5 rounded-xl text-sm text-foreground/60 hover:text-foreground border border-border/50 transition"
+                className="rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted"
               >
                 Batal
               </button>
             </div>
-            <div className="pt-2 border-t border-border/30">
-              <button
-                onClick={() => { setShowAliasDialog(false); signOut(auth); }}
-                className="text-xs text-foreground/40 hover:text-foreground transition text-center w-full"
-              >
-                Log keluar
-              </button>
-            </div>
+            <button
+              onClick={() => { setShowAliasDialog(false); signOut(auth); }}
+              className="mt-6 w-full border-t border-border/60 pt-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Log keluar
+            </button>
           </div>
         </DialogContent>
       </Dialog>
-
-    </div>
+    </motion.main>
   );
 }
 
@@ -1505,5 +1278,31 @@ function GoogleIcon() {
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
     </svg>
+  );
+}
+/** Rangka muat mencerminkan susun atur sebenar: tajuk, nombor hero, baris meta. */
+function RangkaMuat() {
+  return (
+    <div>
+      <Skeleton className="h-11 w-52" />
+      <Skeleton className="mt-14 h-8 w-32" />
+      <Skeleton className="mt-4 h-[22vw] w-[30vw] sm:h-[16vw] lg:h-[9vw] lg:w-[14vw]" />
+      <div className="mt-12 flex flex-wrap gap-x-12 gap-y-5 border-t border-border/60 pt-5">
+        {[0, 1, 2].map(i => (
+          <div key={i}>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-2 h-7 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-16 max-w-xl border-t border-border/50">
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} className="flex items-center justify-between border-b border-border/50 py-4">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-9 w-32 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
