@@ -4,18 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageShell from '@/components/PageShell';
-import { formatTime } from '@/utils/format';
-import { bakiMasaTeks, fetchSolat, parseTime } from '@/lib/solat';
-
-const KATEGORI = [
-  { id: 'fadhilat', title: 'Fadhilat', description: 'Waktu paling awal selepas azan. Paling banyak pahala.' },
-  { id: 'ikhtiar', title: 'Ikhtiar', description: 'Kira-kira 15 minit selepas azan. Waktu yang diutamakan.' },
-  { id: 'jawaz', title: 'Jawaz', description: 'Waktu yang harus. Boleh sembahyang tapi bukan waktu terbaik.' },
-  { id: 'karahah', title: 'Karahah', description: 'Kira-kira 20 minit sebelum masuk waktu solat seterusnya. Makruh.' },
-  { id: 'tahrim', title: 'Tahrim', description: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.' },
-] as const;
-
-type KategoriId = (typeof KATEGORI)[number]['id'];
+import { bakiMasaTeks, binaWaktu, fetchSolat, type WaktuSolat } from '@/lib/solat';
+import {
+  KATEGORI,
+  julatKategori,
+  kategoriPada,
+  senaraiJulat,
+  type KategoriId,
+} from '@/lib/kategori';
 
 function fmt12(d: Date) {
   const h = d.getHours() % 12 || 12;
@@ -23,29 +19,16 @@ function fmt12(d: Date) {
   return `${h}:${m} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
 }
 
-// Sempadan tetap bagi setiap julat: 15 | 15 | baki | 20 | 5 minit.
-function julatKategori(mula: Date, tamat: Date): Record<KategoriId, { dari: Date; ke: Date }> {
-  const s = mula.getTime();
-  const e = tamat.getTime();
-  const F = 15 * 60_000;
-  const I = 15 * 60_000;
-  const K = 20 * 60_000;
-  const T = 5 * 60_000;
-  return {
-    fadhilat: { dari: new Date(s), ke: new Date(s + F) },
-    ikhtiar: { dari: new Date(s + F), ke: new Date(s + F + I) },
-    jawaz: { dari: new Date(s + F + I), ke: new Date(e - K) },
-    karahah: { dari: new Date(e - K), ke: new Date(e - T) },
-    tahrim: { dari: new Date(e - T), ke: new Date(e) },
-  };
-}
-
 export default function KategoriSolatPage() {
   const [memuat, setMemuat] = useState(true);
   const [tiadaZon, setTiadaZon] = useState(false);
   const [ralat, setRalat] = useState(false);
   const [kini, setKini] = useState(() => new Date());
-  const [julatSolat, setJulatSolat] = useState<{ nama: string; mula: Date; tamat: Date }[]>([]);
+  const [waktuHari, setWaktuHari] = useState<{
+    semalam?: WaktuSolat;
+    hariIni?: WaktuSolat;
+    esok?: WaktuSolat;
+  }>({});
 
   useEffect(() => {
     const jam = setInterval(() => setKini(new Date()), 1000);
@@ -74,23 +57,11 @@ export default function KategoriSolatPage() {
           fetchSolat(zon, semalam),
         ]);
 
-        const t = (raw: string) => parseTime(formatTime(raw));
-        const subuh = t(td.prayerTime.fajr);
-        const syuruk = t(td.prayerTime.syuruk);
-        const zohor = t(td.prayerTime.dhuhr);
-        const asar = t(td.prayerTime.asr);
-        const maghrib = t(td.prayerTime.maghrib);
-        const isyak = t(td.prayerTime.isha);
-
-        setJulatSolat([
-          // Julat selepas tengah malam: isyak semalam hingga subuh hari ini.
-          { nama: 'Isyak', mula: parseTime(formatTime(yd.prayerTime.isha), semalam), tamat: subuh },
-          { nama: 'Subuh', mula: subuh, tamat: syuruk },
-          { nama: 'Zohor', mula: zohor, tamat: asar },
-          { nama: 'Asar', mula: asar, tamat: maghrib },
-          { nama: 'Maghrib', mula: maghrib, tamat: isyak },
-          { nama: 'Isyak', mula: isyak, tamat: parseTime(formatTime(tm.prayerTime.fajr), esok) },
-        ]);
+        setWaktuHari({
+          semalam: binaWaktu(yd.prayerTime),
+          hariIni: binaWaktu(td.prayerTime),
+          esok: binaWaktu(tm.prayerTime),
+        });
       } catch {
         setRalat(true);
       } finally {
@@ -99,17 +70,21 @@ export default function KategoriSolatPage() {
     })();
   }, []);
 
-  const semasa = julatSolat.find(w => kini >= w.mula && kini < w.tamat) ?? null;
+  // Julat dahulunya dibina di sini dengan salinan logik halaman utama, dan
+  // kedua-duanya terpesong: senarai ini termasuk Isyak, senarai satu lagi
+  // tidak. Kedua-duanya kini membaca dari lib/kategori.
+  const senarai = waktuHari.hariIni
+    ? senaraiJulat(waktuHari.hariIni, kini, { semalam: waktuHari.semalam, esok: waktuHari.esok })
+    : [];
+  const semasa = senarai.find(w => kini >= w.mula && kini < w.tamat) ?? null;
   const julat = semasa ? julatKategori(semasa.mula, semasa.tamat) : null;
-  const kategoriSemasa: KategoriId | null = julat
-    ? ((Object.entries(julat).find(([, { dari, ke }]) => kini >= dari && kini < ke)?.[0] as KategoriId) ?? null)
-    : null;
+  const kategoriSemasa: KategoriId | null = julat ? kategoriPada(julat, kini) : null;
   const tamatKategori = kategoriSemasa && julat ? julat[kategoriSemasa].ke : null;
   const bakiMs = tamatKategori ? Math.max(tamatKategori.getTime() - kini.getTime(), 0) : 0;
 
   const indeksSemasa = kategoriSemasa ? KATEGORI.findIndex(k => k.id === kategoriSemasa) : -1;
   const kategoriSeterusnya = indeksSemasa >= 0 ? KATEGORI[indeksSemasa + 1] ?? null : null;
-  const julatSeterusnya = julatSolat.find(w => w.mula > kini) ?? null;
+  const julatSeterusnya = senarai.find(w => w.mula > kini) ?? null;
 
   const jumlahMs = semasa ? semasa.tamat.getTime() - semasa.mula.getTime() : 0;
   const kadarKini = semasa ? ((kini.getTime() - semasa.mula.getTime()) / jumlahMs) * 100 : 0;

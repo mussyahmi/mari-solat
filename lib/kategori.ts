@@ -30,19 +30,20 @@ export function julatKategori(mula: Date, tamat: Date): Record<KategoriId, Julat
   };
 }
 
+export type JulatSolat = { nama: string; mula: Date; tamat: Date };
+
 /**
- * Julat solat fardu yang merangkumi `kini`, jika ada.
+ * Setiap julat solat fardu di sekitar `kini`, mengikut urutan.
  *
- * Isyak dahulunya tiada dalam senarai ini sama sekali, jadi halaman utama
- * memaparkan "Di luar waktu" dari isyak hingga subuh — hampir sepanjang malam.
- * Ia terlepas kerana Isyak ialah satu-satunya waktu yang melintasi tengah
- * malam, jadi ia memerlukan waktu hari bersebelahan dan bukan hari ini sahaja.
+ * Isyak ialah satu-satunya waktu yang melintasi tengah malam, jadi ia muncul
+ * dua kali — sekali berakhir pada subuh hari ini, sekali bermula malam ini —
+ * dan memerlukan waktu hari bersebelahan, bukan hari ini sahaja.
  */
-export function julatSemasa(
+export function senaraiJulat(
   waktu: WaktuSolat,
   kini: Date,
   jiran?: { semalam?: WaktuSolat; esok?: WaktuSolat }
-) {
+): JulatSolat[] {
   const t = (n: keyof WaktuSolat, asas: Date = kini) => parseTime(waktu[n] as string, asas);
   const tarikhSemalam = new Date(kini.getTime() - 86_400_000);
   const tarikhEsok = new Date(kini.getTime() + 86_400_000);
@@ -53,7 +54,7 @@ export function julatSemasa(
   const isyakSemalam = parseTime((jiran?.semalam ?? waktu).isyak, tarikhSemalam);
   const subuhEsok = parseTime((jiran?.esok ?? waktu).subuh, tarikhEsok);
 
-  const julat = [
+  return [
     { nama: 'Isyak', mula: isyakSemalam, tamat: t('subuh') },
     { nama: 'Subuh', mula: t('subuh'), tamat: t('syuruk') },
     { nama: 'Zohor', mula: t('zohor'), tamat: t('asar') },
@@ -61,9 +62,23 @@ export function julatSemasa(
     { nama: 'Maghrib', mula: t('maghrib'), tamat: t('isyak') },
     { nama: 'Isyak', mula: t('isyak'), tamat: subuhEsok },
   ];
-  // Tiada julat antara syuruk dan zohor — tiada solat fardu di sana, jadi
-  // "Di luar waktu" memang betul pada waktu itu.
-  return julat.find(w => kini >= w.mula && kini < w.tamat) ?? null;
+}
+
+/**
+ * Julat solat fardu yang merangkumi `kini`, jika ada.
+ *
+ * Isyak dahulunya tiada dalam senarai ini sama sekali, jadi halaman utama
+ * memaparkan "Di luar waktu" dari isyak hingga subuh — hampir sepanjang malam.
+ *
+ * Tiada julat antara syuruk dan zohor: tiada solat fardu di sana, jadi
+ * "Di luar waktu" memang betul pada waktu itu.
+ */
+export function julatSemasa(
+  waktu: WaktuSolat,
+  kini: Date,
+  jiran?: { semalam?: WaktuSolat; esok?: WaktuSolat }
+) {
+  return senaraiJulat(waktu, kini, jiran).find(w => kini >= w.mula && kini < w.tamat) ?? null;
 }
 
 export function kategoriPada(julat: Record<KategoriId, Julat>, kini: Date): KategoriId | null {
