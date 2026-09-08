@@ -221,7 +221,9 @@ export default function HalamanUtama() {
   const waktuKini = waktuHari.hariIni;
   const kiblat = koordinat ? bearingKiblat(koordinat.lat, koordinat.lng) : null;
 
-  const julatSolat = waktuKini ? julatSemasa(waktuKini, kini) : null;
+  const julatSolat = waktuKini
+    ? julatSemasa(waktuKini, kini, { semalam: waktuHari.semalam, esok: waktuHari.esok })
+    : null;
   const julat = julatSolat ? julatKategori(julatSolat.mula, julatSolat.tamat) : null;
   const kategori = julat ? kategoriPada(julat, kini) : null;
   const kategoriTamat = kategori && julat ? julat[kategori].ke : null;
