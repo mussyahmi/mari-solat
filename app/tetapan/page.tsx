@@ -380,7 +380,10 @@ export default function TetapanPage() {
                     onClick={() => handleZoneSelect(z)}
                     className="flex w-full items-baseline justify-between gap-6 py-3.5 text-left transition-colors hover:text-primary"
                   >
-                    <span className="min-w-0 truncate">{z.daerah}</span>
+                    {/* Satu zon boleh meliputi tujuh daerah. Memotongnya
+                        menyembunyikan daerah yang mungkin sedang dicari
+                        pengguna, jadi ia dibiarkan membalut. */}
+                    <span className="min-w-0 text-pretty leading-relaxed">{z.daerah}</span>
                     <span className="shrink-0 text-sm text-muted-foreground">{z.jakimCode}</span>
                   </button>
                 ))}
