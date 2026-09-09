@@ -21,6 +21,7 @@ import InstallButton from '@/components/InstallButton';
 import CariMasjid from '@/components/CariMasjid';
 import NavLinks from '@/components/NavLinks';
 import ScrollableNav from '@/components/ScrollableNav';
+import ButangAkaun from '@/components/ButangAkaun';
 import { APP_VERSION } from '@/lib/version';
 
 export default function Header() {
@@ -70,8 +71,6 @@ export default function Header() {
         </SheetContent>
       </Sheet>
 
-      
-
       {!mounted ? (
         <Button variant="ghost" size="sm" aria-hidden>
           <Loader2Icon className="animate-spin" />
@@ -86,6 +85,16 @@ export default function Header() {
           {resolvedTheme === 'dark' ? <Sun /> : <Moon />}
         </Button>
       )}
+
+      {/* Avatar di sudut, bukan di antara dua ikon monokrom: ia satu-satunya
+          elemen berwarna penuh di sini, jadi menyelitkannya di tengah
+          menjadikannya sauh visual kepala dan memisahkan dua ikon yang
+          sepatutnya berkumpul. Togol tema juga berpindah keluar dari sudut —
+          ia ditetapkan sekali sahaja seumur hidup, jadi ia tidak sepatutnya
+          memiliki slot paling mudah dicapai. */}
+      <span className="ml-1">
+        <ButangAkaun />
+      </span>
       </div>
       </div>
     </header>

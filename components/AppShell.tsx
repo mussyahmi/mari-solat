@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MotionConfig } from 'motion/react';
 import Header from '@/components/Header';
+import AkaunProvider from '@/components/AkaunProvider';
 import { bacaCacheWaktu, fasaPada, type Fasa } from '@/lib/solat';
 import { trackVisitSenyap } from '@/lib/track';
 
@@ -38,6 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // Blok CSS prefers-reduced-motion hanya menghentikan animasi CSS; spring
     // motion dipacu JavaScript dan perlu diberitahu secara berasingan.
     <MotionConfig reducedMotion="user">
+      <AkaunProvider>
       <div className="flex h-dvh flex-col">
         <div
           aria-hidden
@@ -51,6 +53,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </div>
+      </AkaunProvider>
     </MotionConfig>
   );
 }

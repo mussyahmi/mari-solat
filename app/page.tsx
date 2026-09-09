@@ -15,9 +15,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import ModulRingkas from "@/components/ModulRingkas";
+import { useAkaun } from "@/components/AkaunProvider";
 import { bearingKiblat, namaArah } from "@/lib/kiblat";
 import { KATEGORI, kategoriPada, julatKategori, julatSemasa } from "@/lib/kategori";
-import { Compass, Layers, Moon } from "lucide-react";
+import { BookmarkIcon, Compass, Layers, Moon } from "lucide-react";
 import { formatGregorianDate, formatHijriDate } from "@/utils/format";
 import {
   WAKTU,
@@ -47,6 +48,7 @@ const SENARAI_HARI: Hari[] = ["semalam", "hariIni", "esok"];
 export default function HalamanUtama() {
 
   const [zon, setZon] = useState<string | null>(null);
+  const { user: akaun, bakiQada } = useAkaun();
   const [waktuHari, setWaktuHari] = useState<WaktuMengikutHari>({});
   const [hari, setHari] = useState<Hari>("hariIni");
   const [seterusnya, setSeterusnya] = useState<Seterusnya>({ label: null, masa: null });
@@ -372,6 +374,25 @@ export default function HalamanUtama() {
                       : <>Hingga <span className="tabular">{fmtJam(malam.tamat)}</span></>
                 }
               />
+
+              {/* Hanya untuk pengguna yang log masuk: bagi orang lain ia satu
+                  kad yang meminta akaun, di tempat yang sepatutnya menjawab
+                  soalan. Ia juga sebab paling kukuh untuk log masuk. */}
+              {akaun && (
+                <ModulRingkas
+                  href="/qada-solat"
+                  tajuk="Qada solat"
+                  ikon={<BookmarkIcon className="size-4" />}
+                  nilai={bakiQada === null ? "—" : bakiQada}
+                  nota={
+                    bakiQada === null
+                      ? "Belum ada rekod"
+                      : bakiQada === 0
+                        ? "Tiada baki tertinggal"
+                        : "solat lagi untuk diqada"
+                  }
+                />
+              )}
 
               <ModulRingkas
                 href="/arah-kiblat"
