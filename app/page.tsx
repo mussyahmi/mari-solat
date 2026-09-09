@@ -32,6 +32,7 @@ import {
   type WaktuSolat,
 } from "@/lib/solat";
 import { isManualZone } from "@/lib/zoneState";
+import { PILIH_ZON, RALAT_LOKASI } from "@/lib/lokasi";
 import { trackVisit } from "@/lib/track";
 import { AZAN_PRAYERS, isGlobalAzanOn, isAzanEnabled, triggerAzan } from "@/lib/azan";
 import { spring } from "@/lib/motion";
@@ -118,7 +119,7 @@ export default function HalamanUtama() {
   const mintaLokasi = () => {
     setTiadaZon(false);
     if (!navigator.geolocation) {
-      toast.error("Pelayar ini tidak menyokong geolokasi. Pilih zon anda di Tetapan.");
+      toast.error(RALAT_LOKASI.tidakDisokong(PILIH_ZON));
       setTiadaZon(true);
       return;
     }
@@ -135,13 +136,13 @@ export default function HalamanUtama() {
           trackVisit(data.zone, { lat: latitude, lng: longitude });
           await muatZon(data.zone, `${data.zone} ${data.district}`);
         } catch {
-          toast.error("Zon untuk lokasi anda tidak ditemui. Pilih zon di Tetapan.");
+          toast.error(`${RALAT_LOKASI.tiadaZon} ${PILIH_ZON}`);
           setTiadaZon(true);
         }
       },
       () => {
         clearTimeout(hadMasa);
-        toast.error("Lokasi tidak dapat dibaca. Pilih zon anda di Tetapan.");
+        toast.error(RALAT_LOKASI.tidakDibaca(PILIH_ZON));
         setTiadaZon(true);
       },
       { enableHighAccuracy: true, timeout: 10_000 }
@@ -167,8 +168,10 @@ export default function HalamanUtama() {
       setWaktuHari(peta);
       if (peta.hariIni) simpanCacheWaktu(peta.hariIni);
     } catch {
+      // Tiada toast di sini: <GagalMuat /> sudah mengambil alih skrin dengan
+      // penjelasan dan butang cuba lagi. Toast hanya akan menyatakan kegagalan
+      // yang sama sekali lagi, kemudian hilang.
       setRalat(true);
-      toast.error("Waktu solat untuk zon ini gagal dimuatkan. Cuba lagi sebentar nanti.");
     }
   };
 

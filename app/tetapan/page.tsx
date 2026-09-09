@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner';
 import PageShell from '@/components/PageShell';
 import { setManualZone } from '@/lib/zoneState';
+import { RALAT_LOKASI } from '@/lib/lokasi';
 import {
   AZAN_PRAYERS, PRAYER_LABELS,
   isGlobalAzanOn, setGlobalAzanOn,
@@ -30,6 +31,8 @@ export default function TetapanPage() {
   const router = useRouter();
   const [zone, setZone] = useState<string | null>(null);
   const [allZones, setAllZones] = useState<any[]>([]);
+  const [ralatZon, setRalatZon] = useState(false);
+  const [memuatZon, setMemuatZon] = useState(true);
   const [showZoneSelector, setShowZoneSelector] = useState(false);
   const [selectedNegeri, setSelectedNegeri] = useState('');
   const [isLocating, setIsLocating] = useState(false);
@@ -47,10 +50,7 @@ export default function TetapanPage() {
     const savedName = localStorage.getItem('msolat_zone_name');
     if (savedName) setZone(savedName);
 
-    fetch('https://api.waktusolat.app/zones')
-      .then(r => r.json())
-      .then(setAllZones)
-      .catch(() => toast.error('Gagal memuatkan senarai zon.'));
+    muatSenaraiZon();
 
     setAzanOn(isGlobalAzanOn());
     setPrayerToggles(Object.fromEntries(AZAN_PRAYERS.map(p => [p, isAzanEnabled(p)])));
@@ -74,6 +74,18 @@ export default function TetapanPage() {
     return unsub;
   }, []);
 
+  // Dahulunya kegagalan ini hanya toast, jadi dialog terbuka kosong tanpa
+  // penjelasan dan tiada cara untuk mencuba semula.
+  const muatSenaraiZon = () => {
+    setMemuatZon(true);
+    setRalatZon(false);
+    fetch('https://api.waktusolat.app/zones')
+      .then(r => r.json())
+      .then(setAllZones)
+      .catch(() => setRalatZon(true))
+      .finally(() => setMemuatZon(false));
+  };
+
   const saveZone = (code: string, name: string, manual: boolean) => {
     localStorage.setItem('msolat_zone_code', code);
     localStorage.setItem('msolat_zone_name', name);
@@ -91,7 +103,7 @@ export default function TetapanPage() {
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolokasi tidak disokong oleh pelayar anda.');
+      toast.error(RALAT_LOKASI.tidakDisokong());
       return;
     }
     setIsLocating(true);
@@ -106,13 +118,13 @@ export default function TetapanPage() {
           toast.success(`Zon dikesan: ${data.district}.`);
           router.push('/');
         } catch {
-          toast.error('Tiada zon ditemui untuk lokasi ini.');
+          toast.error(RALAT_LOKASI.tiadaZon);
         } finally {
           setIsLocating(false);
         }
       },
       () => {
-        toast.error('Tidak dapat mengakses lokasi.');
+        toast.error(RALAT_LOKASI.tidakDibaca());
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -360,7 +372,22 @@ export default function TetapanPage() {
           </DialogHeader>
 
           <div className="-mx-1 flex-1 overflow-y-auto px-1">
-            {!selectedNegeri ? (
+            {ralatZon ? (
+              <div className="py-6">
+                <p className="leading-relaxed text-muted-foreground">
+                  Senarai zon tidak dapat dimuatkan. Semak sambungan internet anda,
+                  kemudian cuba sekali lagi.
+                </p>
+                <button
+                  onClick={muatSenaraiZon}
+                  className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Cuba lagi
+                </button>
+              </div>
+            ) : memuatZon ? (
+              <p className="py-6 text-muted-foreground">Memuatkan senarai zon…</p>
+            ) : !selectedNegeri ? (
               <div className="divide-y divide-border/50 border-t border-border/50">
                 {negeriList.map(negeri => (
                   <button

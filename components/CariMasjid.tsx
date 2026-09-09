@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { ExternalLinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { RALAT_LOKASI } from '@/lib/lokasi';
 
 /**
  * Membuka carian masjid berdekatan dalam Google Maps.
@@ -20,7 +21,7 @@ export default function CariMasjid() {
       return;
     }
     if (!navigator.geolocation) {
-      toast.error('Pelayar ini tidak menyokong geolokasi.');
+      toast.error(RALAT_LOKASI.tidakDisokong());
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -30,7 +31,7 @@ export default function CariMasjid() {
       },
       // Sebelum ini kegagalan lokasi senyap sepenuhnya — butang diketik dan
       // tiada apa-apa berlaku.
-      () => toast.error('Lokasi tidak dapat dibaca, jadi masjid berdekatan tidak dapat dicari.'),
+      () => toast.error(RALAT_LOKASI.tidakDibaca('Masjid berdekatan tidak dapat dicari.')),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };

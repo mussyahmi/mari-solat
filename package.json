@@ -1,6 +1,6 @@
 {
   "name": "mari-solat",
-  "version": "1.30.11",
+  "version": "1.30.12",
   "private": true,
   "scripts": {
     "predev": "node scripts/generate-sw.mjs",

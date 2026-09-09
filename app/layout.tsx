@@ -5,7 +5,7 @@ import { ThemeProvider } from "next-themes";
 import AppShell from "@/components/AppShell";
 import WakeLock from "@/components/WakeLock";
 import UpdatePrompt from "@/components/UpdatePrompt";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import WarnaTema from "@/components/WarnaTema";
 import { WARNA_TEMA } from "@/lib/warna-tema";
 
@@ -96,7 +96,7 @@ export default function RootLayout({
           <WakeLock />
           <UpdatePrompt />
           <AppShell>{children}</AppShell>
-          <Toaster position="top-right" richColors />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
