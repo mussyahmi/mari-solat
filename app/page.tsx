@@ -345,8 +345,11 @@ export default function HalamanUtama() {
 
           {<RelWaktu waktu={waktuDipapar} minit={minit} seterusnya={hariIni || esokAuto ? seterusnya.label : null} hariIni={hariIni} />}
 
+          {/* Bilangan modul berubah mengikut keadaan log masuk, jadi lajurnya
+              juga. Tiga lajur tetap bermakna modul keempat tergantung
+              sendirian pada baris kedua sebaik sahaja qada muncul. */}
           {(
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className={`grid gap-3 ${akaun ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
               <ModulRingkas
                 href="/kategori-solat"
                 tajuk="Kategori waktu"
