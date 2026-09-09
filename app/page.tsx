@@ -492,7 +492,12 @@ const RelWaktu = memo(function RelWaktu({
     <div className="shrink-0">
       {/* Kelapan-lapan waktu mesti kelihatan serentak. Menatal mendatar
           menyembunyikan separuh hari pada skrin yang paling kerap dilihat. */}
-      <ol className="grid grid-cols-4 overflow-hidden rounded-2xl border border-border/60 lg:grid-cols-8">
+      {/* ring dan bukan border: border mengambil ruang susun atur, jadi sel
+          duduk 1px di dalamnya dan penanda `inset-0` tidak pernah dapat
+          mencapai garis itu — waktu yang disorot kelihatan lebih pendek
+          daripada jirannya. ring dilukis di luar kotak, jadi sel mengisi
+          ketinggian penuh dan sorotan bertemu tepi. */}
+      <ol className="grid grid-cols-4 overflow-hidden rounded-2xl ring-1 ring-border/60 lg:grid-cols-8">
         {WAKTU.map((nama, i) => {
           const akanDatang = seterusnya === nama;
           const asas = new Date(minit * 60_000);
@@ -517,14 +522,32 @@ const RelWaktu = memo(function RelWaktu({
             </>
           );
 
-          // Empat lajur pada mudah alih, lapan pada desktop — jadi sempadan
-          // kanan dan bawah berbeza mengikut susunan.
-          const kelas = [
-            "relative flex h-full w-full flex-col items-center gap-1 px-1.5 py-4 sm:px-2",
-            i % 4 !== 3 ? "border-r border-r-border/50" : "",
-            i === 3 ? "lg:border-r lg:border-r-border/50" : "",
-            i < 4 ? "border-b border-b-border/50 lg:border-b-0" : "",
-          ].join(" ");
+          const kelas = "relative flex h-full w-full flex-col items-center gap-1 px-1.5 py-4 sm:px-2";
+
+          // Pembahagi dilukis sebagai garis bertindih, bukan sempadan susun
+          // atur. Sebagai `border-b`, garis itu menambah 1px kepada kotak sel
+          // manakala penanda `inset-0` hanya mengisi kotak pelapik — jadi
+          // waktu yang disorot pada baris pertama kelihatan 1px lebih pendek.
+          // Empat lajur pada mudah alih, lapan pada desktop, jadi garis kanan
+          // dan bawah berbeza mengikut susunan.
+          const pembahagi = (
+            <>
+              {(i % 4 !== 3 || i === 3) && (
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-y-0 right-0 w-px bg-border/50 ${
+                    i === 3 ? "hidden lg:block" : ""
+                  }`}
+                />
+              )}
+              {i < 4 && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border/50 lg:hidden"
+                />
+              )}
+            </>
+          );
           const penanda = akanDatang ? (
             <motion.span
               layoutId="waktuSeterusnya"
@@ -540,6 +563,7 @@ const RelWaktu = memo(function RelWaktu({
                   <DialogTrigger className={`${kelas} cursor-pointer hover:bg-muted/60`}>
                     {penanda}
                     {kandungan}
+                    {pembahagi}
                   </DialogTrigger>
                   <KiraanDhuha subuh={waktu.subuh} syuruk={waktu.syuruk} dhuha={waktu.dhuha} />
                 </Dialog>
@@ -547,6 +571,7 @@ const RelWaktu = memo(function RelWaktu({
                 <div className={kelas}>
                   {penanda}
                   {kandungan}
+                  {pembahagi}
                 </div>
               )}
             </li>
@@ -626,7 +651,7 @@ function RangkaMuat() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 overflow-hidden rounded-2xl border border-border/60 lg:grid-cols-8">
+      <div className="grid grid-cols-4 overflow-hidden rounded-2xl ring-1 ring-border/60 lg:grid-cols-8">
         {Array.from({ length: 8 }, (_, i) => (
           <div
             key={i}
