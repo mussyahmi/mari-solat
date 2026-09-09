@@ -19,14 +19,6 @@ const fraunces = Fraunces({
   axes: ["SOFT", "WONK", "opsz"],
 });
 
-export const viewport = {
-  // maximumScale dibuang: menyekat zum ialah kegagalan kebolehcapaian.
-  //
-  // Nilai ini hanyalah pengganti SSR: themeColor hanya boleh membawa satu
-  // warna, jadi ia mengambil tema lalai. WarnaTemaInit membetulkannya semasa
-  // HTML dihurai, dan WarnaTema mengekalkannya betul selepas itu.
-  themeColor: WARNA_TEMA.gelap,
-};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://marisolat.com"),
@@ -67,14 +59,21 @@ export const metadata: Metadata = {
 };
 
 /**
- * Berjalan semasa HTML dihurai, sebelum cat pertama, bersama skrip sebaris
- * next-themes. Tanpanya pengguna mod cerah yang membuka aplikasi mendapat bar
+ * Mencipta dan mengisi meta theme-color semasa HTML dihurai, sebelum cat
+ * pertama, bersama skrip sebaris next-themes.
+ *
+ * Meta ini sengaja TIDAK datang daripada eksport `viewport` Next. Eksport itu
+ * menjadikan React pemilik nod tersebut, dan WarnaTema membuangnya untuk
+ * memaksa WebKit mengambil semula warna — jadi navigasi sisi klien seterusnya
+ * membuatkan React cuba membuang nod yang parentNode-nya sudah null, dan
+ * melontar "Cannot read properties of null (reading 'removeChild')". Dengan
+ * meta ini dimiliki sepenuhnya oleh klien, tiada pertembungan. Tanpanya pengguna mod cerah yang membuka aplikasi mendapat bar
  * status gelap sehingga penghidratan selesai, kerana themeColor SSR di atas
  * hanya boleh membawa satu nilai. Ia membaca kunci localStorage yang sama
  * yang ditulis next-themes, jadi kedua-duanya bersetuju pada bingkai pertama.
  */
 function WarnaTemaInit() {
-  const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',localStorage.getItem('theme')==='light'?'${WARNA_TEMA.cerah}':'${WARNA_TEMA.gelap}')}catch(e){}`;
+  const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m)}m.setAttribute('content',localStorage.getItem('theme')==='light'?'${WARNA_TEMA.cerah}':'${WARNA_TEMA.gelap}')}catch(e){}`;
   return <script dangerouslySetInnerHTML={{ __html: js }} />;
 }
 
