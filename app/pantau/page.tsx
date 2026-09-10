@@ -55,6 +55,10 @@ export default function PantauPage() {
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [ditolak, setDitolak] = useState(false);
+  /** Hari ke belakang, atau null untuk semua. */
+  const [tempoh, setTempoh] = useState<number | null>(null);
+  /** Nama platform, atau null untuk semua. */
+  const [plat, setPlat] = useState<string | null>(null);
 
   // Data ini tidak lagi boleh dibaca dari klien, jadi halaman perlu token ID
   // untuk memintanya daripada pelayan. Hanya UID dalam ADMIN_UIDS diterima.
@@ -81,14 +85,45 @@ export default function PantauPage() {
   // Safari memadam localStorage selepas tujuh hari tanpa interaksi — satu
   // orang boleh muncul beberapa kali. "Peranti" ialah dakwaan yang paling
   // hampir dengan apa yang data ini benar-benar tahu.
-  const perantiUnik = new Set(rows.map(r => r.uuid)).size;
-  const zoneCount: Record<string, number> = {};
-  for (const r of rows) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
-  const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  // ── Penapis ─────────────────────────────────────────────────────────
+  // Penapis memandu keseluruhan halaman, bukan log sahaja. Menapis jadual
+  // sambil membiarkan nombor hero kekal pada jumlah keseluruhan menjadikan
+  // nombor itu kelihatan rosak.
+  const HARI_MS = 24 * 60 * 60 * 1000;
+  const dalamTempoh = (r: Visit, hari: number | null) =>
+    hari === null || Date.now() - new Date(r.timestamp).getTime() < hari * HARI_MS;
 
+  const platform = (ua: string) => {
+    if (/iphone|ipad|ipod/i.test(ua)) return 'iOS';
+    if (/android/i.test(ua)) return 'Android';
+    if (/windows|macintosh|linux|cros/i.test(ua)) return 'Desktop';
+    return 'Lain';
+  };
+
+  // Ditapis mengikut masa sahaja: kiraan pada tab platform mesti kekal
+  // kelihatan supaya anda boleh melihat ke mana anda beralih.
+  const barisMasa = rows.filter(r => dalamTempoh(r, tempoh));
+  const barisTapis = barisMasa.filter(r => !plat || platform(r.ua ?? '') === plat);
+
+  const kiraPlatform: Record<string, number> = {};
+  for (const r of barisMasa) {
+    const nama = platform(r.ua ?? '');
+    kiraPlatform[nama] = (kiraPlatform[nama] ?? 0) + 1;
+  }
+  const tabPlatform: [string | null, string, number][] = [
+    [null, 'Semua', barisMasa.length],
+    ...(['iOS', 'Android', 'Desktop', 'Lain'] as const)
+      .filter(n => kiraPlatform[n])
+      .map(n => [n, n, kiraPlatform[n]] as [string, string, number]),
+  ];
+
+  const perantiUnik = new Set(barisTapis.map(r => r.uuid)).size;
+  const zoneCount: Record<string, number> = {};
+  for (const r of barisTapis) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
+  const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
   const jumlahZon = Object.keys(zoneCount).length;
 
-  const terkini = [...rows].sort(
+  const terkini = [...barisTapis].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
   const HAD_LOG = 50;
@@ -98,27 +133,6 @@ export default function PantauPage() {
   const masaTerkini = terkini[0] ? tarikhPendek(terkini[0].timestamp) : '—';
   const masaTerawal = terkini.length ? tarikhPendek(terkini[terkini.length - 1].timestamp) : '—';
   const zonTertinggi = topZones[0]?.[1] ?? 0;
-
-  // Satu-satunya isyarat aktiviti sebenar yang boleh dijawab oleh jadual
-  // "kali terakhir dilihat" ini.
-  const MINGGU_MS = 7 * 24 * 60 * 60 * 1000;
-  const aktif7 = rows.filter(r => Date.now() - new Date(r.timestamp).getTime() < MINGGU_MS).length;
-
-  // User agent sudah disimpan pada setiap baris tetapi sebelum ini hanya
-  // kelihatan sebagai teks terpotong yang tiada siapa baca. Sebagai tiga
-  // nombor ia memberitahu di mana aplikasi ini perlu diuji.
-  const platform = (ua: string) => {
-    if (/iphone|ipad|ipod/i.test(ua)) return 'iOS';
-    if (/android/i.test(ua)) return 'Android';
-    if (/windows|macintosh|linux|cros/i.test(ua)) return 'Desktop';
-    return 'Lain';
-  };
-  const kiraPlatform: Record<string, number> = {};
-  for (const r of rows) {
-    const nama = platform(r.ua ?? '');
-    kiraPlatform[nama] = (kiraPlatform[nama] ?? 0) + 1;
-  }
-  const senaraiPlatform = Object.entries(kiraPlatform).sort((a, b) => b[1] - a[1]);
 
   return (
     <PageShell tajuk="Pantau" lede="Data pelawat MariSolat.">
@@ -172,10 +186,6 @@ export default function PantauPage() {
               tarikh yang benar-benar boleh dijawab oleh data ini. */}
           <dl className="mt-10 divide-y divide-border/50 border-t border-border/60 lg:flex lg:flex-wrap lg:gap-x-12 lg:divide-y-0 lg:pt-5">
             <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
-              <dt className="text-sm text-muted-foreground">Aktif 7 hari</dt>
-              <dd className="angka-paparan text-2xl lg:mt-1">{aktif7}</dd>
-            </div>
-            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
               <dt className="text-sm text-muted-foreground">Zon berbeza</dt>
               <dd className="angka-paparan text-2xl lg:mt-1">{jumlahZon}</dd>
             </div>
@@ -189,10 +199,46 @@ export default function PantauPage() {
             </div>
           </dl>
 
+          {/* Dua baris tab dan bukan menu jatuh: sama seperti setiap penapis
+              lain dalam aplikasi. Kiraan duduk pada tab platform, jadi baris
+              ini juga merupakan pecahan platform — tiada bahagian berasingan
+              yang mengulang nombor yang sama. */}
+          <div className="mt-12 space-y-1">
+            <div className="-ml-3 flex flex-wrap items-center lg:-ml-3.5">
+              {([[null, 'Semua masa'], [30, '30 hari'], [7, '7 hari']] as const).map(([h, label]) => (
+                <button
+                  key={label}
+                  onClick={() => setTempoh(h)}
+                  aria-pressed={tempoh === h}
+                  className="group px-3 py-2 text-sm transition-colors lg:px-3.5"
+                >
+                  <span className={tempoh === h ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="-ml-3 flex flex-wrap items-center lg:-ml-3.5">
+              {tabPlatform.map(([nilai, label, kira]) => (
+                <button
+                  key={label}
+                  onClick={() => setPlat(nilai)}
+                  aria-pressed={plat === nilai}
+                  className="group px-3 py-2 text-sm transition-colors lg:px-3.5"
+                >
+                  <span className={plat === nilai ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
+                    {label}
+                  </span>
+                  <span className="ml-1.5 text-muted-foreground">{kira}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <section className="mt-20">
             <h2 className="paparan text-2xl">Peta pelawat</h2>
             <div className="mt-5 overflow-hidden rounded-2xl">
-              <VisitorMap rows={rows} />
+              <VisitorMap rows={barisTapis} />
             </div>
           </section>
 
@@ -219,26 +265,11 @@ export default function PantauPage() {
             </ol>
           </section>
 
-          {/* User agent sudah ada pada setiap baris tetapi hanya kelihatan
-              sebagai teks terpotong di dalam log. Sebagai tiga nombor ia
-              memberitahu di mana aplikasi ini perlu diuji. */}
-          <section className="mt-20 max-w-xl">
-            <h2 className="paparan text-2xl">Peranti mengikut platform</h2>
-            <dl className="mt-5 divide-y divide-border/50 border-t border-border/50">
-              {senaraiPlatform.map(([nama, kira]) => (
-                <div key={nama} className="flex items-baseline justify-between gap-6 py-3.5">
-                  <dt>{nama}</dt>
-                  <dd className="angka-paparan text-xl">{kira}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-
           <section className="mt-20">
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="paparan text-2xl">Kali terakhir dilihat</h2>
               <p className="text-sm text-muted-foreground">
-                {logDipapar.length} daripada {rows.length}
+                {logDipapar.length} daripada {barisTapis.length}
               </p>
             </div>
 
