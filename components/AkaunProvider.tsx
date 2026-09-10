@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { auth, db } from '@/firebase';
 import { isInAppBrowser } from '@/lib/utils';
 import { PRAYERS, type QadaCounts } from '@/lib/qada';
+import { trackVisitSenyap } from '@/lib/track';
 
 type Akaun = {
   user: User | null;
@@ -50,6 +51,9 @@ export default function AkaunProvider({ children }: { children: React.ReactNode 
     return onAuthStateChanged(auth, async u => {
       setUser(u);
       setMemuat(false);
+      // Dijejak di sini dan bukan pada lekapan rangka: pada ketika itu auth
+      // belum selesai, jadi setiap lawatan akan direkod sebagai tanpa nama.
+      trackVisitSenyap();
       if (!u) {
         setAlias('');
         setBakiQada(null);

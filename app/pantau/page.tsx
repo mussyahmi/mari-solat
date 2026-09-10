@@ -4,21 +4,12 @@ import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, type User } from 'firebase/auth';
 import { auth } from '@/firebase';
-import { fetchVisits } from '@/lib/track';
+import { fetchVisits, type Visit } from '@/lib/track';
 
 import PageShell from '@/components/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const VisitorMap = dynamic(() => import('@/components/VisitorMap'), { ssr: false });
-
-type Visit = {
-  uuid: string;
-  lat: string;
-  lng: string;
-  zone: string;
-  timestamp: string;
-  ua: string;
-};
 
 function UaCell({ ua }: { ua: string }) {
   const [open, setOpen] = useState(false);
@@ -118,6 +109,10 @@ export default function PantauPage() {
   ];
 
   const perantiUnik = new Set(barisTapis.map(r => r.uuid)).size;
+  // Satu-satunya pengenal yang bertahan merentas peranti dan pemadaman
+  // storan — tetapi hanya wujud untuk pengguna yang log masuk, jadi ia
+  // sentiasa lebih rendah daripada bilangan peranti.
+  const akaunUnik = new Set(barisTapis.filter(r => r.uid).map(r => r.uid)).size;
   const zoneCount: Record<string, number> = {};
   for (const r of barisTapis) zoneCount[r.zone] = (zoneCount[r.zone] ?? 0) + 1;
   const topZones = Object.entries(zoneCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -185,6 +180,14 @@ export default function PantauPage() {
               terakhir dilihat", bukan log lawatan. Ia digantikan dengan julat
               tarikh yang benar-benar boleh dijawab oleh data ini. */}
           <dl className="mt-10 divide-y divide-border/50 border-t border-border/60 lg:flex lg:flex-wrap lg:gap-x-12 lg:divide-y-0 lg:pt-5">
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Lawatan</dt>
+              <dd className="angka-paparan text-2xl lg:mt-1">{barisTapis.length}</dd>
+            </div>
+            <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
+              <dt className="text-sm text-muted-foreground">Akaun log masuk</dt>
+              <dd className="angka-paparan text-2xl lg:mt-1">{akaunUnik}</dd>
+            </div>
             <div className="flex items-baseline justify-between py-3.5 lg:block lg:py-0">
               <dt className="text-sm text-muted-foreground">Zon berbeza</dt>
               <dd className="angka-paparan text-2xl lg:mt-1">{jumlahZon}</dd>

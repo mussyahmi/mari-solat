@@ -1,5 +1,5 @@
-import { db } from '@/firebase';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '@/firebase';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 
 function getOrCreateUUID(): string {
   let uid = localStorage.getItem('msolat_uid');
@@ -31,16 +31,28 @@ const KUNCI_HARI = 'msolat_last_tracked_day';
 const KUNCI_KOORDINAT = 'msolat_last_tracked_coords';
 
 /**
- * Rekod lawatan hari ini.
+ * Rekod lawatan hari ini sebagai satu peristiwa baharu.
  *
- * Koordinat pilihan. Dahulunya ini hanya dipanggil dari dalam panggil balik
- * kejayaan geolokasi pada halaman utama, jadi sesiapa yang menolak lokasi,
- * memilih zon sendiri, atau mendarat terus pada mana-mana halaman lain tidak
- * pernah dikira langsung — setiap nombor pada /pantau ialah lantai, bukan
- * jumlah. Zon sahaja sudah memadai untuk merekod lawatan; koordinat menyusul
- * apabila ia memang tersedia.
+ * Dahulunya `setDoc(doc(db,'visits',uuid))` — satu dokumen bagi setiap
+ * peranti, ditimpa setiap kali. Itu menjadikan koleksi ini jadual "kali
+ * terakhir dilihat" dan bukan log: pertumbuhan mengikut minggu, pengguna
+ * baharu berbanding berulang, dan pengekalan semuanya mustahil dijawab
+ * kerana sejarahnya tidak pernah disimpan. Kini `addDoc`, dengan uuid
+ * sebagai medan.
+ *
+ * Masih sekali sehari bagi setiap peranti — itu memberi sejarah harian yang
+ * berguna tanpa satu baris bagi setiap muat halaman.
+ *
+ * Koordinat pilihan. Zon sahaja sudah memadai untuk merekod lawatan;
+ * koordinat menyusul apabila ia memang tersedia.
  */
 export async function trackVisit(zone: string, koordinat?: { lat: number; lng: number }) {
+  // UUID hanyalah profil pelayar: aplikasi yang dipasang, tetingkap peribadi
+  // dan pemadaman ITP Safari semuanya menghasilkan yang baharu, jadi satu
+  // orang boleh muncul beberapa kali dan tidak pernah boleh dipadankan
+  // merentas peranti. UID Firebase kekal merentas kesemuanya — tetapi hanya
+  // wujud untuk pengguna yang log masuk, jadi ia medan pilihan.
+  const uid = auth.currentUser?.uid;
   const hariIni = kunciHari();
   const sudahHariIni = localStorage.getItem(KUNCI_HARI) === hariIni;
   const koordinatHariIni = localStorage.getItem(KUNCI_KOORDINAT) === hariIni;
@@ -51,11 +63,12 @@ export async function trackVisit(zone: string, koordinat?: { lat: number; lng: n
 
   try {
     const uuid = getOrCreateUUID();
-    await setDoc(doc(db, 'visits', uuid), {
+    await addDoc(collection(db, 'visits'), {
       uuid,
       zone,
       timestamp: Timestamp.now(),
       ua: navigator.userAgent.slice(0, 400),
+      ...(uid ? { uid } : {}),
       ...(koordinat ? { lat: koordinat.lat, lng: koordinat.lng } : {}),
     });
     localStorage.setItem(KUNCI_HARI, hariIni);
@@ -66,7 +79,9 @@ export async function trackVisit(zone: string, koordinat?: { lat: number; lng: n
 /**
  * Rekod lawatan tanpa sekali-kali meminta kebenaran lokasi.
  *
- * Dipanggil dari rangka aplikasi, jadi ia berjalan pada setiap halaman.
+ * Dipanggil dari AkaunProvider selepas keadaan auth diketahui — dipanggil
+ * lebih awal, auth.currentUser masih null walaupun bagi pengguna yang log
+ * masuk, jadi uid tidak akan pernah dirakam.
  * Koordinat hanya diambil jika kebenaran sudah diberi sebelum ini — gesaan
  * lokasi pada setiap muat halaman ialah harga yang terlalu mahal untuk satu
  * baris analitik.
@@ -94,6 +109,8 @@ export async function trackVisitSenyap() {
 
 export type Visit = {
   uuid: string;
+  /** UID Firebase, jika pelawat log masuk. */
+  uid: string;
   lat: string;
   lng: string;
   zone: string;

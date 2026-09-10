@@ -44,12 +44,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Tidak dibenarkan.' }, { status: 403 });
   }
 
-  const snap = await adminDb().collection('visits').orderBy('timestamp', 'desc').get();
+  // Log tambah-sahaja tumbuh tanpa had, jadi jangan muat turun semuanya.
+  const HAD = 2000;
+  const snap = await adminDb()
+    .collection('visits')
+    .orderBy('timestamp', 'desc')
+    .limit(HAD)
+    .get();
   return NextResponse.json(
     snap.docs.map(d => {
       const data = d.data();
       return {
         uuid: data.uuid,
+        uid: data.uid ?? '',
         // Baris tanpa lokasi kini sah; hantar rentetan kosong dan biarkan
         // halaman memutuskan cara memaparkannya.
         lat: data.lat === undefined ? '' : String(data.lat),
