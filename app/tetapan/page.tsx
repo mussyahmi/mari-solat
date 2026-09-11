@@ -278,15 +278,27 @@ export default function TetapanPage() {
           href="https://kirapoket.web.app"
           target="_blank"
           rel="noopener noreferrer"
-          className="group mt-5 flex items-baseline justify-between gap-6 border-t border-border/50 py-4 transition-colors hover:text-primary"
+          className="group mt-5 flex items-center gap-4 border-t border-border/50 py-4 transition-colors hover:text-primary"
         >
-          <span className="min-w-0">
+          {/* Disalin dari src/app/icon.tsx KiraPoket, sama seperti KiraPoket
+              menyimpan public/marisolat-icon.png untuk arah sebaliknya. Fail
+              tempatan, bukan pautan panas: tiada kebergantungan pada tapak lain
+              dan tiada permintaan rentas-tapak semasa halaman dimuatkan. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/kirapoket-icon.png"
+            alt=""
+            width={44}
+            height={44}
+            className="size-11 shrink-0 rounded-[22%]"
+          />
+          <span className="min-w-0 flex-1">
             <span className="text-lg">KiraPoket</span>
             <span className="mt-1 block leading-relaxed text-muted-foreground">
               Jejak perbelanjaan mengikut kitaran gaji, bukan bulan kalendar.
             </span>
           </span>
-          <ExternalLinkIcon className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+          <ExternalLinkIcon className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
         </a>
       </section>
 
