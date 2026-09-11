@@ -21,7 +21,12 @@ const fraunces = Fraunces({
 
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://marisolat.com"),
+  // Domain yang benar-benar dilayan. Sebelum ini marisolat.com, yang tiada
+  // rekod DNS langsung — jadi setiap URL metadata, termasuk og:image,
+  // menghala ke hos yang tidak wujud dan pratonton pautan pada Threads,
+  // WhatsApp dan Facebook terpapar rosak. Tukar ini jika marisolat.com
+  // disambungkan kelak.
+  metadataBase: new URL("https://marisolat.web.app"),
   title: "MariSolat - Waktu Solat Malaysia",
   description:
     "Pantau waktu solat harian di Malaysia termasuk tarikh Miladi & Hijri, jadual lengkap solat untuk semua zon dengan MariSolat.",
@@ -32,7 +37,7 @@ export const metadata: Metadata = {
     title: "MariSolat - Waktu Solat Malaysia",
     description:
       "Jadual lengkap waktu solat harian di Malaysia beserta tarikh Miladi & Hijri dengan MariSolat.",
-    url: "https://marisolat.com",
+    url: "https://marisolat.web.app",
     siteName: "MariSolat",
     locale: "ms_MY",
     type: "website",
