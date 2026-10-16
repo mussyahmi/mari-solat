@@ -121,6 +121,23 @@ export default function PantauPage() {
   const terkini = [...barisTapis].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
+  // Satu baris bagi setiap peranti, diterbitkan daripada log. Log hanya
+  // menulis sekali sehari bagi setiap peranti, jadi "terakhir" ialah lawatan
+  // pertama pada hari terakhir mereka datang — bukan bukaan terakhir sebenar.
+  const ikutPeranti = new Map<string, { akhir: Visit; kali: number }>();
+  for (const r of terkini) {
+    const p = ikutPeranti.get(r.uuid);
+    if (p) p.kali++;
+    else ikutPeranti.set(r.uuid, { akhir: r, kali: 1 });
+  }
+  const peranti = [...ikutPeranti.values()];
+  const HAD_PERANTI = 50;
+  const perantiDipapar = peranti.slice(0, HAD_PERANTI);
+  const masaPendek = (iso: string) =>
+    new Date(iso).toLocaleString('ms-MY', {
+      day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+    });
+
   const HAD_LOG = 50;
   const logDipapar = terkini.slice(0, HAD_LOG);
   const tarikhPendek = (iso: string) =>
@@ -268,9 +285,37 @@ export default function PantauPage() {
             </ol>
           </section>
 
-          <section className="mt-20">
+          <section className="mt-20 max-w-3xl">
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="paparan text-2xl">Kali terakhir dilihat</h2>
+              <p className="text-sm text-muted-foreground">
+                {perantiDipapar.length} daripada {peranti.length} peranti
+              </p>
+            </div>
+            <ul className="mt-5 divide-y divide-border/50 border-t border-border/50">
+              {perantiDipapar.map(({ akhir, kali }) => (
+                <li key={akhir.uuid} className="flex flex-col gap-1 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                  <span className="min-w-0">
+                    <span className="font-mono text-sm">{akhir.uuid.slice(0, 8)}…</span>
+                    <span className="ml-3 text-sm text-muted-foreground">
+                      {platform(akhir.ua ?? '')} · {akhir.zone}
+                      {akhir.uid ? ' · log masuk' : ''}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm sm:text-right">
+                    {masaPendek(akhir.timestamp)}
+                    <span className="ml-3 inline-block w-20 text-muted-foreground">
+                      {kali} lawatan
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="mt-20">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="paparan text-2xl">Log lawatan</h2>
               <p className="text-sm text-muted-foreground">
                 {logDipapar.length} daripada {barisTapis.length}
               </p>
