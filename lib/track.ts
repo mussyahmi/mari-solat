@@ -46,7 +46,20 @@ const KUNCI_KOORDINAT = 'msolat_last_tracked_coords';
  * Koordinat pilihan. Zon sahaja sudah memadai untuk merekod lawatan;
  * koordinat menyusul apabila ia memang tersedia.
  */
-export async function trackVisit(zone: string, koordinat?: { lat: number; lng: number }) {
+export function trackVisit(zone: string, koordinat?: { lat: number; lng: number }) {
+  // Semakan localStorage di bawah dan penulisannya dipisahkan oleh await
+  // addDoc. Halaman utama dan AkaunProvider memanggil fungsi ini serentak
+  // semasa muat, jadi kedua-duanya lulus semakan sebelum salah satu sempat
+  // menulis — satu lawatan menjadi dua baris dalam saat yang sama. Beratur
+  // memastikan setiap panggilan menyemak selepas yang sebelumnya selesai.
+  const giliran = antrian.then(() => tulisLawatan(zone, koordinat));
+  antrian = giliran;
+  return giliran;
+}
+
+let antrian: Promise<void> = Promise.resolve();
+
+async function tulisLawatan(zone: string, koordinat?: { lat: number; lng: number }) {
   // UUID hanyalah profil pelayar: aplikasi yang dipasang, tetingkap peribadi
   // dan pemadaman ITP Safari semuanya menghasilkan yang baharu, jadi satu
   // orang boleh muncul beberapa kali dan tidak pernah boleh dipadankan

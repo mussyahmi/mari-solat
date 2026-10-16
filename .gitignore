@@ -81,3 +81,6 @@ next-env.d.ts
 # =========================
 .claude/
 challenge.txt
+
+# Sandaran koleksi visits — mengandungi koordinat tepat pengguna
+visits-sandaran-*.json
