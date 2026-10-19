@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLinkIcon, Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
+import { ChevronDownIcon, ExternalLinkIcon, Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -35,6 +35,8 @@ export default function TetapanPage() {
   const [memuatZon, setMemuatZon] = useState(true);
   const [showZoneSelector, setShowZoneSelector] = useState(false);
   const [selectedNegeri, setSelectedNegeri] = useState('');
+  const senaraiZonRef = useRef<HTMLDivElement | null>(null);
+  const [adaLagiBawah, setAdaLagiBawah] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [azanOn, setAzanOn] = useState(false);
@@ -45,6 +47,25 @@ export default function TetapanPage() {
   const [pushQadaOn, setPushQadaOn] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
+
+  // Senarai negeri dipotong tepat di sempadan baris pada skrin biasa, jadi
+  // tiada petunjuk bahawa ada lagi di bawah. Pembayang ini hilang sebaik
+  // sahaja pengguna sampai ke hujung senarai.
+  const semakLagiBawah = useCallback(() => {
+    const el = senaraiZonRef.current;
+    if (!el) return;
+    setAdaLagiBawah(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  }, []);
+
+  useEffect(() => {
+    if (!showZoneSelector) return;
+    const id = requestAnimationFrame(semakLagiBawah);
+    window.addEventListener('resize', semakLagiBawah);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('resize', semakLagiBawah);
+    };
+  }, [showZoneSelector, selectedNegeri, memuatZon, ralatZon, allZones, semakLagiBawah]);
 
   useEffect(() => {
     const savedName = localStorage.getItem('msolat_zone_name');
@@ -383,51 +404,63 @@ export default function TetapanPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="-mx-1 flex-1 overflow-y-auto px-1">
-            {ralatZon ? (
-              <div className="py-6">
-                <p className="leading-relaxed text-muted-foreground">
-                  Senarai zon tidak dapat dimuatkan. Semak sambungan internet anda,
-                  kemudian cuba sekali lagi.
-                </p>
-                <button
-                  onClick={muatSenaraiZon}
-                  className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Cuba lagi
-                </button>
-              </div>
-            ) : memuatZon ? (
-              <p className="py-6 text-muted-foreground">Memuatkan senarai zon…</p>
-            ) : !selectedNegeri ? (
-              <div className="divide-y divide-border/50 border-t border-border/50">
-                {negeriList.map(negeri => (
+          <div className="relative -mx-1 flex min-h-0 flex-1 flex-col">
+            <div
+              ref={senaraiZonRef}
+              onScroll={semakLagiBawah}
+              className="flex-1 overflow-y-auto px-1"
+            >
+              {ralatZon ? (
+                <div className="py-6">
+                  <p className="leading-relaxed text-muted-foreground">
+                    Senarai zon tidak dapat dimuatkan. Semak sambungan internet anda,
+                    kemudian cuba sekali lagi.
+                  </p>
                   <button
-                    key={negeri}
-                    onClick={() => setSelectedNegeri(negeri)}
-                    className="w-full py-3.5 text-left transition-colors hover:text-primary"
+                    onClick={muatSenaraiZon}
+                    className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    {negeri}
+                    Cuba lagi
                   </button>
-                ))}
-              </div>
-            ) : (
-              <div className="divide-y divide-border/50 border-t border-border/50">
-                {allZones.filter(z => z.negeri === selectedNegeri).map(z => (
-                  <button
-                    key={z.jakimCode}
-                    onClick={() => handleZoneSelect(z)}
-                    className="flex w-full items-baseline justify-between gap-6 py-3.5 text-left transition-colors hover:text-primary"
-                  >
-                    {/* Satu zon boleh meliputi tujuh daerah. Memotongnya
-                        menyembunyikan daerah yang mungkin sedang dicari
-                        pengguna, jadi ia dibiarkan membalut. */}
-                    <span className="min-w-0 text-pretty leading-relaxed">{z.daerah}</span>
-                    <span className="shrink-0 text-sm text-muted-foreground">{z.jakimCode}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+                </div>
+              ) : memuatZon ? (
+                <p className="py-6 text-muted-foreground">Memuatkan senarai zon…</p>
+              ) : !selectedNegeri ? (
+                <div className="divide-y divide-border/50 border-t border-border/50">
+                  {negeriList.map(negeri => (
+                    <button
+                      key={negeri}
+                      onClick={() => setSelectedNegeri(negeri)}
+                      className="w-full py-3.5 text-left transition-colors hover:text-primary"
+                    >
+                      {negeri}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-border/50 border-t border-border/50">
+                  {allZones.filter(z => z.negeri === selectedNegeri).map(z => (
+                    <button
+                      key={z.jakimCode}
+                      onClick={() => handleZoneSelect(z)}
+                      className="flex w-full items-baseline justify-between gap-6 py-3.5 text-left transition-colors hover:text-primary"
+                    >
+                      {/* Satu zon boleh meliputi tujuh daerah. Memotongnya
+                          menyembunyikan daerah yang mungkin sedang dicari
+                          pengguna, jadi ia dibiarkan membalut. */}
+                      <span className="min-w-0 text-pretty leading-relaxed">{z.daerah}</span>
+                      <span className="shrink-0 text-sm text-muted-foreground">{z.jakimCode}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute inset-x-0 bottom-0 flex h-16 items-end justify-center bg-gradient-to-t from-background via-background/80 to-transparent pb-1 transition-opacity duration-300 ${adaLagiBawah ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <ChevronDownIcon className="size-5 animate-bounce text-muted-foreground" />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
