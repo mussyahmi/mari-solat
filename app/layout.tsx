@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import WarnaTema from "@/components/WarnaTema";
 import { WARNA_TEMA } from "@/lib/warna-tema";
 import { SKRIP_AKSEN } from "@/lib/aksen";
+import { SKRIP_SAIZ } from "@/lib/saiz-teks";
 
 // Satu keluarga huruf untuk keseluruhan aplikasi. Paksi saiz optik Fraunces
 // bermakna teks kecil dan angka kiraan detik yang besar mendapat potongan
@@ -87,7 +88,7 @@ export const metadata: Metadata = {
  */
 function WarnaTemaInit() {
   const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m)}m.setAttribute('content',localStorage.getItem('theme')==='dark'?'${WARNA_TEMA.gelap}':'${WARNA_TEMA.cerah}')}catch(e){}`;
-  return <script dangerouslySetInnerHTML={{ __html: js + SKRIP_AKSEN }} />;
+  return <script dangerouslySetInnerHTML={{ __html: js + SKRIP_AKSEN + SKRIP_SAIZ }} />;
 }
 
 export default function RootLayout({
