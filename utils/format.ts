@@ -6,9 +6,21 @@ export function formatPrayerDates(gregorian: string, hijri: string, bahasa: Baha
   return bahasa === "en" ? `${g} | ${h} AH` : `${g} Miladi | ${h} Hijri`;
 }
 
+const BULAN_API = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Tarikh API "16-Dec-2025" sebagai Date. Dihurai sendiri kerana Safari tidak
+ * menerima format ini melalui `new Date(...)` dan memulangkan Invalid Date.
+ */
+export function tarikhApi(gregorian: string) {
+  const [h, b, t] = gregorian.split("-");
+  const bulan = BULAN_API.indexOf(b);
+  return bulan < 0 ? new Date(gregorian) : new Date(Number(t), bulan, Number(h), 12);
+}
+
 export function formatGregorianDate(gregorian: string, bahasa: Bahasa = "ms") {
   // Gregorian: "16-Dec-2025"
-  const gDate = new Date(gregorian);
+  const gDate = tarikhApi(gregorian);
   // Akhiran "Miladi"/"Hijri" dahulunya dibakar ke dalam nilai, jadi ia
   // mengulang label yang berdiri betul-betul di atasnya. Label kini yang
   // menamakan kalendar; nilai hanya membawa tarikh.

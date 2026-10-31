@@ -74,22 +74,30 @@ const LIMA: Slot[] = [...SLOT];
  * amalan "Solat 5 waktu", jika ada.
  */
 export default function HeroLangit({
-  waktu, seterusnya, masa, kini, zon, kategori, malam,
+  waktu, seterusnya, masa, kini, zon, kategori, malam, paparan,
 }: {
   waktu: WaktuSolat;
-  seterusnya: Waktu;
-  masa: Date;
+  seterusnya?: Waktu | null;
+  masa?: Date | null;
   kini: Date;
   zon: string | null;
   /** Kategori waktu semasa (Fadhilat, Jawaz, …) dan bila ia bertukar. */
   kategori: { nama: string; tamat: Date | null } | null;
   /** Satu pertiga malam yang akan datang (atau sedang berjalan). */
   malam: { mula: Date; tamat: Date } | null;
+  /**
+   * Mod paparan untuk semalam dan esok: tiada kiraan detik, matahari atau
+   * tanda solat — hanya jadual hari itu pada lengkung yang sama.
+   */
+  paparan?: { tajuk: string; keterangan: string; fasa: Fasa };
 }) {
   const t = useTeks(TEKS);
   const { amalan, log, tulis } = useAmalanHariIni();
 
-  const asas = new Date(masa);
+  const statik = !!paparan || !seterusnya || !masa;
+  // Lengkung hanya memerlukan jarak relatif antara waktu, jadi tarikh asas
+  // tidak penting dalam mod paparan.
+  const asas = new Date(masa ?? kini);
   const jam = (w: Waktu) => parseTime(waktu[w], asas).getTime();
   const subuh = jam('subuh');
   const syuruk = jam('syuruk');
@@ -113,17 +121,18 @@ export default function HeroLangit({
     const m = Math.ceil((ms % 3_600_000) / 60_000);
     return m === 60 ? `${j + 1}${t.jam}` : `${j ? `${j}${t.jam} ` : ''}${m}${t.minit}`;
   };
-  const bakiMs = Math.max(masa.getTime() - kini.getTime(), 0);
+  const bakiMs = masa ? Math.max(masa.getTime() - kini.getTime(), 0) : 0;
   const bakiTeks = bakiMs < 60_000 ? t.sekejap : jamMinit(bakiMs);
   const fmt = (d: Date) => `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
-  const namaSeterusnya = seterusnya[0].toUpperCase() + seterusnya.slice(1);
+  const namaSeterusnya = seterusnya ? seterusnya[0].toUpperCase() + seterusnya.slice(1) : '';
 
-  const { fasa } = fasaPada(waktu, kini);
+  const fasa = paparan?.fasa ?? fasaPada(waktu, kini).fasa;
   const kiniMs = kini.getTime();
-  const nampakMatahari = kiniMs >= mula && kiniMs <= tamat && parseTime(waktu.subuh, kini).toDateString() === asas.toDateString();
+  const nampakMatahari = !statik && kiniMs >= mula && kiniMs <= tamat && parseTime(waktu.subuh, kini).toDateString() === asas.toDateString();
   const siang = kiniMs > syuruk && kiniMs < maghrib;
 
-  const amalanSolat = amalan.find(a => a.jenis === 'solat');
+  // Tanda solat dan ringkasan amalan hanya untuk hari ini.
+  const amalanSolat = statik ? undefined : amalan.find(a => a.jenis === 'solat');
   const amalanZikir = amalan.find(a => a.jenis === 'zikir');
   const amalanQuran = amalan.find(adalahQuran);
   const ditunai = (amalanSolat && log[amalanSolat.id]?.solat) ?? [];
@@ -152,18 +161,23 @@ export default function HeroLangit({
   return (
     <section className="relative overflow-hidden rounded-3xl p-4 text-white shadow-[var(--bayang-kad)] sm:p-6" style={{ background: LANGIT[fasa] }}>
       <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-4xl">
-        {t.dalam(namaSeterusnya, bakiTeks)}
+        {paparan ? paparan.tajuk : t.dalam(namaSeterusnya, bakiTeks)}
       </h1>
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-white/90 sm:text-base">
-        <span className="tabular">{t.pada(waktu[seterusnya])}</span>
-        {namaZon && <><span aria-hidden>·</span><span className="max-w-[16ch] truncate sm:max-w-none">{namaZon}</span></>}
-        <span aria-hidden>·</span>
-        <Link href="/tetapan" className="underline underline-offset-4">{t.tukar}</Link>
+        <span className="tabular">{paparan ? paparan.keterangan : seterusnya ? t.pada(waktu[seterusnya]) : ''}</span>
+        {/* Zon dan pautan tukar untuk hari ini sahaja; hari lain sudah ada kad tarikh dan zon di bawah. */}
+        {!statik && (
+          <>
+            {namaZon && <><span aria-hidden>·</span><span className="max-w-[16ch] truncate sm:max-w-none">{namaZon}</span></>}
+            <span aria-hidden>·</span>
+            <Link href="/tetapan" className="underline underline-offset-4">{t.tukar}</Link>
+          </>
+        )}
       </p>
 
       {/* Dua fakta masa hari ini sebagai cip, bukan dilukis pada lengkung —
           lengkung kekal untuk waktu solat sahaja. */}
-      {(kategori || malam) && (
+      {!statik && (kategori || malam) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {kategori && (
             <Link href="/kategori-solat" className="inline-flex items-center gap-2 rounded-full bg-white/25 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/35">
@@ -187,7 +201,7 @@ export default function HeroLangit({
         </div>
       )}
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto mt-1 w-full max-w-xl overflow-visible" role="img" aria-label={t.dalam(namaSeterusnya, bakiTeks)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={`mx-auto w-full max-w-xl overflow-visible ${statik ? 'mt-7' : 'mt-1'}`} role="img" aria-label={paparan ? paparan.tajuk : t.dalam(namaSeterusnya, bakiTeks)}>
         <defs>
           <clipPath id="atasUfuk"><rect x="0" y="0" width={W} height={UFUK} /></clipPath>
           <clipPath id="bawahUfuk"><rect x="0" y={UFUK} width={W} height={H} /></clipPath>
@@ -236,19 +250,20 @@ export default function HeroLangit({
               <circle cx={cx} cy={cy} r="16" fill="transparent" />
               <circle
                 cx={cx} cy={cy} r="8"
-                fill={sudah ? w.css : masuk ? '#ffffff40' : '#ffffff14'}
+                fill={sudah ? w.css : statik ? '#ffffff2e' : masuk ? '#ffffff40' : '#ffffff14'}
                 stroke="#fff" strokeWidth="2"
               />
               {sudah && <path d={`M${cx - 3.4} ${cy} l2.4 2.4 4.4 -4.8`} fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />}
               <text x={cx} y={atas ? cy - 13 : cy + 21} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" style={{ paintOrder: 'stroke', stroke: '#00000022', strokeWidth: 2 }}>
                 {LABEL_SLOT[sl]}
               </text>
+
             </g>
           );
         })}
       </svg>
 
-      {cip.length > 0 && (
+      {!statik && cip.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cip.map((c, i) => (
             <Link key={i} href="/amalan" className="flex items-center gap-1.5 rounded-full bg-white/25 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/35">

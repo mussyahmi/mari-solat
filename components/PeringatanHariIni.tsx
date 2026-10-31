@@ -75,7 +75,7 @@ export default function PeringatanHariIni() {
       )}
 
       <div className="mt-4 space-y-4">
-        {pasanganHari(topik, anjakan).map(p => <KadPeringatan key={p.id} p={p} />)}
+        {pasanganHari(topik, anjakan).map((p, i) => <KadPeringatan key={p.id} p={p} kedudukan={i + anjakan * 2} />)}
       </div>
 
       <Link href="/peringatan" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">

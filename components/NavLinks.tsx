@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   BanIcon, BookHeartIcon, BookOpenIcon, ClockIcon, CompassIcon, LayersIcon, ListChecksIcon,
   MoonStarIcon, RotateCcwIcon, ScrollTextIcon, SettingsIcon, ShieldCheckIcon,
-  SparklesIcon, type LucideIcon,
+  SparklesIcon, WindIcon, type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, isActivePath } from '@/lib/nav';
 import { palet } from '@/lib/aksen';
@@ -26,6 +26,7 @@ const IKON: Record<string, { ikon: LucideIcon; w: number }> = {
   '/amalan': { ikon: ListChecksIcon, w: 1 },
   '/peringatan': { ikon: BookHeartIcon, w: 2 },
   '/tasbih': { ikon: SparklesIcon, w: 4 },
+  '/istighfar': { ikon: WindIcon, w: 5 },
   '/rukun-solat': { ikon: BookOpenIcon, w: 0 },
   '/syarat-wajib-solat': { ikon: ScrollTextIcon, w: 1 },
   '/syarat-sah-solat': { ikon: ShieldCheckIcon, w: 2 },

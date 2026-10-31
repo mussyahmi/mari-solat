@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { bahasaSemasa } from '@/lib/bahasa';
 import { solatBaru } from '@/lib/amalan';
+import { pastikanLalai } from '@/lib/amalan-lalai';
 import { db } from '@/firebase';
 import { useAkaun } from '@/components/AkaunProvider';
 import type { Amalan, LogHari, LogTahun } from '@/lib/amalan';
@@ -25,7 +26,11 @@ export function useAmalanHariIni() {
     if (!user) return;
     return onSnapshot(
       collection(db, 'users', user.uid, 'amalan'),
-      snap => setAmalan(snap.docs.map(d => ({ id: d.id, ...d.data() }) as Amalan).sort((a, b) => a.susunan - b.susunan)),
+      snap => {
+        const semua = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Amalan).sort((a, b) => a.susunan - b.susunan);
+        setAmalan(semua);
+        pastikanLalai(user.uid, semua, bahasaSemasa());
+      },
       () => setAmalan([]),
     );
   }, [user]);

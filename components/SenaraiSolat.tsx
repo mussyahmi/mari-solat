@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Pencil } from 'lucide-react';
 import { useTeks } from '@/components/BahasaProvider';
-import { palet, WARNA_WAKTU } from '@/lib/aksen';
+import { GRADIEN_UTAMA, palet, PALET_UTAMA, WARNA_WAKTU } from '@/lib/aksen';
 import { LABEL_SLOT, SLOT, type Amalan, type LogHari, type Slot } from '@/lib/amalan';
 import { parseTime, type WaktuSolat } from '@/lib/solat';
 import { cn } from '@/lib/utils';
+import { useGetarSiap } from '@/components/KesanSiap';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 const ms = {
@@ -54,6 +55,12 @@ function slotSemasa(waktu: WaktuSolat, kini: Date): Slot | null {
   return null;
 }
 
+/** ✓ bagi tanda, dengan getaran "selesai" apabila baru ditanda. */
+function IsiTanda({ siap, kecil }: { siap: boolean; warna?: string; kecil?: boolean }) {
+  useGetarSiap(siap);
+  return siap ? <Check className={kecil ? 'size-3.5' : 'size-6'} strokeWidth={3} /> : null;
+}
+
 /** Cincin kemajuan kecil untuk pil zikir. */
 function Cincin({ kadar, warna }: { kadar: number; warna: string }) {
   const r = 7;
@@ -72,7 +79,7 @@ function Cincin({ kadar, warna }: { kadar: number; warna: string }) {
  * (mana-mana hari) supaya kedua-duanya menulis rekod yang sama.
  */
 export default function SenaraiSolat({
-  waktu, kini, hariLepas, solat, zikir, logSolat, logZikir, onTulis, onUbahZikir, ciptaSolat,
+  waktu, kini, hariLepas, solat, zikir, logSolat, logZikir, onTulis, onUbahZikir, ciptaSolat, tanpaNotaWaktu, seragam,
 }: {
   waktu: WaktuSolat | null;
   /** Masa sekarang jika tarikh dipaparkan ialah hari ini, selainnya null. */
@@ -87,6 +94,10 @@ export default function SenaraiSolat({
   onUbahZikir?: () => void;
   /** Cipta amalan Solat 5 waktu jika belum ada — bulatan tetap dipaparkan. */
   ciptaSolat?: () => Promise<Amalan | undefined>;
+  /** Sembunyikan baris Imsak · Syuruk · Dhuha — halaman utama sudah memaparkan grid waktu penuh. */
+  tanpaNotaWaktu?: boolean;
+  /** Satu warna tema untuk semua waktu (Jejak Ibadah), bukan warna setiap waktu. */
+  seragam?: boolean;
 }) {
   const t = useTeks(TEKS);
   const [buka, setBuka] = useState<Slot | null>(null);
@@ -120,7 +131,7 @@ export default function SenaraiSolat({
     <div className="@container">
     <div className="grid gap-3 @xl:grid-cols-3 @4xl:grid-cols-5">
       {SLOT.map(sl => {
-        const w = palet(WARNA_WAKTU[sl]);
+        const w = seragam ? PALET_UTAMA : palet(WARNA_WAKTU[sl]);
         const kini_ = semasa === sl;
         const sudah = ditunai.includes(sl);
         const ditanda = (logZikir?.slot?.[sl] ?? []).filter(id => item.some(it => it.id === id));
@@ -131,8 +142,8 @@ export default function SenaraiSolat({
           <div
             key={sl}
             className={cn(
-              'relative flex flex-col overflow-hidden rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors',
-              kini_ ? w.lembut : 'bg-card'
+              'relative flex flex-col rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors',
+              kini_ || (seragam && sudah) ? w.lembut : 'bg-card'
             )}
             style={{ borderColor: kini_ ? `oklch(from ${w.css} l c h / 0.45)` : undefined }}
           >
@@ -160,13 +171,13 @@ export default function SenaraiSolat({
                   aria-label={t.tanda(LABEL_SLOT[sl])}
                   aria-pressed={sudah}
                   className={cn(
-                    'flex size-12 shrink-0 items-center justify-center rounded-full transition-all active:scale-90',
-                    sudah ? 'text-white shadow-sm' : 'border-[3px]',
+                    'relative flex size-12 shrink-0 items-center justify-center rounded-full transition-all active:scale-90',
+                    sudah ? (seragam ? cn('shadow-sm', w.teks) : 'text-white shadow-sm') : 'border-[3px]',
                     !sudahMasuk(sl) && !sudah && 'opacity-50'
                   )}
-                  style={sudah ? { background: w.css } : { borderColor: `oklch(from ${w.css} l c h / 0.55)` }}
+                  style={sudah ? { background: seragam ? GRADIEN_UTAMA : w.css } : { borderColor: `oklch(from ${w.css} l c h / 0.55)` }}
                 >
-                  {sudah && <Check className="size-6" strokeWidth={3} />}
+                  <IsiTanda siap={sudah} warna={w.css} />
                 </button>
               )}
             </div>
@@ -190,7 +201,7 @@ export default function SenaraiSolat({
         );
       })}
 
-      {waktu && (
+      {waktu && !tanpaNotaWaktu && (
         <p className="col-span-full px-2 text-xs text-muted-foreground tabular-nums">
           {t.imsak} {waktu.imsak} · {t.syuruk} {waktu.syuruk} · {t.dhuha} {waktu.dhuha}
         </p>
@@ -202,7 +213,7 @@ export default function SenaraiSolat({
     <Dialog open={buka !== null} onOpenChange={b => !b && setBuka(null)}>
       <DialogContent className="sm:max-w-sm">
         {buka && (() => {
-          const w = palet(WARNA_WAKTU[buka]);
+          const w = seragam ? PALET_UTAMA : palet(WARNA_WAKTU[buka]);
           const ditanda = (logZikir?.slot?.[buka] ?? []).filter(id => item.some(it => it.id === id));
           const penuh = n > 0 && ditanda.length >= n;
           return (
@@ -227,10 +238,10 @@ export default function SenaraiSolat({
                       className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-muted/60"
                     >
                       <span
-                        className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border-2', ada ? 'border-transparent text-white' : 'border-border')}
+                        className={cn('relative flex size-6 shrink-0 items-center justify-center rounded-lg border-2', ada ? 'border-transparent text-white' : 'border-border')}
                         style={ada ? { background: w.css } : undefined}
                       >
-                        {ada && <Check className="size-3.5" strokeWidth={3} />}
+                        <IsiTanda siap={ada} warna={w.css} kecil />
                       </span>
                       <span className={cn(ada && 'text-muted-foreground line-through decoration-muted-foreground/40')}>{it.nama}</span>
                     </button>

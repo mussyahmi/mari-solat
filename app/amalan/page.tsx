@@ -6,8 +6,8 @@ import {
   collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, BookOpen, Clock3, Check, ChevronDown, ChevronLeft, ChevronRight, Minus, MoonStar, Pencil, Plus, Sparkles, X } from 'lucide-react';
-import { palet, WARNA_WAKTU } from '@/lib/aksen';
+import { ArrowDown, ArrowUp, BookOpen, Clock3, Check, ChevronDown, ChevronLeft, ChevronRight, Minus, MoonStar, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { GRADIEN_PELANGI, GRADIEN_PELANGI_PEKAT, gradienPastel, palet, PALET_UTAMA } from '@/lib/aksen';
 import { db } from '@/firebase';
 import { useAkaun } from '@/components/AkaunProvider';
 import InAppBrowserBanner from '@/components/InAppBrowserBanner';
@@ -15,16 +15,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { berperingkat, naikMasuk, spring } from '@/lib/motion';
 import { isInAppBrowser, cn } from '@/lib/utils';
 import { todayStr } from '@/lib/qada';
-import { BULAN, BULAN_PENDEK, HARI, teksSemasa, type Bahasa } from '@/lib/bahasa';
+import { BULAN, BULAN_PENDEK, HARI, bahasaSemasa, teksSemasa, type Bahasa } from '@/lib/bahasa';
 import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { bacaCacheWaktu, parseTime } from '@/lib/solat';
 import {
-  bakiSebelum, cadangan, dijadualkan, kiraSyawal, LABEL_SLOT, nilai, SASARAN_SYAWAL,
+  bakiSebelum, dijadualkan, kiraSyawal, LABEL_SLOT, nilai, SASARAN_SYAWAL,
   SLOT, slotLengkap, tambahHari, tarikhKe, teksJadual,
-  adalahQuran, idBaru, solatBaru, unitPapar, warnaAmalan, type Amalan, type ItemZikir, type LogHari, type LogTahun, type Petak, type Slot,
+  adalahQuran, idBaru, susunAmalan, solatBaru, unitPapar, warnaAmalan, type Amalan, type ItemZikir, type LogHari, type LogTahun, type Petak, type Slot,
 } from '@/lib/amalan';
 import GridAmalan, { gayaPetak, julat, kelasPetak, MatriksAmalan, type Paparan } from './GridAmalan';
 import BorangAmalan from './BorangAmalan';
+import { adalahLalai, pastikanLalai } from '@/lib/amalan-lalai';
+import { useGetarSiap } from '@/components/KesanSiap';
 import KadQuran from '@/components/KadQuran';
 import SenaraiSolat from '@/components/SenaraiSolat';
 import { useWaktuTarikh } from '@/components/useWaktuTarikh';
@@ -32,9 +34,16 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 
 const IKON_JENIS = { sasaran: BookOpen, zikir: Sparkles, solat: Clock3, jadual: MoonStar } as const;
 
+/**
+ * Warna kad amalan: tiga amalan lalai berkongsi warna tema; setiap amalan
+ * yang ditambah pengguna mendapat warnanya sendiri (dipilih dalam borang).
+ */
+const paletKad = (a?: Amalan) => (!a || adalahLalai(a) ? PALET_UTAMA : palet(warnaAmalan(a)));
+const gradien = gradienPastel;
+
 /** Cip ikon berwarna — identiti visual setiap amalan. */
 function CipAmalan({ a, kecil }: { a: Amalan; kecil?: boolean }) {
-  const p = palet(warnaAmalan(a));
+  const p = paletKad(a);
   const Ikon = IKON_JENIS[a.jenis];
   return (
     <span className={cn('flex shrink-0 items-center justify-center rounded-2xl', p.lembut, p.teks, kecil ? 'size-9' : 'size-11')}>
@@ -69,7 +78,9 @@ const ms = {
   hariSelepas: 'Hari selepas',
   kembali: 'Kembali ke hari ini',
   tiadaJadual: 'Tiada amalan dijadualkan pada hari ini.',
-  pencapaian: 'Pencapaian',
+  pencapaian: 'Ringkasan',
+  tabHariIni: 'Hari ini',
+  tabRingkasan: 'Ringkasan',
   paparan: { minggu: 'Minggu', bulan: 'Bulan', tahun: 'Tahun' } as Record<Paparan, string>,
   sebelum: 'Sebelum',
   selepas: 'Selepas',
@@ -101,6 +112,15 @@ const ms = {
   legenda: { lengkap: 'Lengkap', sebahagian: 'Sebahagian', qada: 'Hari melunas baki', terlepas: 'Terlepas', belum: 'Belum', tiada: 'Tiada jadual' },
   bakiDilunas: (b: number) => `Baki ${b} dilunaskan`,
   tercapai: 'Sasaran tercapai',
+  belumSelesai: 'Belum selesai',
+  selesai: 'Selesai',
+  selepasSetiap: 'Selepas setiap solat fardu',
+  tajukSolat: 'Solat',
+  tiadaJadualHari: 'Tiada jadual hari ini',
+  semuaSelesai: 'MasyaAllah, semua amalan hari ini selesai!',
+  teruskan: 'Teruskan, sedikit demi sedikit',
+  selesaiDaripada: (a: number, n: number) => `${a} / ${n} amalan selesai`,
+  belumBermula: 'Belum dijejak pada tarikh ini',
   perlu: (n: number, unit: string | undefined) => `Perlu ${n} ${unit} · `,
   baki: (b: number) => `baki ${b}`,
   sasaran: (n: number, unit: string | undefined) => `Sasaran ${n} ${unit}`,
@@ -114,6 +134,9 @@ const ms = {
   ubahSenarai: 'Ubah senarai zikir',
   siapUbah: 'Siap',
   zikirBaru: 'Tambah zikir, cth. Selawat 10x',
+  tambahZikir: 'Tambah zikir',
+  lalai: 'Lalai',
+  lalaiNota: 'Amalan lalai — tidak boleh dipadam',
   buangZikir: (n: string) => `Buang ${n}`,
   tandaWaktu: (w: string) => `Tandakan semua zikir ${w}`,
   gagalUbah: 'Senarai tidak dapat disimpan.',
@@ -145,7 +168,9 @@ const en: typeof ms = {
   hariSelepas: 'Next day',
   kembali: 'Back to today',
   tiadaJadual: 'No practices scheduled for this day.',
-  pencapaian: 'Progress',
+  pencapaian: 'Overview',
+  tabHariIni: 'Today',
+  tabRingkasan: 'Overview',
   paparan: { minggu: 'Week', bulan: 'Month', tahun: 'Year' },
   sebelum: 'Previous',
   selepas: 'Next',
@@ -177,6 +202,15 @@ const en: typeof ms = {
   legenda: { lengkap: 'Complete', sebahagian: 'Partial', qada: 'Day that cleared a backlog', terlepas: 'Missed', belum: 'Not yet', tiada: 'Not scheduled' },
   bakiDilunas: b => `Backlog of ${b} cleared`,
   tercapai: 'Target reached',
+  belumSelesai: 'Not done yet',
+  selesai: 'Done',
+  selepasSetiap: 'After each obligatory prayer',
+  tiadaJadualHari: 'Not scheduled today',
+  semuaSelesai: 'MasyaAllah, every practice done today!',
+  teruskan: 'Keep going, little by little',
+  selesaiDaripada: (a, n) => `${a} / ${n} practices done`,
+  belumBermula: 'Not tracked on this date yet',
+  tajukSolat: 'Solat',
   perlu: (n, unit) => `Need ${n} ${unit} · `,
   baki: b => `${b} backlog`,
   sasaran: (n, unit) => `Target ${n} ${unit}`,
@@ -190,6 +224,9 @@ const en: typeof ms = {
   ubahSenarai: 'Edit zikir list',
   siapUbah: 'Done',
   zikirBaru: 'Add a zikir, e.g. Selawat 10x',
+  tambahZikir: 'Add zikir',
+  lalai: 'Default',
+  lalaiNota: 'Default practice — cannot be deleted',
   buangZikir: n => `Remove ${n}`,
   tandaWaktu: w => `Mark all zikir for ${w}`,
   gagalUbah: "Couldn't save the list.",
@@ -257,6 +294,8 @@ export default function AmalanPage() {
   const [anjakan, setAnjakan] = useState(0);
   const [borang, setBorang] = useState<{ asal: Amalan | null } | null>(null);
   const [sahPadam, setSahPadam] = useState<Amalan | null>(null);
+  /** Dua paparan: tanda harian, atau ringkasan pencapaian dan urus amalan. */
+  const [tab, setTab] = useState<'hariIni' | 'ringkasan'>('hariIni');
   const waktuDipilih = useWaktuTarikh(dipilih);
   const [inApp, setInApp] = useState(false);
 
@@ -280,7 +319,12 @@ export default function AmalanPage() {
     if (!user) return;
     return onSnapshot(
       query(collection(db, 'users', user.uid, 'amalan'), orderBy('susunan')),
-      snap => setAmalan(snap.docs.map(d => ({ id: d.id, ...d.data() }) as Amalan)),
+      snap => {
+        const semua = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Amalan);
+        setAmalan(semua);
+        // Solat, Al-Quran dan Zikir sentiasa ada untuk setiap pengguna.
+        pastikanLalai(user.uid, semua, bahasaSemasa());
+      },
       () => { setAmalan([]); toast.error(teksSemasa(TEKS).gagalMuat); }
     );
   }, [user]);
@@ -379,21 +423,16 @@ export default function AmalanPage() {
 
   const alihAmalan = async (i: number, arah: -1 | 1) => {
     if (!user || !amalan) return;
-    const a = amalan[i];
-    const b = amalan[i + arah];
+    // Indeks datang daripada senarai yang dipaparkan (sudah disusun).
+    const tersusun = susunAmalan(amalan);
+    const a = tersusun[i];
+    const b = tersusun[i + arah];
     const batch = writeBatch(db);
     batch.update(doc(db, 'users', user.uid, 'amalan', a.id), { susunan: b.susunan });
     batch.update(doc(db, 'users', user.uid, 'amalan', b.id), { susunan: a.susunan });
     // Dua amalan lama mungkin berkongsi nombor susunan yang sama.
     if (a.susunan === b.susunan) batch.update(doc(db, 'users', user.uid, 'amalan', b.id), { susunan: a.susunan - arah });
     await batch.commit().catch(() => toast.error(t.gagalSusun));
-  };
-
-  const mulaCadangan = async () => {
-    if (!user) return;
-    const batch = writeBatch(db);
-    for (const c of cadangan(hariIni, bahasa)) batch.set(doc(collection(db, 'users', user.uid, 'amalan')), c);
-    await batch.commit().catch(() => toast.error(t.gagalCadangan));
   };
 
   /* ── Belum log masuk ─────────────────────────────────────────────── */
@@ -441,10 +480,9 @@ export default function AmalanPage() {
     );
   }
 
-  const senarai = amalan ?? [];
+  const senarai = susunAmalan(amalan ?? []);
   const perluHariIni = senarai.filter(a => dijadualkan(a, dipilih));
   const amalanSolat = perluHariIni.find(a => a.jenis === 'solat');
-  const amalanZikir = perluHariIni.find(a => a.jenis === 'zikir');
   const awalRekod = senarai.reduce((m, a) => (a.mula < m ? a.mula : m), hariIni);
 
   // Penilaian setiap amalan untuk julat yang dipaparkan.
@@ -482,37 +520,47 @@ export default function AmalanPage() {
             {t.subtajuk}
           </p>
         </div>
-        {senarai.length > 0 && (
-          <button
-            onClick={() => setBorang({ asal: null })}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            <Plus className="size-4" /> {t.amalan}
-          </button>
-        )}
+        {/* Satu-satunya butang untuk menambah amalan baharu. */}
+        <button
+          onClick={() => setBorang({ asal: null })}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        >
+          <Plus className="size-4" /> {t.amalan}
+        </button>
       </motion.header>
 
       {senarai.length === 0 ? (
-        <motion.section variants={naikMasuk} className="kad max-w-xl p-6">
-          <div className="mb-5 flex gap-2">
-            {[0, 1, 3, 4].map(w => <span key={w} className={cn('size-10 rounded-2xl', palet(w).lembut)} />)}
-          </div>
-          <p className="paparan text-2xl">{t.belumAda}</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t.mulakan}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button onClick={mulaCadangan} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik hover:bg-primary/90">
-              {t.gunaCadangan}
-            </button>
-            <button onClick={() => setBorang({ asal: null })} className="rounded-full border border-border px-5 py-2.5 text-sm hover:bg-muted">
-              {t.tambahSendiri}
-            </button>
-          </div>
-        </motion.section>
+        // Amalan lalai sedang dicipta — sekejap sahaja.
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-56 rounded-full" />
+          <Skeleton className="h-24 w-full rounded-3xl" />
+          <Skeleton className="h-24 w-full rounded-3xl" />
+        </div>
       ) : (
         <>
-          {/* ── Rekod hari dipilih ─────────────────────────────────── */}
+          <motion.div variants={naikMasuk} className="mb-8 flex">
+            <div className="flex rounded-full bg-muted p-1">
+              {(['hariIni', 'ringkasan'] as const).map(k => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setTab(k)}
+                  aria-pressed={tab === k}
+                  className="relative rounded-full px-5 py-2 text-sm"
+                >
+                  {tab === k && (
+                    <motion.span layoutId="tabJejak" className="absolute inset-0 rounded-full bg-card shadow-sm dark:bg-accent" transition={spring.susunAtur} />
+                  )}
+                  <span className={cn('relative', tab === k ? 'font-semibold dark:text-accent-foreground' : 'text-muted-foreground')}>
+                    {k === 'hariIni' ? t.tabHariIni : t.tabRingkasan}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
+          {tab === 'hariIni' && (
+          /* ── Rekod hari dipilih ─────────────────────────────────── */
           <motion.section variants={naikMasuk}>
             <div className="flex items-end justify-between gap-4">
               <div>
@@ -540,52 +588,74 @@ export default function AmalanPage() {
               </button>
             )}
 
-            <div className="mt-6 space-y-3">
+            {/* Ringkasan hari: berapa amalan sudah lengkap, dalam jalur kecerunan tema. */}
+            {perluHariIni.length > 0 && (() => {
+              const siapHari = perluHariIni.filter(a => lengkap(nilai(a, log[a.id] ?? {}, dipilih, dipilih, hariIni).petak[dipilih])).length;
+              const semua = siapHari === perluHariIni.length;
+              return (
+                <div className="relative mt-5 overflow-hidden rounded-3xl p-5 text-foreground shadow-[var(--bayang-kad)]" style={{ background: GRADIEN_PELANGI }}>
+                  <svg viewBox="0 0 100 100" className="pointer-events-none absolute -right-8 -top-8 size-40 rotate-12 opacity-15" aria-hidden>
+                    <path d="M50 0 L61 26 L85 15 L74 39 L100 50 L74 61 L85 85 L61 74 L50 100 L39 74 L15 85 L26 61 L0 50 L26 39 L15 15 L39 26 Z" fill="var(--w1)" />
+                  </svg>
+                  <p className="relative text-sm font-medium text-foreground/70">{semua ? t.semuaSelesai : t.teruskan}</p>
+                  <p className="relative mt-1 text-3xl font-extrabold tabular-nums">{t.selesaiDaripada(siapHari, perluHariIni.length)}</p>
+                  <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-white/60">
+                    <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${(siapHari / perluHariIni.length) * 100}%`, background: GRADIEN_PELANGI_PEKAT }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="mt-6 space-y-8">
               {perluHariIni.length === 0 && (
                 <p className="kad p-5 text-sm text-muted-foreground">{t.tiadaJadual}</p>
               )}
-              {/* Solat dan zikir selepas solat digabungkan dalam lima kad waktu —
-                  satu tempat untuk menanda kedua-duanya, dengan waktu sebenar hari itu. */}
-              {!senarai.some(a => a.jenis === 'solat') && (
-                <div className="kad flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                  <p className="flex-1 text-sm text-muted-foreground">{t.solatBelum}</p>
-                  <button type="button" onClick={() => ciptaSolat()} className="flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-                    <Plus className="size-4" /> {t.tambahSolat}
-                  </button>
-                </div>
-              )}
-              {(
+              {/* Lima kad waktu untuk menanda solat sahaja; zikir selepas solat
+                  mempunyai kadnya sendiri di bawah, atas permintaan pemilik. */}
+              {/* Setiap amalan ialah bahagian bertajuk dalam satu senarai — amalan
+                  baharu sentiasa mendapat tajuk dan tempatnya sendiri. */}
+              <section>
+                <TajukBahagian Ikon={Clock3} lalai>{amalanSolat?.nama ?? t.tajukSolat}</TajukBahagian>
                 <SenaraiSolat
                   waktu={waktuDipilih}
                   kini={dipilih === hariIni ? new Date() : null}
                   hariLepas={dipilih < hariIni}
                   solat={amalanSolat}
-                  zikir={amalanZikir}
                   logSolat={amalanSolat ? log[amalanSolat.id]?.[dipilih] : undefined}
-                  logZikir={amalanZikir ? log[amalanZikir.id]?.[dipilih] : undefined}
                   onTulis={(a, isi) => tulis(a, dipilih, isi)}
-                  onUbahZikir={amalanZikir ? () => setBorang({ asal: amalanZikir }) : undefined}
                   ciptaSolat={senarai.some(a => a.jenis === 'solat') ? undefined : ciptaSolat}
+                  seragam
                 />
-              )}
-              <div className="grid items-start gap-3 lg:grid-cols-2">
-              {perluHariIni.filter(a => a !== amalanSolat && a !== amalanZikir).map(a => (
-                <BarisAmalan
-                  key={`${a.id}-${dipilih}`}
-                  a={a}
-                  s={dipilih}
-                  hariIni={hariIni}
-                  log={log[a.id] ?? {}}
-                  onTulis={isi => tulis(a, dipilih, isi)}
-                  onUbah={ubah => ubahAmalan(a, ubah)}
-                />
+              </section>
+              {/* Semua amalan, mengikut susunan — amalan baharu sentiasa di hujung.
+                  Yang tidak dijadualkan hari ini tetap kelihatan, dipudarkan. */}
+              {senarai.filter(a => a.jenis !== 'solat').map(a => !dijadualkan(a, dipilih) ? (
+                <section key={`${a.id}-${dipilih}`} className="opacity-55">
+                  <TajukBahagian a={a} Ikon={IKON_JENIS[a.jenis]} lalai={adalahLalai(a)} onBuang={adalahLalai(a) ? undefined : () => setSahPadam(a)} labelBuang={t.padamAmalan(a.nama)}>{a.nama}</TajukBahagian>
+                  <BingkaiAmalan a={a}>
+                    <KepalaAmalan a={a} siap={false} tajuk={t.tiadaJadualHari} subtajuk={a.jenis === 'jadual' ? teksJadual(a.jadual, bahasa) : t.belumBermula} />
+                  </BingkaiAmalan>
+                </section>
+              ) : (
+                <section key={`${a.id}-${dipilih}`}>
+                  <TajukBahagian a={a} Ikon={IKON_JENIS[a.jenis]} lalai={adalahLalai(a)} onBuang={adalahLalai(a) ? undefined : () => setSahPadam(a)} labelBuang={t.padamAmalan(a.nama)}>{a.nama}</TajukBahagian>
+                  <BarisAmalan
+                    a={a}
+                    s={dipilih}
+                    hariIni={hariIni}
+                    log={log[a.id] ?? {}}
+                    onTulis={isi => tulis(a, dipilih, isi)}
+                    onUbah={ubah => ubahAmalan(a, ubah)}
+                  />
+                </section>
               ))}
-              </div>
             </div>
           </motion.section>
+          )}
 
+          {tab === 'ringkasan' && (<>
           {/* ── Pencapaian ─────────────────────────────────────────── */}
-          <motion.section variants={naikMasuk} className="mt-14">
+          <motion.section variants={naikMasuk}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="paparan text-2xl">{t.pencapaian}</h2>
               <div className="flex items-center rounded-full bg-muted p-1">
@@ -646,11 +716,12 @@ export default function AmalanPage() {
                   id: n.a.id, nama: n.a.nama, petak: n.petak, amalan: n.a, utama: false,
                   warna: palet(warnaAmalan(n.a)).css as string | undefined,
                   onUbah: (() => setBorang({ asal: n.a })) as (() => void) | undefined,
-                  onPadam: (() => setSahPadam(n.a)) as (() => void) | undefined,
+                  onPadam: (adalahLalai(n.a) ? undefined : () => setSahPadam(n.a)) as (() => void) | undefined,
                   labelPadam: t.padamAmalan(n.a.nama),
                 })),
               ];
-              const pilih = (d: string) => { setDipilih(d); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+              // Menekan hari dalam ringkasan membuka tab Hari ini pada tarikh itu.
+              const pilih = (d: string) => { setDipilih(d); setTab('hariIni'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
               const ringkasan = (baris: (typeof semuaBaris)[number]) => {
                 const { perlu, siap } = kira(baris.petak);
                 const streak = baris.amalan ? berturut(baris.amalan, log[baris.amalan.id] ?? {}, hariIni) : 0;
@@ -701,14 +772,6 @@ export default function AmalanPage() {
                 </div>
               );
             })()}
-
-            <button
-              type="button"
-              onClick={() => setBorang({ asal: null })}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-border py-3.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-            >
-              <Plus className="size-4" /> {t.tambahAmalan}
-            </button>
           </motion.section>
 
           {/* ── Urus ───────────────────────────────────────────────── */}
@@ -719,7 +782,10 @@ export default function AmalanPage() {
                 <li key={a.id} className="flex items-center gap-3 py-3">
                   <CipAmalan a={a} kecil />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate">{a.nama}</p>
+                    <p className="flex items-center gap-2">
+                      <span className="truncate">{a.nama}</span>
+                      {adalahLalai(a) && <LencanaLalai />}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {a.jenis === 'sasaran' && t.sehari(a.sasaran, unitPapar(a.unit, bahasa, a.sasaran))}
                       {a.jenis === 'zikir' && t.zikirWaktu(a.item?.length ?? 0)}
@@ -730,10 +796,16 @@ export default function AmalanPage() {
                   <button aria-label={t.naik} disabled={i === 0} onClick={() => alihAmalan(i, -1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowUp className="size-4" /></button>
                   <button aria-label={t.turun} disabled={i === senarai.length - 1} onClick={() => alihAmalan(i, 1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowDown className="size-4" /></button>
                   <button aria-label={t.ubah(a.nama)} onClick={() => setBorang({ asal: a })} className="rounded p-1.5 text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button>
+                  {adalahLalai(a) ? (
+                    <span className="w-7" aria-hidden />
+                  ) : (
+                    <button aria-label={t.padamAmalan(a.nama)} onClick={() => setSahPadam(a)} className="rounded p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
+                  )}
                 </li>
               ))}
             </ul>
           </motion.section>
+          </>)}
         </>
       )}
 
@@ -754,7 +826,7 @@ export default function AmalanPage() {
         hariIni={hariIni}
         onTutup={() => setBorang(null)}
         onSimpan={simpanAmalan}
-        onPadam={() => padamAmalan()}
+        onPadam={borang?.asal && adalahLalai(borang.asal) ? undefined : () => padamAmalan()}
       />
     </motion.main>
   );
@@ -782,6 +854,115 @@ function Legenda() {
   );
 }
 
+/** Tajuk bahagian bagi setiap amalan dalam senarai Hari ini. */
+/** Pil kecil menandakan amalan lalai (Solat, Zikir, Al-Quran) — sebab ia tiada butang buang. */
+function LencanaLalai() {
+  const t = useTeks(TEKS);
+  return (
+    <span title={t.lalaiNota} className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+      {t.lalai}
+    </span>
+  );
+}
+
+function TajukBahagian({ Ikon, children, onBuang, labelBuang, lalai, a }: { Ikon: React.ComponentType<{ className?: string }>; children: React.ReactNode; onBuang?: () => void; labelBuang?: string; lalai?: boolean; a?: Amalan }) {
+  return (
+    <div className="mb-3 flex items-center gap-3">
+      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-2xl', paletKad(a).lembut, paletKad(a).teks)}>
+        <Ikon className="size-[18px]" />
+      </span>
+      <h3 className="paparan min-w-0 truncate text-xl">{children}</h3>
+      {lalai && <LencanaLalai />}
+      <span className="flex-1" />
+      {/* Buang amalan terus dari senarai; dialog pengesahan menyusul. */}
+      {onBuang && (
+        <button type="button" onClick={onBuang} aria-label={labelBuang} className="rounded-full p-2 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-destructive">
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ── Bingkai kad amalan ─────────────────────────────────────────────
+   Setiap jenis amalan menggunakan bingkai yang sama — warna lembut amalan
+   itu, bulatan status besar di kiri (ikon amalan, menjadi ✓ apabila
+   selesai), nama dan baris status, dan tindakan di kanan — supaya amalan
+   baharu sentiasa kelihatan sekeluarga dengan yang sedia ada. */
+
+/** Kad putih biasa; bertukar ke rona tema yang lembut apabila amalan selesai —
+    hari yang lengkap kelihatan "terisi" warna. */
+function BingkaiAmalan({ a, children, siap }: { a?: Amalan; siap?: boolean; children: React.ReactNode }) {
+  const p = paletKad(a);
+  return (
+    <div
+      className={cn('rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors duration-500', siap ? (p === PALET_UTAMA ? 'bg-accent/70' : p.lembut) : 'border-border/70 bg-card')}
+      style={siap ? { borderColor: `oklch(from ${p.css} l c h / 0.35)` } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+function KepalaAmalan({
+  a, siap, tajuk, subtajuk, kanan, onBulatan, labelBulatan,
+}: {
+  a: Amalan;
+  siap: boolean;
+  /** Tajuk kad — status amalan; nama amalan sudah ada pada tajuk bahagian. */
+  tajuk?: React.ReactNode;
+  subtajuk: React.ReactNode;
+  kanan?: React.ReactNode;
+  /** Jika ada, bulatan menjadi butang untuk menanda selesai. */
+  onBulatan?: () => void;
+  labelBulatan?: string;
+}) {
+  const p = paletKad(a);
+  const Ikon = IKON_JENIS[a.jenis];
+  useGetarSiap(siap);
+  const isi = (
+    <>
+      {siap ? <Check className="size-7" strokeWidth={3} /> : <Ikon className="size-6" />}
+    </>
+  );
+  const kelas = cn(
+    'relative flex size-14 shrink-0 items-center justify-center rounded-full transition-all',
+    // Isian pastel: tanda ✓ dalam warna amalan yang lebih pekat supaya jelas.
+    siap ? cn('shadow-sm', p.teks) : cn('border-[3px] bg-card', p.teks),
+    onBulatan && 'active:scale-90'
+  );
+  const gaya = siap ? { background: gradien(p.css) } : { borderColor: `oklch(from ${p.css} l c h / 0.35)` };
+  return (
+    <div className="flex items-center gap-3">
+      {onBulatan ? (
+        <button type="button" onClick={onBulatan} aria-pressed={siap} aria-label={labelBulatan} className={kelas} style={gaya}>{isi}</button>
+      ) : (
+        <span className={kelas} style={gaya}>{isi}</span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-lg font-bold leading-tight">{tajuk ?? a.nama}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{subtajuk}</p>
+      </div>
+      {kanan}
+    </div>
+  );
+}
+
+/** Pengira −/+ dalam pil putih, seperti kad Al-Quran. */
+function Pengira({ nilai, onTukar, warnaTeks, labelTolak, labelTambah }: { nilai: number; onTukar: (n: number) => void; warnaTeks: string; labelTolak: string; labelTambah: string }) {
+  return (
+    <div className="flex shrink-0 items-center rounded-full border border-border/60 bg-card shadow-sm">
+      <button type="button" aria-label={labelTolak} disabled={nilai === 0} onClick={() => onTukar(Math.max(0, nilai - 1))} className="flex size-10 items-center justify-center rounded-full disabled:opacity-30">
+        <Minus className="size-4" />
+      </button>
+      <span className="angka-paparan w-7 text-center text-xl">{nilai}</span>
+      <button type="button" aria-label={labelTambah} onClick={() => onTukar(nilai + 1)} className={cn('flex size-10 items-center justify-center rounded-full', warnaTeks)}>
+        <Plus className="size-4" strokeWidth={2.5} />
+      </button>
+    </div>
+  );
+}
+
 /* ── Satu baris amalan untuk hari dipilih ─────────────────────────── */
 
 function BarisAmalan({
@@ -797,10 +978,10 @@ function BarisAmalan({
   const t = useTeks(TEKS);
   const { bahasa } = useBahasa();
   const hari = log[s];
-  const p = palet(warnaAmalan(a));
+  const p = paletKad(a);
 
   if (adalahQuran(a)) {
-    return <KadQuran a={a} s={s} hariIni={hariIni} log={log} onTulis={onTulis} onUbah={onUbah} />;
+    return <KadQuran a={a} s={s} hariIni={hariIni} log={log} onTulis={onTulis} onUbah={onUbah} tunjukNama={false} seragam />;
   }
 
   if (a.jenis === 'sasaran') {
@@ -810,38 +991,25 @@ function BarisAmalan({
     const dibuat = hari?.jumlah ?? 0;
     const set = (n: number) => onTulis({ jumlah: Math.max(0, n) });
     return (
-      <div className="kad p-4">
-      <div className="flex items-center gap-3">
-        <CipAmalan a={a} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">{a.nama}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {dibuat >= perlu ? (
-              <span className={baki > 0 ? 'text-amaran' : 'text-primary'}>
-                {baki > 0 ? t.bakiDilunas(baki) : t.tercapai}
-              </span>
-            ) : baki > 0 ? (
-              <>{t.perlu(perlu, unitPapar(a.unit, bahasa, perlu))}{sasaran} + <span className="text-amaran">{t.baki(baki)}</span></>
-            ) : (
-              <>{t.sasaran(sasaran, unitPapar(a.unit, bahasa, sasaran))}</>
-            )}
-          </p>
+      <BingkaiAmalan a={a} siap={dibuat >= perlu}>
+        <KepalaAmalan
+          a={a}
+          siap={dibuat >= perlu}
+          tajuk={dibuat >= perlu ? (baki > 0 ? t.bakiDilunas(baki) : t.tercapai) : t.belumSelesai}
+          subtajuk={dibuat >= perlu ? (
+            <>{t.sasaran(sasaran, unitPapar(a.unit, bahasa, sasaran))}</>
+          ) : baki > 0 ? (
+            <>{t.perlu(perlu, unitPapar(a.unit, bahasa, perlu))}{sasaran} + <span className="text-amaran">{t.baki(baki)}</span></>
+          ) : (
+            <>{t.sasaran(sasaran, unitPapar(a.unit, bahasa, sasaran))}</>
+          )}
+          kanan={<Pengira nilai={dibuat} onTukar={set} warnaTeks={p.teks} labelTolak={t.tolak} labelTambah={t.tambah} />}
+        />
+        {/* Bar kemajuan ke arah jumlah perlu hari ini, termasuk baki. */}
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(dibuat / perlu, 1) * 100}%`, background: baki > 0 && dibuat > sasaran ? 'var(--amaran)' : p.css }} />
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button aria-label={t.tolak} disabled={dibuat === 0} onClick={() => set(dibuat - 1)} className={cn('flex size-9 items-center justify-center rounded-full transition-opacity disabled:opacity-30', p.lembut, p.teks)}>
-            <Minus className="size-4" />
-          </button>
-          <span className="angka-paparan w-9 text-center text-2xl">{dibuat}</span>
-          <button aria-label={t.tambah} onClick={() => set(dibuat + 1)} className={cn('flex size-9 items-center justify-center rounded-full text-white', p.pekat)}>
-            <Plus className="size-4" />
-          </button>
-        </div>
-      </div>
-      {/* Bar kemajuan ke arah jumlah perlu hari ini, termasuk baki. */}
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(dibuat / perlu, 1) * 100}%`, background: baki > 0 && dibuat > sasaran ? 'var(--amaran)' : p.css }} />
-      </div>
-      </div>
+      </BingkaiAmalan>
     );
   }
 
@@ -849,16 +1017,16 @@ function BarisAmalan({
     const selesai = !!hari?.selesai;
     const syawal = a.jadual?.jenis === 'syawal' ? kiraSyawal(log, s) : null;
     return (
-      <button onClick={() => onTulis({ selesai: !selesai })} className="kad flex w-full items-center gap-3 p-4 text-left transition-transform active:scale-[0.99]">
-        <CipAmalan a={a} />
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{a.nama}</span>
-          <span className="mt-0.5 block text-sm text-muted-foreground">
-            {syawal !== null ? t.syawalIni(syawal, SASARAN_SYAWAL) : teksJadual(a.jadual, bahasa)}
-          </span>
-        </span>
-        <TandaBulat aktif={selesai} besar warna={p.css} />
-      </button>
+      <BingkaiAmalan a={a} siap={selesai}>
+        <KepalaAmalan
+          a={a}
+          siap={selesai}
+          onBulatan={() => onTulis({ selesai: !selesai })}
+          labelBulatan={a.nama}
+          tajuk={selesai ? t.selesai : t.belumSelesai}
+          subtajuk={syawal !== null ? t.syawalIni(syawal, SASARAN_SYAWAL) : teksJadual(a.jadual, bahasa)}
+        />
+      </BingkaiAmalan>
     );
   }
 
@@ -866,19 +1034,13 @@ function BarisAmalan({
     const ditunai = hari?.solat ?? [];
     const togol = (sl: Slot) => onTulis({ solat: ditunai.includes(sl) ? ditunai.filter(x => x !== sl) : SLOT.filter(x => x === sl || ditunai.includes(x)) });
     return (
-      <div className="kad p-4">
-        <div className="flex items-center gap-3">
-          <CipAmalan a={a} />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">{a.nama}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">{t.solatSiap(ditunai.length)}</p>
-          </div>
-        </div>
+      <BingkaiAmalan a={a} siap={ditunai.length === SLOT.length}>
+        <KepalaAmalan a={a} siap={ditunai.length === SLOT.length} tajuk={<span className="tabular-nums">{t.solatSiap(ditunai.length)}</span>} subtajuk={t.limaWaktu} />
         {/* Satu butang bagi setiap waktu, dalam warna waktu itu di seluruh aplikasi. */}
         <div className="mt-4 grid grid-cols-5 gap-2">
           {SLOT.map(sl => {
             const ada = ditunai.includes(sl);
-            const w = palet(WARNA_WAKTU[sl]);
+            const w = PALET_UTAMA;
             return (
               <button
                 key={sl}
@@ -899,7 +1061,7 @@ function BarisAmalan({
             );
           })}
         </div>
-      </div>
+      </BingkaiAmalan>
     );
   }
 
@@ -955,29 +1117,28 @@ function BarisZikir({
     setBaru('');
   };
 
-  const p = palet(warnaAmalan(a));
+  const p = paletKad(a);
 
   return (
-    <div className="kad p-4">
-      <div className="flex items-center gap-3">
-        <CipAmalan a={a} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">{a.nama}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">{t.waktu(siapSlot)}</p>
-        </div>
-        <button
+    <BingkaiAmalan a={a} siap={siapSlot === SLOT.length}>
+      <KepalaAmalan
+        a={a}
+        siap={siapSlot === SLOT.length}
+        tajuk={<span className="tabular-nums">{t.waktu(siapSlot)}</span>}
+        subtajuk={t.selepasSetiap}
+        kanan={<button
           type="button"
           onClick={() => setUbah(v => !v)}
           aria-label={t.ubahSenarai}
           aria-pressed={ubah}
           className={cn(
             'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-            ubah ? cn(p.pekat, 'text-white') : cn(p.lembut, p.teks)
+            ubah ? cn(p.pekat, 'text-white') : cn('bg-card shadow-sm', p.teks)
           )}
         >
           {ubah ? <><Check className="size-4" /> {t.siapUbah}</> : <Pencil className="size-4" />}
-        </button>
-      </div>
+        </button>}
+      />
 
       {ubah ? (
         /* Senarai diubah terus di sini. Setiap perubahan disimpan serta-merta;
@@ -1012,6 +1173,7 @@ function BarisZikir({
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); tambah(); } }}
               placeholder={t.zikirBaru}
               maxLength={60}
+              autoFocus
               className="min-w-0 flex-1 rounded-full bg-muted px-4 py-2.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
             />
             <button type="button" onClick={tambah} disabled={!baru.trim()} aria-label={t.tambah} className={cn('flex size-10 shrink-0 items-center justify-center rounded-full text-white disabled:opacity-40', p.pekat)}>
@@ -1109,32 +1271,44 @@ function BarisZikir({
               );
             })}
           </ul>
+          {/* Jalan pintas yang jelas untuk menambah zikir — membuka mod ubah
+              terus pada medan tambah. */}
+          <button
+            type="button"
+            onClick={() => setUbah(true)}
+            className={cn('mt-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed py-2.5 text-sm font-semibold transition-colors hover:bg-accent', p.teks)}
+            style={{ borderColor: `oklch(from ${p.css} l c h / 0.4)` }}
+          >
+            <Plus className="size-4" /> {t.tambahZikir}
+          </button>
         </>
       )}
-    </div>
+    </BingkaiAmalan>
   );
 }
 
 function TandaBulat({ aktif, separa, besar, warna = 'var(--primary)' }: { aktif: boolean; separa?: boolean; besar?: boolean; warna?: string }) {
+  useGetarSiap(aktif);
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+        'relative flex shrink-0 items-center justify-center rounded-full border-2 transition-colors',
         besar ? 'size-10' : 'size-6',
         aktif ? 'border-transparent text-white' : 'border-border'
       )}
       style={aktif ? { background: warna } : separa ? { borderColor: `oklch(from ${warna} l c h / 0.6)` } : undefined}
     >
-      {aktif && <Check className={besar ? 'size-5' : 'size-3.5'} strokeWidth={3} />}
+      {aktif && <Check className={cn(besar ? 'size-5' : 'size-3.5')} strokeWidth={3} />}
       {!aktif && separa && <span className="size-2 rounded-full" style={{ background: warna }} />}
     </span>
   );
 }
 
 function TandaKotak({ aktif, warna = 'var(--primary)' }: { aktif: boolean; warna?: string }) {
+  useGetarSiap(aktif);
   return (
     <span
-      className={cn('flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors', aktif ? 'border-transparent text-white' : 'border-border')}
+      className={cn('relative flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors', aktif ? 'border-transparent text-white' : 'border-border')}
       style={aktif ? { background: warna } : undefined}
     >
       {aktif && <Check className="size-3" strokeWidth={3} />}

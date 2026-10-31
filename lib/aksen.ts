@@ -53,6 +53,27 @@ export const PALET = [
   { pekat: 'bg-w6', teks: 'text-w6', lembut: 'bg-w6-lembut', css: 'var(--w6)' },
 ] as const;
 
+/**
+ * Warna seragam Jejak Ibadah — warna tema pengguna sendiri, supaya senarai
+ * amalan kelihatan sekata dan tidak berwarna-warni seperti halaman utama.
+ */
+export const PALET_UTAMA = { pekat: 'bg-primary', teks: 'text-primary', lembut: 'bg-accent', css: 'var(--primary)' } as const;
+
+/** Kecerunan lembut warna tema — rona digeser sedikit supaya ia hidup, bukan rata. */
+export const GRADIEN_UTAMA = gradienPastel('var(--primary)');
+
+/**
+ * Kecerunan pastel bagi satu warna: lebih cerah dan kurang pekat daripada
+ * warna asal, dengan rona digeser sedikit supaya ia terasa ceria, bukan rata.
+ */
+export function gradienPastel(css: string) {
+  return `linear-gradient(135deg, oklch(from ${css} calc(l + 0.2) calc(c * 0.75) calc(h - 30)), oklch(from ${css} calc(l + 0.08) calc(c * 0.9) h))`;
+}
+
+/** Jalur ringkasan harian: pelangi pastel merah jambu → ungu muda → biru langit. */
+export const GRADIEN_PELANGI = 'linear-gradient(120deg, var(--w4-lembut), var(--w1-lembut) 50%, var(--w6-lembut))';
+export const GRADIEN_PELANGI_PEKAT = 'linear-gradient(90deg, var(--w4), var(--w1), var(--w6))';
+
 export const palet = (i: number) => PALET[((i % PALET.length) + PALET.length) % PALET.length];
 
 /**

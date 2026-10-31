@@ -32,6 +32,7 @@ export default function SolatHariIni({ waktu, kini }: { waktu: WaktuSolat; kini:
       waktu={waktu}
       kini={kini}
       hariLepas={false}
+      tanpaNotaWaktu
       solat={solat}
       zikir={zikir}
       logSolat={solat ? log[solat.id] : undefined}

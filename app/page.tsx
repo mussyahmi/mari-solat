@@ -16,32 +16,27 @@ import {
 } from "@/components/ui/dialog";
 import PeringatanHariIni from "@/components/PeringatanHariIni";
 import QuranHariIni from "@/components/QuranHariIni";
+import KadIstighfar from "@/components/KadIstighfar";
 import HeroLangit from "@/components/HeroLangit";
 import SolatHariIni from "@/components/SolatHariIni";
 import { useBahasa, useTeks } from "@/components/BahasaProvider";
 import { KATEGORI, kategoriPada, julatKategori, julatSemasa } from "@/lib/kategori";
 import {
   CalendarDays,
-  Cloud,
-  CloudSun,
   MapPin,
-  Moon,
   MoonStar,
-  Sun,
-  Sunrise,
-  Sunset,
+  Wind,
   type LucideIcon,
 } from "lucide-react";
 import { palet, WARNA_WAKTU } from "@/lib/aksen";
-import { formatGregorianDate, formatHijriDate } from "@/utils/format";
+import { formatGregorianDate, formatHijriDate, tarikhApi } from "@/utils/format";
+import { HARI } from "@/lib/bahasa";
 import {
   WAKTU,
-  bakiMasa,
   binaWaktu,
   simpanCacheWaktu,
   fetchSolat,
   parseTime,
-  type BakiMasa,
   type Waktu,
   type WaktuSolat,
 } from "@/lib/solat";
@@ -61,6 +56,7 @@ const ms = {
   hijri: "Hijri",
   zon: "Zon",
   sekilas: 'Sekilas pandang',
+  nafasIstighfar: 'Nafas Istighfar',
   kategoriWaktu: "Kategori waktu",
   diLuarWaktu: "Di luar waktu",
   bertukarDalam: "Bertukar dalam",
@@ -105,6 +101,7 @@ const en: typeof ms = {
   hijri: "Hijri",
   zon: "Zone",
   sekilas: 'At a glance',
+  nafasIstighfar: 'Istighfar Breathing',
   kategoriWaktu: "Prayer time category",
   diLuarWaktu: "Outside prayer time",
   bertukarDalam: "Changes in",
@@ -315,10 +312,6 @@ export default function HalamanUtama() {
   const hariIni = hari === "hariIni";
   const esokAuto = hari === "esok" && dilaraskan;
   const tunjukKiraan = (hariIni || esokAuto) && !!seterusnya.label;
-  const baki = useMemo<BakiMasa | null>(() => {
-    if (!seterusnya.masa || !tunjukKiraan) return null;
-    return bakiMasa(seterusnya.masa, new Date(Math.floor(kini.getTime() / 1000) * 1000));
-  }, [seterusnya.masa, tunjukKiraan, kini]);
 
   // Modul menggunakan waktu hari ini, bukan hari yang sedang dilihat — ia
   // menjawab "apa yang benar sekarang", tanpa mengira tab mana yang dipilih.
@@ -415,12 +408,20 @@ export default function HalamanUtama() {
                 malam={malam}
               />
             ) : (
-              <HeroWaktu
+              // Semalam dan esok: kad langit yang sama tanpa kiraan detik —
+              // fajar untuk esok, senja untuk semalam.
+              <HeroLangit
                 waktu={waktuDipapar}
-                seterusnya={seterusnya.label}
-                baki={baki}
-                tunjukKiraan={tunjukKiraan}
-                hari={hari}
+                kini={kini}
+                zon={zon}
+                kategori={null}
+                malam={null}
+                paparan={{
+                  tajuk: t.hari[hari],
+                  // Hari dalam minggu + tarikh penuh: jelas hari mana yang sedang dilihat.
+                  keterangan: `${HARI[bahasa][tarikhApi(waktuDipapar.gregorianDate).getDay()]}, ${formatGregorianDate(waktuDipapar.gregorianDate, bahasa)} · ${formatHijriDate(waktuDipapar.hijriDate)}`,
+                  fasa: hari === 'semalam' ? 'maghrib' : 'syuruk',
+                }}
               />
             )}
 
@@ -446,11 +447,10 @@ export default function HalamanUtama() {
           </section>
 
 
-          {/* Hari ini: kad lima waktu yang boleh ditanda. Semalam dan esok
-              hanya untuk rujukan, jadi grid waktu yang padat sudah memadai. */}
-          {hariIni
-            ? <SolatHariIni waktu={waktuDipapar} kini={kini} />
-            : <RelWaktu waktu={waktuDipapar} minit={minit} seterusnya={esokAuto ? seterusnya.label : null} hariIni={hariIni} />}
+          {/* Grid lapan waktu untuk setiap hari; hari ini juga mendapat kad lima
+              waktu yang boleh ditanda di bawahnya. */}
+          <RelWaktu waktu={waktuDipapar} minit={minit} seterusnya={hariIni || esokAuto ? seterusnya.label : null} hariIni={hariIni} />
+          {hariIni && <SolatHariIni waktu={waktuDipapar} kini={kini} />}
 
           {/* Kategori waktu dan satu pertiga malam kini dalam kad langit; kiblat
               dan qada dibuang dari halaman utama — kedua-duanya di bar bawah. */}
@@ -458,6 +458,16 @@ export default function HalamanUtama() {
           <div className="mt-10">
             <QuranHariIni />
           </div>
+
+          <section className="mt-10">
+            <h2 className="mb-4 flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-2xl bg-w2-lembut text-w2">
+                <Wind className="size-5" />
+              </span>
+              <span className="paparan text-2xl">{t.nafasIstighfar}</span>
+            </h2>
+            <KadIstighfar />
+          </section>
 
           <div className="mt-10">
             <PeringatanHariIni />
@@ -467,18 +477,6 @@ export default function HalamanUtama() {
     </main>
   );
 }
-
-/** Ikon bagi setiap waktu — dikongsi oleh hero dan kad waktu. */
-const IKON_WAKTU: Record<Waktu, LucideIcon> = {
-  imsak: MoonStar,
-  subuh: Sunrise,
-  syuruk: Sun,
-  dhuha: CloudSun,
-  zohor: Sun,
-  asar: Cloud,
-  maghrib: Sunset,
-  isyak: Moon,
-};
 
 function BarisTarikh({
   ikon: Ikon,
@@ -501,104 +499,6 @@ function BarisTarikh({
         <dt className="text-xs text-muted-foreground">{label}</dt>
         <dd className="mt-0.5 font-medium">{children}</dd>
       </div>
-    </div>
-  );
-}
-
-/* ── Hero ───────────────────────────────────────────────── */
-
-function HeroWaktu({
-  waktu,
-  seterusnya,
-  baki,
-  tunjukKiraan,
-  hari,
-  atasLangit = false,
-  className = '',
-}: {
-  waktu: WaktuSolat;
-  seterusnya: Waktu | null;
-  baki: BakiMasa | null;
-  tunjukKiraan: boolean;
-  hari: Hari;
-  /** Di atas langit, teks mewarisi tinta panel dan bukan token antara muka. */
-  atasLangit?: boolean;
-  className?: string;
-}) {
-  const t = useTeks(TEKS);
-  const lembut = atasLangit ? 'opacity-70' : 'text-muted-foreground';
-  const lebihLembut = atasLangit ? 'opacity-60' : 'text-muted-foreground';
-
-  if (!tunjukKiraan || !seterusnya) {
-    return (
-      <div className={`kad px-5 py-8 text-center ${className}`}>
-        <p className={`paparan text-5xl  lg:text-6xl ${atasLangit ? 'opacity-80' : 'text-muted-foreground'}`}>
-          {t.hari[hari]}
-        </p>
-        <p className={`mt-2 text-sm ${lebihLembut}`}>{t.kiraanHanya}</p>
-      </div>
-    );
-  }
-
-  // Kad hero diwarnai rona waktu seterusnya, jadi Maghrib sentiasa merah
-  // jambu dan Subuh sentiasa ungu — sama seperti di halaman lain.
-  const p = palet(WARNA_WAKTU[seterusnya]);
-  const Ikon = IKON_WAKTU[seterusnya];
-  return (
-    <div className={`flex min-w-0 flex-col items-start gap-5 rounded-3xl p-5 sm:p-7 ${p.lembut} ${className}`}>
-      <div className="flex w-full items-center gap-3">
-        <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${p.pekat} text-card shadow-sm`}>
-          <Ikon className="size-6" strokeWidth={2} />
-        </span>
-        <p className={`paparan text-3xl leading-none lg:text-4xl ${p.teks}`}>
-          {seterusnya[0].toUpperCase() + seterusnya.slice(1)}
-        </p>
-        <span className={`tabular ml-auto rounded-full bg-card px-3 py-1 text-sm font-semibold ${p.teks}`}>
-          {waktu[seterusnya]}
-        </span>
-      </div>
-      {baki && <KiraDetik baki={baki} lembut={lembut} />}
-    </div>
-  );
-}
-
-/* ── Kiraan detik ───────────────────────────────────────── */
-
-function KiraDetik({ baki, lembut }: { baki: BakiMasa; lembut: string }) {
-  const t = useTeks(TEKS);
-  const unit = [
-    ...(baki.jam > 0 ? [{ nilai: String(baki.jam).padStart(2, "0"), label: t.jam }] : []),
-    { nilai: String(baki.minit).padStart(2, "0"), label: t.minit },
-    { nilai: String(baki.saat).padStart(2, "0"), label: t.saat },
-  ];
-
-  // Jurang antara kumpulan mesti jauh lebih besar daripada jurang antara digit
-  // di dalamnya, jika tidak "40 56" terbaca sebagai satu nombor.
-  return (
-    <div className="flex items-start gap-6 lg:gap-8">
-      {unit.map(({ nilai, label }) => (
-        <div key={label} className="flex flex-col items-center gap-1.5">
-          <div className="flex">
-            {nilai.split("").map((digit, i) => (
-              <span
-                key={i}
-                className="angka-paparan relative block h-[0.78em] w-[0.58em] overflow-hidden text-[15vw] leading-none lg:text-[12vw] [@media(max-height:760px)]:text-[9vw]"
-              >
-                <motion.span
-                  key={digit}
-                  initial={{ y: "-100%" }}
-                  animate={{ y: "0%" }}
-                  transition={spring.digit}
-                  className="tabular absolute inset-0 flex items-center justify-center"
-                >
-                  {digit}
-                </motion.span>
-              </span>
-            ))}
-          </div>
-          <span className={`text-xs ${lembut}`}>{label}</span>
-        </div>
-      ))}
     </div>
   );
 }

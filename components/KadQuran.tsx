@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { Bookmark, Check, Minus, Plus } from 'lucide-react';
 import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { palet } from '@/lib/aksen';
+import { GRADIEN_UTAMA, palet, PALET_UTAMA } from '@/lib/aksen';
 import { bakiSebelum, unitPapar, warnaAmalan, type Amalan, type LogHari, type LogTahun } from '@/lib/amalan';
 import { namaSurah, pautanAyat, SURAH } from '@/lib/surah';
 import { cn } from '@/lib/utils';
+import { useGetarSiap } from '@/components/KesanSiap';
 
 const ms = {
   dibaca: 'Dibaca hari ini',
@@ -62,7 +63,7 @@ const TEKS = { ms, en };
  * rekod yang sama.
  */
 export default function KadQuran({
-  a, s, hariIni, log, onTulis, onUbah, tunjukNama = true,
+  a, s, hariIni, log, onTulis, onUbah, tunjukNama = true, seragam = false,
 }: {
   a: Amalan;
   s: string;
@@ -71,11 +72,13 @@ export default function KadQuran({
   onTulis: (isi: LogHari) => void;
   onUbah: (ubah: Partial<Amalan>) => void;
   tunjukNama?: boolean;
+  /** Jejak Ibadah: warna tema dan kad putih, sama seperti amalan lain. */
+  seragam?: boolean;
 }) {
   const t = useTeks(TEKS);
   const { bahasa } = useBahasa();
   const [ubahPenanda, setUbahPenanda] = useState(false);
-  const p = palet(warnaAmalan(a));
+  const p = seragam ? PALET_UTAMA : palet(warnaAmalan(a));
 
   const sasaran = a.sasaran ?? 1;
   const baki = bakiSebelum(a, log, s, hariIni);
@@ -85,28 +88,34 @@ export default function KadQuran({
   const set = (n: number) => onTulis({ jumlah: Math.max(0, n) });
   const unit = unitPapar(a.unit, bahasa, perlu);
   const hariIniDipilih = s === hariIni;
+  useGetarSiap(siap);
+  const status = siap
+    ? (hariIniDipilih ? t.dibaca : t.dibacaSemalam)
+    : (hariIniDipilih ? t.belum : t.belumLepas);
 
   return (
-    <div className={cn('rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors', p.lembut)} style={{ borderColor: `oklch(from ${p.css} l c h / 0.3)` }}>
-      {tunjukNama && (
-        <p className={cn('mb-3 text-xs font-semibold uppercase tracking-widest', p.teks)}>{a.nama}</p>
-      )}
+    <div
+      className={cn('rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors duration-500', seragam ? (siap ? 'bg-accent/70' : 'border-border/70 bg-card') : p.lembut)}
+      style={seragam ? (siap ? { borderColor: 'oklch(from var(--primary) l c h / 0.35)' } : undefined) : { borderColor: `oklch(from ${p.css} l c h / 0.3)` }}
+    >
 
       <div className="flex items-center gap-3">
         <span
-          className={cn('flex size-14 shrink-0 items-center justify-center rounded-full transition-colors', siap ? 'text-white' : 'border-[3px] bg-card')}
-          style={siap ? { background: p.css } : { borderColor: `oklch(from ${p.css} l c h / 0.35)` }}
+          className={cn('relative flex size-14 shrink-0 items-center justify-center rounded-full transition-colors', siap ? (seragam ? cn('shadow-sm', p.teks) : 'text-white') : 'border-[3px] bg-card')}
+          style={siap ? { background: seragam ? GRADIEN_UTAMA : p.css } : { borderColor: `oklch(from ${p.css} l c h / 0.35)` }}
         >
           {siap ? <Check className="size-7" strokeWidth={3} /> : <IkonMushaf warna={p.css} />}
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold leading-tight">
-            {siap
-              ? (hariIniDipilih ? t.dibaca : t.dibacaSemalam)
-              : (hariIniDipilih ? t.belum : t.belumLepas)}
+          {/* Dalam Jejak Ibadah, tajuk ialah nama amalan seperti kad lain dan
+              status turun ke baris kedua; di halaman utama tajuk bahagian
+              sudah menamakannya, jadi status menjadi tajuk. */}
+          <p className="truncate text-lg font-bold leading-tight">
+            {tunjukNama ? a.nama : status}
           </p>
           <p className="mt-0.5 text-sm text-muted-foreground">
+            {tunjukNama && <span className={cn('font-medium', siap ? p.teks : 'text-foreground/70')}>{status} · </span>}
             {siap && baki > 0 ? (
               <span className="text-amaran">{t.dilunas(baki)}</span>
             ) : baki > 0 ? (

@@ -307,8 +307,8 @@ export function cadangan(hariIni: string, bahasa: Bahasa): Omit<Amalan, 'id'>[] 
   const z = (nama: string) => ({ id: idBaru(), nama });
   return [
     { nama: t.solat, jenis: 'solat', mula: hariIni, susunan: 0, warna: 2 },
-    { nama: t.quran, jenis: 'sasaran', sasaran: 1, unit: t.unit, mula: hariIni, susunan: 1, warna: 0, quran: true },
-    { nama: t.zikir, jenis: 'zikir', mula: hariIni, susunan: 2, item: t.item.map(z), warna: 1 },
+    { nama: t.zikir, jenis: 'zikir', mula: hariIni, susunan: 1, item: t.item.map(z), warna: 1 },
+    { nama: t.quran, jenis: 'sasaran', sasaran: 1, unit: t.unit, mula: hariIni, susunan: 2, warna: 0, quran: true },
   ];
 }
 
@@ -340,4 +340,13 @@ export const adalahQuran = (a: Amalan) => a.jenis === 'sasaran' && (a.quran === 
 /** Amalan "Solat 5 waktu" baharu — dicipta automatik kali pertama solat ditanda. */
 export function solatBaru(bahasa: Bahasa, mula: string, susunan: number): Omit<Amalan, 'id'> {
   return { nama: TEKS_CADANGAN[bahasa].solat, jenis: 'solat', mula, susunan, warna: 2 };
+}
+
+/**
+ * Susunan paparan: Solat dahulu, Zikir selepas solat terus di bawahnya
+ * (kerana ia mengikut solat), kemudian selebihnya mengikut susunan pengguna.
+ */
+export function susunAmalan(senarai: Amalan[]) {
+  const pangkat = (a: Amalan) => (a.jenis === 'solat' ? 0 : a.jenis === 'zikir' ? 1 : 2);
+  return [...senarai].sort((a, b) => pangkat(a) - pangkat(b) || a.susunan - b.susunan);
 }

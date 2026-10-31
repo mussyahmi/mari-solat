@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { BookOpen, Heart, ScrollText, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  ambilTeks, bacaSimpanan, NAMA_KITAB, pautan, PERISTIWA_SIMPAN, togolSimpan,
+  ambilTeks, bacaSimpanan, NAMA_KITAB, pautan, PERISTIWA_SIMPAN, togolSimpan, TOPIK,
   type Peringatan, type Teks,
 } from '@/lib/peringatan';
 import { cn } from '@/lib/utils';
+import { palet } from '@/lib/aksen';
 
 const ms = {
   quran: 'Al-Quran',
@@ -22,6 +24,8 @@ const ms = {
   simpan: 'Simpan',
   buang: 'Buang dari simpanan',
   gagal: 'Teks tidak dapat dimuatkan. Semak sambungan internet.',
+  kongsi: 'Kongsi',
+  disalin: 'Disalin — tampal untuk berkongsi.',
 };
 const en: typeof ms = {
   quran: 'Quran',
@@ -35,6 +39,8 @@ const en: typeof ms = {
   simpan: 'Save',
   buang: 'Remove from saved',
   gagal: "Couldn't load the text. Check your internet connection.",
+  kongsi: 'Share',
+  disalin: 'Copied — paste to share.',
 };
 const TEKS = { ms, en };
 
@@ -43,12 +49,21 @@ type Mod = 'en' | 'bm' | 'dua';
 // Al-Quran hijau, hadis jingga — seperti dalam kebanyakan aplikasi rujukan,
 // supaya jenis sumber terbaca sebelum teksnya.
 const GAYA = {
-  quran: { jalur: 'var(--w3)', teks: 'text-w3', isi: 'bg-w3' },
-  hadis: { jalur: 'var(--w5)', teks: 'text-w5', isi: 'bg-w5' },
+  quran: { jalur: 'var(--w3)', teks: 'text-w3', isi: 'bg-w3', lembut: 'bg-w3-lembut', tint: 'var(--w3-lembut)', Ikon: BookOpen },
+  hadis: { jalur: 'var(--w5)', teks: 'text-w5', isi: 'bg-w5', lembut: 'bg-w5-lembut', tint: 'var(--w5-lembut)', Ikon: ScrollText },
 } as const;
 
+/** Bintang lapan (rub el hizb) untuk corak latar di sudut kad. */
+const BINTANG = 'M50 0 L61 26 L85 15 L74 39 L100 50 L74 61 L85 85 L61 74 L50 100 L39 74 L15 85 L26 61 L0 50 L26 39 L15 15 L39 26 Z';
+
+const ANGKA_ARAB = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+const angkaArab = (n: number) => String(n).split('').map(d => ANGKA_ARAB[Number(d)]).join('');
+
 /** Satu ayat atau hadis, dengan teks diambil dari sumber asalnya. */
-export default function KadPeringatan({ p }: { p: Peringatan }) {
+/** Urutan warna pastel untuk kad berturutan — kad bersebelahan sentiasa berbeza warna. */
+const PUTARAN = [3, 0, 1, 4, 5, 2];
+
+export default function KadPeringatan({ p, kedudukan }: { p: Peringatan; kedudukan?: number }) {
   const t = useTeks(TEKS);
   const { bahasa } = useBahasa();
   const [teks, setTeks] = useState<Teks | null>(null);
@@ -56,7 +71,11 @@ export default function KadPeringatan({ p }: { p: Peringatan }) {
   const [mod, setMod] = useState<Mod>('dua');
   const [penuh, setPenuh] = useState(false);
   const [disimpan, setDisimpan] = useState(false);
-  const g = GAYA[p.jenis];
+  // Warna berputar mengikut kedudukan kad dalam senarai, supaya halaman
+  // berwarna-warni semasa ditatal walaupun semua kad satu topik; tanpa
+  // kedudukan, warna topik digunakan. Ikon masih membezakan Al-Quran dan hadis.
+  const w = palet(kedudukan !== undefined ? PUTARAN[kedudukan % PUTARAN.length] : TOPIK.find(x => x.id === p.topik[0])?.warna ?? 0);
+  const g = { ...GAYA[p.jenis], jalur: w.css, teks: w.teks, isi: w.pekat, lembut: w.lembut, tint: w.css.replace(')', '-lembut)') }; // var(--wN) → var(--wN-lembut)
 
   useEffect(() => {
     let batal = false;
@@ -85,7 +104,7 @@ export default function KadPeringatan({ p }: { p: Peringatan }) {
     <div className={cn(petikan && 'mt-4 border-l-[3px] pl-4')} style={petikan ? { borderColor: g.jalur } : undefined}>
       <p className={cn(
         'whitespace-pre-line text-pretty',
-        petikan ? 'text-[15px] leading-relaxed text-foreground/80' : 'text-[17px] leading-relaxed',
+        petikan ? 'text-[15px] leading-relaxed text-foreground/75' : 'text-[17px] leading-relaxed text-foreground/90',
         panjang && (petikan ? 'line-clamp-4' : 'line-clamp-6'),
       )}>
         {teks[k]}
@@ -96,12 +115,43 @@ export default function KadPeringatan({ p }: { p: Peringatan }) {
     </div>
   );
 
+  const kongsi = async () => {
+    if (!teks) return;
+    const isi = `${teks.arab ? `${teks.arab}\n\n` : ''}${teks[utama]}\n\n— ${rujukan}\n${pautan(p)}`;
+    try {
+      if (navigator.share) { await navigator.share({ text: isi }); return; }
+      await navigator.clipboard.writeText(isi);
+      toast.success(t.disalin);
+    } catch { /* dibatalkan pengguna */ }
+  };
+
+  const { Ikon } = g;
+
   return (
-    <article className="kad overflow-hidden border-t-4 p-5" style={{ borderTopColor: g.jalur }}>
-      <header className="flex items-start justify-between gap-3">
-        <p className="min-w-0 text-sm">
-          <span className={cn('font-semibold', g.teks)}>{p.jenis === 'quran' ? t.quran : t.hadis}</span>
-          <span className="ml-2 text-muted-foreground">{rujukan}</span>
+    // Wash warna sumber di bahagian atas kad, pudar ke putih — Al-Quran hijau, hadis jingga.
+    <article
+      className="relative isolate overflow-hidden rounded-3xl border p-5 shadow-[var(--bayang-kad)]"
+      style={{
+        background: `linear-gradient(170deg, ${g.tint} 0%, var(--card) 62%)`,
+        borderColor: `oklch(from ${g.jalur} l c h / 0.3)`,
+      }}
+    >
+      {/* Corak bintang lapan yang pudar di sudut — hiasan, bukan kandungan. */}
+      <svg viewBox="0 0 100 100" className={cn('pointer-events-none absolute -right-10 -top-10 -z-10 size-44 rotate-12 opacity-[0.16]', g.teks)} aria-hidden>
+        <path d={BINTANG} fill="currentColor" />
+        <path d={BINTANG} fill="none" stroke="currentColor" strokeWidth="3" transform="translate(50 50) scale(.55) translate(-50 -50)" />
+      </svg>
+
+      <header className="flex items-center gap-3">
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm"
+          style={{ background: `linear-gradient(135deg, oklch(from ${g.jalur} calc(l + 0.16) c calc(h - 30)), oklch(from ${g.jalur} calc(l + 0.04) c h))` }}
+        >
+          <Ikon className="size-5" />
+        </span>
+        <p className="min-w-0 flex-1 leading-tight">
+          <span className={cn('block text-xs font-bold uppercase tracking-widest', g.teks)}>{p.jenis === 'quran' ? t.quran : t.hadis}</span>
+          <span className="mt-0.5 block truncate text-sm font-medium text-foreground/80">{rujukan}</span>
         </p>
         <button
           type="button"
@@ -114,24 +164,42 @@ export default function KadPeringatan({ p }: { p: Peringatan }) {
         </button>
       </header>
 
-      <div className="mt-4">
+      <div className="mt-5">
         {gagal ? (
           <p className="text-sm text-muted-foreground">{t.gagal}</p>
         ) : !teks ? (
           <div className="space-y-2">
+            <Skeleton className="mx-auto h-8 w-4/5" />
             <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-11/12" />
             <Skeleton className="h-5 w-2/3" />
           </div>
         ) : (
           <>
-            {teks.arab && (
-              <p dir="rtl" lang="ar" className="font-arab mb-4 text-right text-2xl leading-[2]">{teks.arab}</p>
+            {teks.arab && p.jenis === 'quran' && (
+              <>
+                {/* Ayat sebagai pusat kad, ditutup penanda nombor ayat tradisional. */}
+                <p dir="rtl" lang="ar" className="font-arab text-center text-[1.7rem] leading-[2.1] text-foreground">
+                  {teks.arab}{' '}
+                  <span className={cn('whitespace-nowrap text-[1.4rem]', g.teks)}>﴿{angkaArab(p.ayat)}﴾</span>
+                </p>
+                <div className={cn('my-4 flex items-center gap-3', g.teks)} aria-hidden>
+                  <span className="h-px flex-1 bg-current opacity-20" />
+                  <span className="text-xs">✦</span>
+                  <span className="h-px flex-1 bg-current opacity-20" />
+                </div>
+              </>
             )}
-            {blokTeks(utama, false)}
+            {p.jenis === 'hadis' ? (
+              <div className="relative pl-7">
+                <span className={cn('paparan absolute -left-1 -top-3 text-5xl leading-none opacity-30', g.teks)} aria-hidden>“</span>
+                {blokTeks(utama, false)}
+              </div>
+            ) : (
+              blokTeks(utama, false)
+            )}
             {kedua && blokTeks(kedua, true)}
             {p.jenis === 'hadis' && (
-              <button type="button" onClick={() => setPenuh(v => !v)} className={cn('mt-3 text-sm font-medium', g.teks)}>
+              <button type="button" onClick={() => setPenuh(v => !v)} className={cn('mt-3 text-sm font-semibold', g.teks)}>
                 {penuh ? t.ringkas : t.bacaPenuh}
               </button>
             )}
@@ -139,30 +207,35 @@ export default function KadPeringatan({ p }: { p: Peringatan }) {
         )}
       </div>
 
-      <footer className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1.5">
+      <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4" style={{ borderColor: `oklch(from ${g.jalur} l c h / 0.2)` }}>
+        <div className={cn('flex gap-1 rounded-full p-1', g.lembut)}>
           {([['en', 'EN'], ['bm', 'BM'], ['dua', t.semua]] as const).map(([k, label]) => (
             <button
               key={k}
               type="button"
               onClick={() => setMod(k)}
               className={cn(
-                'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
-                mod === k ? cn(g.isi, 'text-white') : 'bg-muted text-muted-foreground hover:text-foreground'
+                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                mod === k ? cn(g.isi, 'text-white shadow-sm') : 'text-muted-foreground hover:text-foreground'
               )}
             >
               {label}
             </button>
           ))}
         </div>
-        <a
-          href={pautan(p)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-primary underline underline-offset-4"
-        >
-          {p.jenis === 'quran' ? t.bacaQuran : t.bacaHadis}
-        </a>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={kongsi} disabled={!teks} className={cn('flex items-center gap-1.5 text-sm font-semibold disabled:opacity-40', g.teks)}>
+            <Share2 className="size-4" /> {t.kongsi}
+          </button>
+          <a
+            href={pautan(p)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {p.jenis === 'quran' ? 'Quran.com' : 'Sunnah.com'}
+          </a>
+        </div>
       </footer>
     </article>
   );

@@ -85,7 +85,7 @@ export default function PeringatanPage() {
     <PageShell tajuk={t.tajuk} lede={t.lede}>
       <div className="flex flex-wrap gap-2">
         {cip('semua', t.semua)}
-        {TOPIK.map(x => cip(x.id, x.nama[bahasa], x.warna))}
+        {TOPIK.map(x => cip(x.id, <><span className={cn('size-2 rounded-full', tapis === x.id ? 'bg-current' : palet(x.warna).pekat)} aria-hidden />{x.nama[bahasa]}</>, x.warna))}
         {cip('disimpan', <><Heart className="size-3.5" /> {t.disimpan}</>, 3)}
       </div>
 
@@ -93,7 +93,7 @@ export default function PeringatanPage() {
         {tapis === 'disimpan' && senarai.length === 0 && (
           <p className="kad p-5 text-sm text-muted-foreground">{t.tiadaSimpan}</p>
         )}
-        {senarai.slice((semasa - 1) * SEHALAMAN, semasa * SEHALAMAN).map(p => <KadPeringatan key={p.id} p={p} />)}
+        {senarai.slice((semasa - 1) * SEHALAMAN, semasa * SEHALAMAN).map((p, i) => <KadPeringatan key={p.id} p={p} kedudukan={i} />)}
       </div>
 
       {jumlahHalaman > 1 && (

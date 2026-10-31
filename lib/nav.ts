@@ -39,6 +39,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/amalan', label: { ms: 'Jejak Amalan', en: 'Ibadah Tracker' } },
       { href: '/peringatan', label: { ms: 'Peringatan', en: 'Reminders' } },
       { href: '/tasbih', label: { ms: 'Tasbih', en: 'Tasbih' } },
+      { href: '/istighfar', label: { ms: 'Nafas Istighfar', en: 'Istighfar Breathing' } },
     ],
   },
   {
