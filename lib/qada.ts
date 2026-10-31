@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import { BULAN, BULAN_PENDEK, type Bahasa } from '@/lib/bahasa';
 
 /**
  * Jenis, pemalar dan pengiraan tulen untuk Qada Solat.
@@ -92,36 +93,55 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((dateB.getTime() - dateA.getTime()) / 86400000);
 }
 
-export function formatMalayDateTime(iso: string) {
+export function formatMalayDateTime(iso: string, bahasa: Bahasa = 'ms') {
   const d = new Date(iso);
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
   const period = h < 12 ? 'AM' : 'PM';
-  return `${d.getDate()} ${MALAY_MONTHS[d.getMonth()]}, ${h % 12 || 12}:${m} ${period}`;
+  return `${d.getDate()} ${BULAN_PENDEK[bahasa][d.getMonth()]}, ${h % 12 || 12}:${m} ${period}`;
 }
 
-export function formatMalayDate(date: Date) {
-  return `${date.getDate()} ${MALAY_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+export function formatMalayDate(date: Date, bahasa: Bahasa = 'ms') {
+  return `${date.getDate()} ${BULAN_PENDEK[bahasa][date.getMonth()]} ${date.getFullYear()}`;
 }
 
-export function estimateCompletion(total: number, rate: number): { label: string; date: string } | null {
+const ms = {
+  esok: 'Esok',
+  hari: (n: number) => `${n} hari lagi`,
+  bulanHari: (mo: number, d: number) => `${mo} bulan ${d} hari lagi`,
+  bulan: (mo: number) => `${mo} bulan lagi`,
+  tahunBulan: (yr: number, mo: number) => `${yr} tahun ${mo} bulan lagi`,
+  tahun: (yr: number) => `${yr} tahun lagi`,
+};
+const en: typeof ms = {
+  esok: 'Tomorrow',
+  hari: (n: number) => `${n} ${n === 1 ? 'day' : 'days'} to go`,
+  bulanHari: (mo: number, d: number) => `${mo} ${mo === 1 ? 'month' : 'months'} ${d} ${d === 1 ? 'day' : 'days'} to go`,
+  bulan: (mo: number) => `${mo} ${mo === 1 ? 'month' : 'months'} to go`,
+  tahunBulan: (yr: number, mo: number) => `${yr} ${yr === 1 ? 'year' : 'years'} ${mo} ${mo === 1 ? 'month' : 'months'} to go`,
+  tahun: (yr: number) => `${yr} ${yr === 1 ? 'year' : 'years'} to go`,
+};
+const LABEL_SIAP = { ms, en };
+
+export function estimateCompletion(total: number, rate: number, bahasa: Bahasa = 'ms'): { label: string; date: string } | null {
   if (total <= 0 || rate <= 0) return null;
+  const t = LABEL_SIAP[bahasa];
   const days = Math.ceil(total / rate);
   const date = new Date();
   date.setDate(date.getDate() + days);
   let label: string;
-  if (days === 1) label = 'Esok';
-  else if (days < 30) label = `${days} hari lagi`;
+  if (days === 1) label = t.esok;
+  else if (days < 30) label = t.hari(days);
   else if (days < 365) {
     const mo = Math.floor(days / 30), rem = days % 30;
-    label = rem > 0 ? `${mo} bulan ${rem} hari lagi` : `${mo} bulan lagi`;
+    label = rem > 0 ? t.bulanHari(mo, rem) : t.bulan(mo);
   } else {
     // Pada skala tahun, baki hari ialah ketepatan palsu — kadar harian itu
     // sendiri berubah jauh lebih kerap daripada itu. Dua unit sudah memadai.
     const yr = Math.floor(days / 365), mo = Math.floor((days % 365) / 30);
-    label = mo > 0 ? `${yr} tahun ${mo} bulan lagi` : `${yr} tahun lagi`;
+    label = mo > 0 ? t.tahunBulan(yr, mo) : t.tahun(yr);
   }
-  return { label, date: formatMalayDate(date) };
+  return { label, date: formatMalayDate(date, bahasa) };
 }
 
 export function isMonthComplete(mk: string): boolean {
@@ -133,10 +153,10 @@ export function isMonthComplete(mk: string): boolean {
   return today >= firstOfNext;
 }
 
-export function lastDayOfMonth(mk: string): string {
+export function lastDayOfMonth(mk: string, bahasa: Bahasa = 'ms'): string {
   const [year, month] = mk.split('-').map(Number);
   const d = new Date(year, month, 0);
-  return `${d.getDate()} ${MALAY_MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${BULAN[bahasa][d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function getLbValue(p: Participant, view: LbView) {

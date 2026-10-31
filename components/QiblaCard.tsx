@@ -2,6 +2,11 @@
 
 import { motion } from 'motion/react';
 import { spring } from '@/lib/motion';
+import { useTeks } from '@/components/BahasaProvider';
+
+const ms = { kompas: 'Kompas Kiblat', mataAngin: ['U', 'T', 'S', 'B'] };
+const en: typeof ms = { kompas: 'Qibla compass', mataAngin: ['N', 'E', 'S', 'W'] };
+const TEKS = { ms, en };
 
 type Props = {
   qibla: number;
@@ -19,21 +24,17 @@ function py(angle: number, radius: number) {
 }
 
 const TICKS = Array.from({ length: 12 }, (_, i) => ({ angle: i * 30, major: i % 3 === 0 }));
-const CARDINALS = [
-  { label: 'U', angle: 0 },
-  { label: 'T', angle: 90 },
-  { label: 'S', angle: 180 },
-  { label: 'B', angle: 270 },
-];
+const CARDINALS = [0, 90, 180, 270];
 
 export default function QiblaCard({ qibla, heading, isAligned }: Props) {
   const compassRotation = heading !== null ? -heading : 0;
+  const t = useTeks(TEKS);
 
   return (
     <svg
       viewBox="0 0 300 300"
       className="size-60 sm:size-72 lg:size-80"
-      aria-label="Kompas Kiblat"
+      aria-label={t.kompas}
     >
       {/* Alignment glow */}
       {isAligned && (
@@ -48,10 +49,10 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
         initial={false}
         transition={spring.jarum}
       >
-        {/* Main ring */}
-        <circle cx={CX} cy={CY} r={R} fill="none"
+        {/* Main ring — muka dail berwarna lembut, seperti cip ikon */}
+        <circle cx={CX} cy={CY} r={R}
           strokeWidth={isAligned ? 2.5 : 1.75}
-          className={isAligned ? "stroke-primary" : "stroke-border"}
+          className={isAligned ? "fill-accent/60 stroke-primary" : "fill-card stroke-border"}
           style={{ transition: 'stroke 0.5s ease' }}
         />
 
@@ -66,21 +67,21 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
         ))}
 
         {/* Cardinal labels */}
-        {CARDINALS.map(({ label, angle }) => (
-          <text key={label}
+        {CARDINALS.map((angle, i) => (
+          <text key={angle}
             x={px(angle, R - 30)} y={py(angle, R - 30)}
             textAnchor="middle" dominantBaseline="middle"
             fontSize="11" fontWeight="600"
             className="fill-muted-foreground"
           >
-            {label}
+            {t.mataAngin[i]}
           </text>
         ))}
 
         {/* Qibla marker on the ring */}
         <polygon
           points={`${px(qibla, R - 8)},${py(qibla, R - 8)} ${px(qibla - 5, R - 26)},${py(qibla - 5, R - 26)} ${px(qibla + 5, R - 26)},${py(qibla + 5, R - 26)}`}
-          className={isAligned ? "fill-primary" : "fill-hijau-500"}
+          className={isAligned ? "fill-primary" : "fill-w5"}
           style={{ transition: 'fill 0.5s ease' }}
         />
       </motion.g>
@@ -103,7 +104,7 @@ export default function QiblaCard({ qibla, heading, isAligned }: Props) {
 
       {/* Center dot */}
       <circle cx={CX} cy={CY} r={5} strokeWidth={1.5}
-        className="fill-background stroke-border"
+        className="fill-card stroke-border"
       />
     </svg>
   );

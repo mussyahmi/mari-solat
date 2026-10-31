@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDownIcon, ExternalLinkIcon, Loader2Icon, MapPinIcon, PencilIcon } from 'lucide-react';
+import {
+  CheckIcon, ChevronDownIcon, ExternalLinkIcon, InfoIcon, LanguagesIcon, LayoutGridIcon,
+  Loader2Icon, LocateFixedIcon, MapPinIcon, PaletteIcon, PencilIcon, type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -26,9 +29,103 @@ import { getFCMToken } from '@/lib/fcm';
 import { auth, db } from '@/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { useBahasa, useTeks } from '@/components/BahasaProvider';
+import { BAHASA, NAMA_BAHASA } from '@/lib/bahasa';
+import PemilihAksen from '@/components/PemilihAksen';
+import { palet } from '@/lib/aksen';
+import { cn } from '@/lib/utils';
+
+/** Cip ikon berwarna — setiap bahagian tetapan mendapat warna paletnya sendiri. */
+function CipIkon({ ikon: Ikon, i }: { ikon: LucideIcon; i: number }) {
+  const p = palet(i);
+  return (
+    <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl', p.lembut, p.teks)}>
+      <Ikon className="size-5" strokeWidth={2} />
+    </span>
+  );
+}
+
+function KepalaKad({ ikon, i, tajuk }: { ikon: LucideIcon; i: number; tajuk: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <CipIkon ikon={ikon} i={i} />
+      <h2 className="paparan text-xl leading-none">{tajuk}</h2>
+    </div>
+  );
+}
+
+const ms = {
+  tajuk: 'Tetapan',
+  lede: 'Zon menentukan setiap waktu yang dipaparkan dalam aplikasi ini.',
+  zonDitetapkan: (d: string) => `Zon ditetapkan ke ${d}.`,
+  zonDikesan: (d: string) => `Zon dikesan: ${d}.`,
+  notifDibenarkan: 'Notifikasi dibenarkan.',
+  notifTidakDibenarkan: 'Notifikasi tidak dibenarkan.',
+  benarkanDahulu: 'Benarkan notifikasi pelayar dahulu.',
+  gagalDaftar: 'Gagal mendaftar notifikasi. Cuba semula.',
+  tetapkanZonDahulu: 'Tetapkan zon waktu solat dahulu.',
+  gagalSimpan: 'Gagal menyimpan tetapan notifikasi.',
+  zonAnda: 'Zon anda',
+  belumDipilih: 'Belum dipilih',
+  pilihZon: 'Pilih zon',
+  mengesan: 'Mengesan…',
+  kesanLokasi: 'Kesan dari lokasi semasa',
+  lokasiDikesan: 'Lokasi dikesan',
+  caraTajuk: 'Cara zon dipilih',
+  cara1:
+    'JAKIM membahagikan Malaysia kepada zon waktu solat, setiap satu dengan kod tersendiri seperti WLY01. Waktu berbeza beberapa minit antara zon bersebelahan, jadi pilih zon tempat anda benar-benar berada.',
+  cara2:
+    'Mengesan dari lokasi semasa akan memilih zon terdekat secara automatik. Zon yang anda pilih sendiri tidak akan ditukar olehnya.',
+  bahasa: 'Bahasa',
+  rupa: 'Rupa',
+  aplikasiLain: 'Aplikasi lain',
+  kiraPoket: 'Jejak perbelanjaan mengikut kitaran gaji, bukan bulan kalendar.',
+  semuaNegeri: '← Semua negeri',
+  pilihNegeri: 'Pilih negeri dahulu.',
+  ralatZon:
+    'Senarai zon tidak dapat dimuatkan. Semak sambungan internet anda, kemudian cuba sekali lagi.',
+  cubaLagi: 'Cuba lagi',
+  memuatkan: 'Memuatkan senarai zon…',
+};
+const en: typeof ms = {
+  tajuk: 'Settings',
+  lede: 'Your zone sets every prayer time shown in this app.',
+  zonDitetapkan: d => `Zone set to ${d}.`,
+  zonDikesan: d => `Zone detected: ${d}.`,
+  notifDibenarkan: 'Notifications allowed.',
+  notifTidakDibenarkan: 'Notifications not allowed.',
+  benarkanDahulu: 'Allow browser notifications first.',
+  gagalDaftar: "Couldn't register for notifications. Please try again.",
+  tetapkanZonDahulu: 'Set your prayer time zone first.',
+  gagalSimpan: "Couldn't save notification settings.",
+  zonAnda: 'Your zone',
+  belumDipilih: 'Not chosen yet',
+  pilihZon: 'Choose zone',
+  mengesan: 'Detecting…',
+  kesanLokasi: 'Detect from current location',
+  lokasiDikesan: 'Detected location',
+  caraTajuk: 'How zones work',
+  cara1:
+    'JAKIM divides Malaysia into prayer time zones, each with its own code such as WLY01. Times differ by a few minutes between neighbouring zones, so choose the zone where you actually are.',
+  cara2:
+    "Detecting from your current location picks the nearest zone automatically. It won't override a zone you chose yourself.",
+  bahasa: 'Language',
+  rupa: 'Appearance',
+  aplikasiLain: 'Other apps',
+  kiraPoket: 'Track spending by pay cycle, not calendar month.',
+  semuaNegeri: '← All states',
+  pilihNegeri: 'Choose a state first.',
+  ralatZon:
+    "The zone list couldn't be loaded. Check your internet connection, then try again.",
+  cubaLagi: 'Try again',
+  memuatkan: 'Loading zone list…',
+};
+const TEKS = { ms, en };
 
 export default function TetapanPage() {
   const router = useRouter();
+  const t = useTeks(TEKS);
+  const { bahasa, tukar } = useBahasa();
   const [zone, setZone] = useState<string | null>(null);
   const [allZones, setAllZones] = useState<any[]>([]);
   const [ralatZon, setRalatZon] = useState(false);
@@ -118,7 +215,7 @@ export default function TetapanPage() {
     saveZone(zoneData.jakimCode, `${zoneData.jakimCode} · ${zoneData.daerah}`, true);
     setShowZoneSelector(false);
     setSelectedNegeri('');
-    toast.success(`Zon ditetapkan ke ${zoneData.daerah}.`);
+    toast.success(t.zonDitetapkan(zoneData.daerah));
     router.push('/');
   };
 
@@ -136,7 +233,7 @@ export default function TetapanPage() {
           const data = await res.json();
           if (!res.ok || 'error' in data) throw new Error();
           saveZone(data.zone, `${data.zone} · ${data.district}`, false);
-          toast.success(`Zon dikesan: ${data.district}.`);
+          toast.success(t.zonDikesan(data.district));
           router.push('/');
         } catch {
           toast.error(RALAT_LOKASI.tiadaZon);
@@ -155,8 +252,8 @@ export default function TetapanPage() {
   const handleRequestNotif = async () => {
     const result = await requestNotifPermission();
     setNotifPermission(result);
-    if (result === 'granted') toast.success('Notifikasi dibenarkan.');
-    else toast.error('Notifikasi tidak dibenarkan.');
+    if (result === 'granted') toast.success(t.notifDibenarkan);
+    else toast.error(t.notifTidakDibenarkan);
   };
 
   const togglePrayer = (prayer: string, value: boolean) => {
@@ -170,7 +267,7 @@ export default function TetapanPage() {
     try {
       const permission = await requestNotifPermission();
       if (permission !== 'granted') {
-        toast.error('Benarkan notifikasi pelayar dahulu.');
+        toast.error(t.benarkanDahulu);
         setPushLoading(false);
         return;
       }
@@ -178,7 +275,7 @@ export default function TetapanPage() {
 
       const token = fcmToken ?? await getFCMToken();
       if (!token) {
-        toast.error('Gagal mendaftar notifikasi. Cuba semula.');
+        toast.error(t.gagalDaftar);
         setPushLoading(false);
         return;
       }
@@ -187,7 +284,7 @@ export default function TetapanPage() {
 
       const zoneCode = localStorage.getItem('msolat_zone_code') ?? '';
       if (azanEnabled && !zoneCode) {
-        toast.error('Tetapkan zon waktu solat dahulu.');
+        toast.error(t.tetapkanZonDahulu);
         setPushLoading(false);
         return;
       }
@@ -201,6 +298,7 @@ export default function TetapanPage() {
           azanEnabled,
           azanPrayers: [...AZAN_PRAYERS],
           qadaReminderEnabled: qadaEnabled,
+          bahasa,
           updatedAt: new Date(),
         });
       }
@@ -208,7 +306,7 @@ export default function TetapanPage() {
       setPushAzanOn(azanEnabled);
       setPushQadaOn(qadaEnabled);
     } catch {
-      toast.error('Gagal menyimpan tetapan notifikasi.');
+      toast.error(t.gagalSimpan);
     } finally {
       setPushLoading(false);
     }
@@ -227,101 +325,135 @@ export default function TetapanPage() {
 
   return (
     <PageShell
-      tajuk="Tetapan"
-      lede="Zon menentukan setiap waktu yang dipaparkan dalam aplikasi ini."
+      tajuk={t.tajuk}
+      lede={t.lede}
     >
       {/* Zon ialah satu-satunya fakta halaman ini, jadi ia diberi layanan
           yang sama seperti nombor hero di halaman lain. */}
-      <div className="flex flex-col items-start gap-3">
-        <p className="paparan text-2xl leading-none lg:text-3xl">Zon anda</p>
-        {namaZon ? (
-          <>
-            <p className="paparan text-5xl leading-none lg:text-6xl">{namaZon}</p>
-            {kodZon && <p className="text-muted-foreground">{kodZon}</p>}
-          </>
-        ) : (
-          <p className="paparan text-5xl leading-none text-muted-foreground lg:text-6xl">
-            Belum dipilih
-          </p>
+      <section className="kad max-w-2xl p-5 lg:p-7">
+        <div className="flex items-center gap-3">
+          <CipIkon ikon={MapPinIcon} i={2} />
+          <p className="paparan text-xl leading-none">{t.zonAnda}</p>
+        </div>
+        <div className="mt-5 flex flex-col items-start gap-3">
+          {namaZon ? (
+            <>
+              <p className="paparan text-4xl leading-[1.05] lg:text-5xl">{namaZon}</p>
+              {kodZon && (
+                <span className="rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
+                  {kodZon}
+                </span>
+              )}
+            </>
+          ) : (
+            <p className="paparan text-4xl leading-[1.05] text-muted-foreground lg:text-5xl">
+              {t.belumDipilih}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            onClick={() => { setSelectedNegeri(''); setShowZoneSelector(true); }}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
+          >
+            <PencilIcon className="size-4" />
+            {t.pilihZon}
+          </button>
+          <button
+            onClick={detectLocation}
+            disabled={isLocating}
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-85 disabled:opacity-40"
+          >
+            {isLocating ? <Loader2Icon className="size-4 animate-spin" /> : <LocateFixedIcon className="size-4" />}
+            {isLocating ? t.mengesan : t.kesanLokasi}
+          </button>
+        </div>
+
+        {coords && (
+          <dl className="mt-5 rounded-2xl bg-muted px-4 py-3">
+            <div className="flex items-baseline justify-between gap-6">
+              <dt className="text-sm text-muted-foreground">{t.lokasiDikesan}</dt>
+              <dd className="tabular font-mono text-sm">
+                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+              </dd>
+            </div>
+          </dl>
         )}
-      </div>
+      </section>
 
-      <div className="mt-10 flex flex-wrap gap-3">
-        <button
-          onClick={() => { setSelectedNegeri(''); setShowZoneSelector(true); }}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
-        >
-          <PencilIcon className="size-4" />
-          Pilih zon
-        </button>
-        <button
-          onClick={detectLocation}
-          disabled={isLocating}
-          className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40"
-        >
-          {isLocating ? <Loader2Icon className="size-4 animate-spin" /> : <MapPinIcon className="size-4" />}
-          {isLocating ? 'Mengesan…' : 'Kesan dari lokasi semasa'}
-        </button>
-      </div>
+      <div className="mt-4 grid max-w-2xl gap-4">
+        <section className="kad p-5">
+          <KepalaKad ikon={InfoIcon} i={5} tajuk={t.caraTajuk} />
+          <p className="mt-4 leading-relaxed text-muted-foreground">{t.cara1}</p>
+          <p className="mt-3 leading-relaxed text-muted-foreground">{t.cara2}</p>
+        </section>
 
-      {coords && (
-        <dl className="mt-10 max-w-md border-t border-border/60 pt-5">
-          <div className="flex items-baseline justify-between gap-6">
-            <dt className="text-sm text-muted-foreground">Lokasi dikesan</dt>
-            <dd className="tabular font-mono text-sm">
-              {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-            </dd>
+        <section className="kad p-5">
+          <KepalaKad ikon={LanguagesIcon} i={0} tajuk={t.bahasa} />
+          <div role="radiogroup" aria-label={t.bahasa} className="mt-4 inline-flex w-full rounded-full bg-muted p-1">
+            {BAHASA.map(b => (
+              <button
+                key={b}
+                role="radio"
+                aria-checked={bahasa === b}
+                lang={b}
+                onClick={() => tukar(b)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+                  bahasa === b ? 'bg-card font-semibold text-foreground shadow-sm dark:bg-accent dark:text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {bahasa === b && <CheckIcon className="size-4 shrink-0 text-primary" />}
+                <span>{NAMA_BAHASA[b]}</span>
+              </button>
+            ))}
           </div>
-        </dl>
-      )}
+        </section>
 
-      <section className="mt-20 max-w-[68ch]">
-        <h2 className="paparan text-2xl">Cara zon dipilih</h2>
-        <p className="mt-4 leading-relaxed text-muted-foreground">
-          JAKIM membahagikan Malaysia kepada zon waktu solat, setiap satu dengan
-          kod tersendiri seperti WLY01. Waktu berbeza beberapa minit antara zon
-          bersebelahan, jadi pilih zon tempat anda benar-benar berada.
-        </p>
-        <p className="mt-4 leading-relaxed text-muted-foreground">
-          Mengesan dari lokasi semasa akan memilih zon terdekat secara
-          automatik. Zon yang anda pilih sendiri tidak akan ditukar olehnya.
-        </p>
-      </section>
+        <section className="kad p-5">
+          <KepalaKad ikon={PaletteIcon} i={3} tajuk={t.rupa} />
+          <div className="mt-4">
+            <PemilihAksen />
+          </div>
+        </section>
 
-      {/* Satu-satunya rujukan kepada aplikasi lain dalam keseluruhan MariSolat,
-          dan ia diletakkan di sini dengan sengaja: Tetapan ialah tempat orang
-          datang untuk melihat tentang aplikasi ini. Ia tidak diletakkan pada
-          halaman waktu solat, halaman ilmu atau tasbih — promosi di sebelah
-          kiraan detik azan atau bacaan zikir menjatuhkan nada aplikasi. */}
-      <section className="mt-20 max-w-[68ch]">
-        <h2 className="paparan text-2xl">Aplikasi lain</h2>
-        <a
-          href="https://kirapoket.web.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group mt-5 flex items-center gap-4 border-t border-border/50 py-4 transition-colors hover:text-primary"
-        >
-          {/* Disalin dari src/app/icon.tsx KiraPoket, sama seperti KiraPoket
-              menyimpan public/marisolat-icon.png untuk arah sebaliknya. Fail
-              tempatan, bukan pautan panas: tiada kebergantungan pada tapak lain
-              dan tiada permintaan rentas-tapak semasa halaman dimuatkan. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/kirapoket-icon.png"
-            alt=""
-            width={44}
-            height={44}
-            className="size-11 shrink-0 rounded-[22%]"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="text-lg">KiraPoket</span>
-            <span className="mt-1 block leading-relaxed text-muted-foreground">
-              Jejak perbelanjaan mengikut kitaran gaji, bukan bulan kalendar.
+        {/* Satu-satunya rujukan kepada aplikasi lain dalam keseluruhan MariSolat,
+            dan ia diletakkan di sini dengan sengaja: Tetapan ialah tempat orang
+            datang untuk melihat tentang aplikasi ini. Ia tidak diletakkan pada
+            halaman waktu solat, halaman ilmu atau tasbih — promosi di sebelah
+            kiraan detik azan atau bacaan zikir menjatuhkan nada aplikasi. */}
+        <section className="kad p-5">
+          <KepalaKad ikon={LayoutGridIcon} i={4} tajuk={t.aplikasiLain} />
+          <a
+            href="https://kirapoket.web.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group -mx-2 mt-3 flex items-center gap-4 rounded-2xl p-2 transition-colors hover:bg-muted"
+          >
+            {/* Disalin dari src/app/icon.tsx KiraPoket, sama seperti KiraPoket
+                menyimpan public/marisolat-icon.png untuk arah sebaliknya. Fail
+                tempatan, bukan pautan panas: tiada kebergantungan pada tapak lain
+                dan tiada permintaan rentas-tapak semasa halaman dimuatkan. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/kirapoket-icon.png"
+              alt=""
+              width={44}
+              height={44}
+              className="size-11 shrink-0 rounded-2xl"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold">KiraPoket</span>
+              <span className="mt-0.5 block text-sm leading-relaxed text-muted-foreground">
+                {t.kiraPoket}
+              </span>
             </span>
-          </span>
-          <ExternalLinkIcon className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-        </a>
-      </section>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+              <ExternalLinkIcon className="size-4" />
+            </span>
+          </a>
+        </section>
+      </div>
 
       {/* Tetapan azan dan notifikasi push di bawah dimatikan sebelum kerja ini
           bermula, jadi ia dibiarkan seperti asal — bukan keputusan reka bentuk.
@@ -385,10 +517,10 @@ export default function TetapanPage() {
 
       {/* Pemilih zon */}
       <Dialog open={showZoneSelector} onOpenChange={open => { setShowZoneSelector(open); if (!open) setSelectedNegeri(''); }}>
-        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden rounded-3xl">
           <DialogHeader>
             <DialogTitle className="paparan text-2xl">
-              {selectedNegeri || 'Pilih zon'}
+              {selectedNegeri || t.pilihZon}
             </DialogTitle>
             <DialogDescription asChild>
               {selectedNegeri ? (
@@ -396,10 +528,10 @@ export default function TetapanPage() {
                   className="text-left text-sm text-primary transition-opacity hover:opacity-80"
                   onClick={() => setSelectedNegeri('')}
                 >
-                  ← Semua negeri
+                  {t.semuaNegeri}
                 </button>
               ) : (
-                <span>Pilih negeri dahulu.</span>
+                <span>{t.pilihNegeri}</span>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -413,43 +545,42 @@ export default function TetapanPage() {
               {ralatZon ? (
                 <div className="py-6">
                   <p className="leading-relaxed text-muted-foreground">
-                    Senarai zon tidak dapat dimuatkan. Semak sambungan internet anda,
-                    kemudian cuba sekali lagi.
+                    {t.ralatZon}
                   </p>
                   <button
                     onClick={muatSenaraiZon}
                     className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    Cuba lagi
+                    {t.cubaLagi}
                   </button>
                 </div>
               ) : memuatZon ? (
-                <p className="py-6 text-muted-foreground">Memuatkan senarai zon…</p>
+                <p className="py-6 text-muted-foreground">{t.memuatkan}</p>
               ) : !selectedNegeri ? (
-                <div className="divide-y divide-border/50 border-t border-border/50">
+                <div className="flex flex-col gap-0.5">
                   {negeriList.map(negeri => (
                     <button
                       key={negeri}
                       onClick={() => setSelectedNegeri(negeri)}
-                      className="w-full py-3.5 text-left transition-colors hover:text-primary"
+                      className="w-full rounded-2xl px-3 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       {negeri}
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="divide-y divide-border/50 border-t border-border/50">
+                <div className="flex flex-col gap-0.5">
                   {allZones.filter(z => z.negeri === selectedNegeri).map(z => (
                     <button
                       key={z.jakimCode}
                       onClick={() => handleZoneSelect(z)}
-                      className="flex w-full items-baseline justify-between gap-6 py-3.5 text-left transition-colors hover:text-primary"
+                      className="group flex w-full items-center justify-between gap-6 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       {/* Satu zon boleh meliputi tujuh daerah. Memotongnya
                           menyembunyikan daerah yang mungkin sedang dicari
                           pengguna, jadi ia dibiarkan membalut. */}
                       <span className="min-w-0 text-pretty leading-relaxed">{z.daerah}</span>
-                      <span className="shrink-0 text-sm text-muted-foreground">{z.jakimCode}</span>
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground group-hover:bg-card">{z.jakimCode}</span>
                     </button>
                   ))}
                 </div>

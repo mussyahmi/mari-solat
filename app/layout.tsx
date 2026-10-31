@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import AppShell from "@/components/AppShell";
@@ -8,6 +8,7 @@ import UpdatePrompt from "@/components/UpdatePrompt";
 import { Toaster } from "@/components/ui/sonner";
 import WarnaTema from "@/components/WarnaTema";
 import { WARNA_TEMA } from "@/lib/warna-tema";
+import { SKRIP_AKSEN } from "@/lib/aksen";
 
 // Satu keluarga huruf untuk keseluruhan aplikasi. Paksi saiz optik Fraunces
 // bermakna teks kecil dan angka kiraan detik yang besar mendapat potongan
@@ -17,6 +18,13 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
   axes: ["SOFT", "WONK", "opsz"],
+});
+
+// Teks antara muka dalam sans geometri yang bulat dan mesra; Fraunces kekal
+// untuk tajuk dan angka paparan, di mana wataknya paling terasa.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
 });
 
 
@@ -78,8 +86,8 @@ export const metadata: Metadata = {
  * yang ditulis next-themes, jadi kedua-duanya bersetuju pada bingkai pertama.
  */
 function WarnaTemaInit() {
-  const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m)}m.setAttribute('content',localStorage.getItem('theme')==='light'?'${WARNA_TEMA.cerah}':'${WARNA_TEMA.gelap}')}catch(e){}`;
-  return <script dangerouslySetInnerHTML={{ __html: js }} />;
+  const js = `try{var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m)}m.setAttribute('content',localStorage.getItem('theme')==='dark'?'${WARNA_TEMA.gelap}':'${WARNA_TEMA.cerah}')}catch(e){}`;
+  return <script dangerouslySetInnerHTML={{ __html: js + SKRIP_AKSEN }} />;
 }
 
 export default function RootLayout({
@@ -88,13 +96,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ms" className={`dark ${fraunces.variable}`} suppressHydrationWarning>
+    <html lang="ms" className={`${fraunces.variable} ${jakarta.variable}`} suppressHydrationWarning>
       <body
         className="antialiased"
       >
-        {/* Aplikasi solat paling kerap dibuka pada subuh dan selepas isyak,
-            jadi gelap ialah lalai yang jujur untuknya. */}
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        {/* Cerah lembut sebagai lalai, berwarna mengikut tema pilihan; mod
+            gelap kekal satu ketikan di kepala. */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <WarnaTemaInit />
           <WarnaTema />
           <WakeLock />

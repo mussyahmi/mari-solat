@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ShareIcon, SquarePlusIcon } from 'lucide-react';
+import { DownloadIcon, ShareIcon, SquarePlusIcon } from 'lucide-react';
+import { palet } from '@/lib/aksen';
+import { cn } from '@/lib/utils';
+import { useTeks } from '@/components/BahasaProvider';
+import type { Kamus } from '@/lib/bahasa';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -11,23 +15,50 @@ interface BeforeInstallPromptEvent extends Event {
 
 // Ikon sebaris memberi pembaca sesuatu untuk dipadankan pada skrin, bukan
 // penerangan tentang ikon untuk dihuraikan sendiri.
-const LANGKAH_IOS = [
-  <>
-    Tekan <ShareIcon className="inline size-4 align-text-bottom" />{' '}
-    <b className="font-semibold text-foreground">Share</b> pada bar bawah Safari.
-  </>,
-  <>
-    Skrol ke bawah dan pilih <SquarePlusIcon className="inline size-4 align-text-bottom" />{' '}
-    <b className="font-semibold text-foreground">Add to Home Screen</b>.
-  </>,
-  <>Tekan <b className="font-semibold text-foreground">Add</b> untuk mengesahkan.</>,
-];
+const LANGKAH_IOS: Kamus<React.ReactNode[]> = {
+  ms: [
+    <>
+      Tekan <ShareIcon className="inline size-4 align-text-bottom" />{' '}
+      <b className="font-semibold text-foreground">Share</b> pada bar bawah Safari.
+    </>,
+    <>
+      Skrol ke bawah dan pilih <SquarePlusIcon className="inline size-4 align-text-bottom" />{' '}
+      <b className="font-semibold text-foreground">Add to Home Screen</b>.
+    </>,
+    <>Tekan <b className="font-semibold text-foreground">Add</b> untuk mengesahkan.</>,
+  ],
+  en: [
+    <>
+      Tap <ShareIcon className="inline size-4 align-text-bottom" />{' '}
+      <b className="font-semibold text-foreground">Share</b> in Safari&apos;s bottom bar.
+    </>,
+    <>
+      Scroll down and choose <SquarePlusIcon className="inline size-4 align-text-bottom" />{' '}
+      <b className="font-semibold text-foreground">Add to Home Screen</b>.
+    </>,
+    <>Tap <b className="font-semibold text-foreground">Add</b> to confirm.</>,
+  ],
+};
+
+const ms = {
+  pasang: 'Install MariSolat',
+  huraian:
+    'MariSolat terbuka skrin penuh tanpa bar pelayar, dengan ikonnya sendiri pada skrin utama. Safari tiada butang install, jadi ia dibuat melalui menu Kongsi.',
+};
+const en: typeof ms = {
+  pasang: 'Install MariSolat',
+  huraian:
+    "MariSolat opens full screen without the browser bar, with its own icon on your home screen. Safari has no install button, so it's done through the Share menu.",
+};
+const TEKS = { ms, en };
 
 export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIos, setIsIos] = useState(false);
   const [showIosDialog, setShowIosDialog] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true); // andaikan sudah diinstall sehingga disemak
+  const t = useTeks(TEKS);
+  const langkahIos = useTeks(LANGKAH_IOS);
 
   useEffect(() => {
     const standalone =
@@ -82,30 +113,32 @@ export default function InstallButton() {
     <>
       <button
         onClick={install}
-        className="text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="flex items-center gap-2.5 rounded-2xl text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        Install MariSolat
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-w1-lembut text-w1">
+          <DownloadIcon className="size-3.5" />
+        </span>
+        {t.pasang}
       </button>
 
       <Dialog open={showIosDialog} onOpenChange={setShowIosDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="paparan text-2xl">Install MariSolat</DialogTitle>
+            <DialogTitle className="paparan text-2xl">{t.pasang}</DialogTitle>
             {/* Menyatakan sebab ada tiga langkah lebih berguna daripada
                 menyuruh pembaca mengikut langkah yang sudah kelihatan. */}
             {/* Butang tidak pernah memberi sebab untuk mengetiknya. Baris
                 pertama ialah sebab; baris kedua sebab ada tiga langkah. */}
             <DialogDescription className="leading-relaxed">
-              MariSolat terbuka skrin penuh tanpa bar pelayar, dengan ikonnya
-              sendiri pada skrin utama. Safari tiada butang install, jadi ia
-              dibuat melalui menu Kongsi.
+              {t.huraian}
             </DialogDescription>
           </DialogHeader>
 
-          <ol className="divide-y divide-border/50 border-t border-border/50">
-            {LANGKAH_IOS.map((langkah, i) => (
-              <li key={i} className="flex gap-4 py-4 text-left">
-                <span className="angka-paparan w-4 shrink-0 text-lg text-muted-foreground">{i + 1}</span>
+          <ol className="flex flex-col gap-2">
+            {langkahIos.map((langkah, i) => (
+              <li key={i} className="flex items-start gap-3 rounded-2xl bg-muted/60 p-3 text-left">
+                {/* Setiap langkah diberi warna palet sendiri. */}
+                <span className={cn('angka-paparan flex size-8 shrink-0 items-center justify-center rounded-xl text-base', palet(i).lembut, palet(i).teks)}>{i + 1}</span>
                 <span className="leading-relaxed text-muted-foreground">{langkah}</span>
               </li>
             ))}

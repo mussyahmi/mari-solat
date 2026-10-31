@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { teksSemasa } from '@/lib/bahasa';
 
 const POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const INITIAL_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
@@ -10,6 +11,18 @@ const INITIAL_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
 // `current`. Ini elak toast berulang kalau /version.json tertinggal di
 // belakang bundle yang sedang berjalan (cth. deploy yang tak jana semula
 // version.json) — keadaan itu tak boleh dibaiki dengan muat semula.
+const ms = {
+  tajuk: 'Versi baru tersedia',
+  huraian: 'Muat semula untuk mendapatkan kemaskini terbaru.',
+  muatSemula: 'Muat Semula',
+};
+const en: typeof ms = {
+  tajuk: 'New version available',
+  huraian: 'Reload to get the latest update.',
+  muatSemula: 'Reload',
+};
+const TEKS = { ms, en };
+
 function isNewer(remote: string, current: string): boolean {
   const parse = (v: string) =>
     v.split('.').map((n) => Number.parseInt(n, 10));
@@ -35,11 +48,12 @@ export default function UpdatePrompt() {
         const { version } = await res.json();
         if (isNewer(version, INITIAL_VERSION) && !shown.current) {
           shown.current = true;
-          toast('Versi baru tersedia', {
-            description: 'Muat semula untuk mendapatkan kemaskini terbaru.',
+          const t = teksSemasa(TEKS);
+          toast(t.tajuk, {
+            description: t.huraian,
             duration: Infinity,
             action: {
-              label: 'Muat Semula',
+              label: t.muatSemula,
               onClick: () => window.location.reload(),
             },
           });

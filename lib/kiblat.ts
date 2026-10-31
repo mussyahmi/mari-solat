@@ -1,3 +1,5 @@
+import { bahasaSemasa, type Bahasa, type Kamus } from '@/lib/bahasa';
+
 /** Kaabah, Makkah. */
 const KAABAH = { lat: 21.422487, lng: 39.826206 };
 
@@ -19,8 +21,11 @@ export function bearingKiblat(lat: number, lng: number) {
   return (deg(Math.atan2(y, x)) + 360) % 360;
 }
 
-const MATA_ANGIN = ['Utara', 'Timur laut', 'Timur', 'Tenggara', 'Selatan', 'Barat daya', 'Barat', 'Barat laut'];
+const MATA_ANGIN: Kamus<string[]> = {
+  ms: ['Utara', 'Timur laut', 'Timur', 'Tenggara', 'Selatan', 'Barat daya', 'Barat', 'Barat laut'],
+  en: ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'],
+};
 
-export function namaArah(bearing: number) {
-  return MATA_ANGIN[Math.round(bearing / 45) % 8];
+export function namaArah(bearing: number, bahasa: Bahasa = bahasaSemasa()) {
+  return MATA_ANGIN[bahasa][Math.round(bearing / 45) % 8];
 }

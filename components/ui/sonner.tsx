@@ -23,7 +23,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
  * konsisten dengan seluruh aplikasi, di mana warna digunakan berhemat.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "dark" } = useTheme()
+  const { theme = "light" } = useTheme()
 
   return (
     <Sonner

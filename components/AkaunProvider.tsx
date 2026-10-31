@@ -14,6 +14,17 @@ import { auth, db } from '@/firebase';
 import { isInAppBrowser } from '@/lib/utils';
 import { PRAYERS, type QadaCounts } from '@/lib/qada';
 import { trackVisitSenyap } from '@/lib/track';
+import { teksSemasa } from '@/lib/bahasa';
+
+const ms = {
+  pelayarDalaman: 'Log masuk Google tidak berfungsi dalam pelayar ini. Buka MariSolat dalam Safari atau Chrome.',
+  gagal: 'Log masuk gagal.',
+};
+const en: typeof ms = {
+  pelayarDalaman: "Google sign-in doesn't work in this browser. Open MariSolat in Safari or Chrome.",
+  gagal: 'Sign-in failed.',
+};
+const TEKS = { ms, en };
 
 type Akaun = {
   user: User | null;
@@ -83,13 +94,13 @@ export default function AkaunProvider({ children }: { children: React.ReactNode 
     // Log masuk Google disekat dalam pelayar dalaman Instagram/Facebook, dan
     // popup itu gagal secara senyap. Katakan sebabnya.
     if (isInAppBrowser()) {
-      toast.error('Log masuk Google tidak berfungsi dalam pelayar ini. Buka MariSolat dalam Safari atau Chrome.');
+      toast.error(teksSemasa(TEKS).pelayarDalaman);
       return;
     }
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch {
-      toast.error('Log masuk gagal.');
+      toast.error(teksSemasa(TEKS).gagal);
     }
   };
 

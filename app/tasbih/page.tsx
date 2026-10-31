@@ -6,6 +6,10 @@ import { amiri } from './amiri';
 import { berperingkat, naikMasuk, spring } from '@/lib/motion';
 import { toast } from 'sonner';
 import { Minus, RotateCcw, Check } from 'lucide-react';
+import { useTeks } from '@/components/BahasaProvider';
+import { teksSemasa } from '@/lib/bahasa';
+import { palet } from '@/lib/aksen';
+import { cn } from '@/lib/utils';
 
 type Preset = {
   id: string;
@@ -24,6 +28,48 @@ const PRESETS: Preset[] = [
   { id: 'hawqala',        name: 'La hawla wa la quwwata illa billah', arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ', target: 100 },
   { id: 'bebas',          name: 'Bebas',                                                                  target: 0   },
 ];
+
+const ms = {
+  bebas: 'Bebas',
+  lede: 'Tekan untuk kira selawat, zikir, atau tasbih harian.',
+  kiraanBebas: 'Kiraan bebas',
+  tambah: 'Tambah kiraan',
+  tolakSatu: 'Tolak satu',
+  tolak: 'Tolak',
+  sahkan: 'Tekan sekali lagi untuk sahkan',
+  kosongkanKiraan: 'Kosongkan kiraan',
+  pasti: 'Pasti?',
+  kosongkan: 'Kosongkan',
+  sasaran: 'Sasaran',
+  baki: 'Baki',
+  pusingan: 'Pusingan',
+  tersimpan: 'Kiraan tersimpan',
+  bilPusingan: (n: number) => `${n} pusingan`,
+  lengkap: 'Tasbih lengkap, Alhamdulillah',
+  lengkapHuraian: (nama: string, n: number) => `${nama} · pusingan ${n}`,
+  dikosongkan: 'Kiraan dikosongkan',
+};
+const en: typeof ms = {
+  bebas: 'Free',
+  lede: 'Tap to count selawat, zikir, or your daily tasbih.',
+  kiraanBebas: 'Free count',
+  tambah: 'Add to count',
+  tolakSatu: 'Subtract one',
+  tolak: 'Subtract',
+  sahkan: 'Tap again to confirm',
+  kosongkanKiraan: 'Reset count',
+  pasti: 'Sure?',
+  kosongkan: 'Reset',
+  sasaran: 'Target',
+  baki: 'Remaining',
+  pusingan: 'Rounds',
+  tersimpan: 'Saved counts',
+  bilPusingan: n => `${n} ${n === 1 ? 'round' : 'rounds'}`,
+  lengkap: 'Tasbih complete, Alhamdulillah',
+  lengkapHuraian: (nama, n) => `${nama} · round ${n}`,
+  dikosongkan: 'Count cleared',
+};
+const TEKS = { ms, en };
 
 const STORAGE_KEY = 'msolat_tasbih_v1';
 
@@ -65,6 +111,8 @@ export default function TasbihPage() {
   const [resetArmed, setResetArmed] = useState(false);
   const [pulseKey, setPulseKey] = useState(0);
   const [completeKey, setCompleteKey] = useState(0);
+  const t = useTeks(TEKS);
+  const namaPreset = (p: Preset) => (p.id === 'bebas' ? t.bebas : p.name);
 
   // Hydrate from localStorage (deferred to effect to avoid SSR/CSR mismatch)
   useEffect(() => {
@@ -90,6 +138,9 @@ export default function TasbihPage() {
   const cycles = state.cycles[preset.id] ?? 0;
   const hasTarget = preset.target > 0;
   const progress = hasTarget ? Math.min(count / preset.target, 1) : 0;
+  /** Setiap zikir mendapat warna palet sendiri mengikut kedudukannya. */
+  const warnaPreset = (p: Preset) => palet(PRESETS.indexOf(p));
+  const w = warnaPreset(preset);
 
   const vibrate = (ms: number | number[]) => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -108,8 +159,9 @@ export default function TasbihPage() {
         // Cycle complete
         setCompleteKey(k => k + 1);
         vibrate([20, 40, 80]);
-        toast.success('Tasbih lengkap, Alhamdulillah', {
-          description: `${PRESETS.find(p => p.id === id)?.name} · pusingan ${(prev.cycles[id] ?? 0) + 1}`,
+        const teks = teksSemasa(TEKS);
+        toast.success(teks.lengkap, {
+          description: teks.lengkapHuraian(PRESETS.find(p => p.id === id)?.name ?? '', (prev.cycles[id] ?? 0) + 1),
           duration: 2500,
         });
         return {
@@ -147,7 +199,7 @@ export default function TasbihPage() {
     }));
     setResetArmed(false);
     vibrate([10, 30, 10]);
-    toast.success('Kiraan dikosongkan');
+    toast.success(t.dikosongkan);
   };
 
   const switchPreset = (id: string) => {
@@ -191,40 +243,42 @@ export default function TasbihPage() {
         <motion.header variants={naikMasuk}>
           <h1 className="paparan text-4xl lg:text-5xl">Tasbih</h1>
           <p className="mt-3 max-w-[52ch] text-pretty text-lg leading-relaxed text-muted-foreground">
-            Tekan untuk kira selawat, zikir, atau tasbih harian.
+            {t.lede}
           </p>
         </motion.header>
 
-        {/* Pemilih zikir menggunakan baris tab yang sama seperti halaman utama
-            dan qada, bukan cip berwarna yang hanya wujud di halaman ini. */}
+        {/* Pemilih zikir: baris cip pil yang boleh ditatal mendatar. Cip aktif
+            mengambil warna zikir itu, sama seperti gelang di bawah. */}
         <motion.div
           variants={naikMasuk}
-          className="-mx-5 mt-10 overflow-x-auto px-5 lg:mx-0 lg:px-0"
+          className="-mx-5 mt-8 overflow-x-auto px-5 py-1 lg:mx-0 lg:px-0"
           style={{ scrollbarWidth: 'none' }}
         >
-          <div className="-ml-3 flex w-max items-center border-b border-border/60 lg:-ml-3.5">
-            {PRESETS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => switchPreset(p.id)}
-                className="group relative shrink-0 px-3 py-3 text-sm whitespace-nowrap transition-colors lg:px-3.5"
-              >
-                {p.id === preset.id && (
-                  <motion.span
-                    layoutId="tabZikir"
-                    className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
-                    transition={spring.susunAtur}
-                  />
-                )}
-                <span className={p.id === preset.id ? 'font-semibold text-foreground' : 'text-muted-foreground group-hover:text-foreground'}>
-                  {p.name}
-                </span>
-              </button>
-            ))}
+          <div className="flex w-max items-center gap-2">
+            {PRESETS.map(p => {
+              const aktif = p.id === preset.id;
+              const wp = warnaPreset(p);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => switchPreset(p.id)}
+                  aria-pressed={aktif}
+                  className={cn(
+                    'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm transition-colors',
+                    aktif
+                      ? cn('font-semibold', wp.lembut, wp.teks)
+                      : 'bg-card text-muted-foreground shadow-sm hover:text-foreground',
+                  )}
+                >
+                  <span className={cn('size-2 rounded-full', wp.pekat)} aria-hidden />
+                  {namaPreset(p)}
+                </button>
+              );
+            })}
           </div>
         </motion.div>
 
-        <motion.div variants={naikMasuk} className="flex select-none flex-col items-center pt-12">
+        <motion.div variants={naikMasuk} className="flex select-none flex-col items-center pt-10">
           {/* Lafaz ialah perkara yang dibaca, jadi ia mendapat saiz sebenar
               dan bukan sekadar kapsyen di atas bulatan. */}
           {preset.arabic ? (
@@ -232,7 +286,7 @@ export default function TasbihPage() {
               {preset.arabic}
             </p>
           ) : (
-            <p className="paparan text-2xl">Kiraan bebas</p>
+            <p className="paparan text-2xl">{t.kiraanBebas}</p>
           )}
 
           <motion.button
@@ -241,30 +295,36 @@ export default function TasbihPage() {
             whileTap={{ scale: 0.955 }}
             transition={spring.ketik}
             className="group relative mt-10 w-[min(74vw,320px)] rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-            aria-label="Tambah kiraan"
+            aria-label={t.tambah}
           >
             <span
               key={`complete-${completeKey}`}
               className="pointer-events-none absolute inset-0 rounded-full"
               style={{
                 animation: completeKey > 0 ? 'tasbihComplete 700ms ease-out' : undefined,
-                background: 'radial-gradient(circle, oklch(from var(--primary) l c h / 0.35), transparent 70%)',
+                background: `radial-gradient(circle, oklch(from ${w.css} l c h / 0.35), transparent 70%)`,
               }}
             />
 
-            <svg viewBox="0 0 300 300" className="block w-full" aria-hidden>
+            {/* Cakera putih di bawah gelang, seperti kad bulat di atas latar. */}
+            <span
+              className="pointer-events-none absolute inset-[4%] rounded-full bg-card"
+              style={{ boxShadow: 'var(--bayang-kad)' }}
+            />
+
+            <svg viewBox="0 0 300 300" className="relative block w-full" aria-hidden>
               <circle
                 cx="150" cy="150" r={RING_RADIUS}
                 fill="none"
-                stroke="oklch(from var(--muted-foreground) l c h / 0.18)"
-                strokeWidth="2"
+                stroke={`oklch(from ${w.css} l c h / 0.18)`}
+                strokeWidth="8"
               />
               {hasTarget && (
                 <circle
                   cx="150" cy="150" r={RING_RADIUS}
                   fill="none"
-                  stroke="var(--primary)"
-                  strokeWidth="4"
+                  stroke={w.css}
+                  strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={RING_CIRC}
                   strokeDashoffset={dashOffset}
@@ -274,11 +334,11 @@ export default function TasbihPage() {
               )}
               <defs>
                 <radialGradient id="inner-fill" cx="50%" cy="40%" r="60%">
-                  <stop offset="0%" stopColor="oklch(from var(--primary) l c h / 0.07)" />
-                  <stop offset="100%" stopColor="oklch(from var(--primary) l c h / 0)" />
+                  <stop offset="0%" stopColor={`oklch(from ${w.css} l c h / 0.1)`} />
+                  <stop offset="100%" stopColor={`oklch(from ${w.css} l c h / 0)`} />
                 </radialGradient>
               </defs>
-              <circle cx="150" cy="150" r={RING_RADIUS - 6} fill="url(#inner-fill)" />
+              <circle cx="150" cy="150" r={RING_RADIUS - 8} fill="url(#inner-fill)" />
             </svg>
 
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -298,7 +358,7 @@ export default function TasbihPage() {
               {/* Sifar dalam angka Arab ialah satu titik, yang di bawah angka
                   besar hanya kelihatan seperti habuk — jadi ia bermula pada 1. */}
               {count > 0 && (
-                <span dir="rtl" lang="ar" className="font-arab mt-2 text-2xl text-muted-foreground">
+                <span dir="rtl" lang="ar" className={cn('font-arab mt-2 text-2xl', w.teks)}>
                   {toArabic(count)}
                 </span>
               )}
@@ -309,59 +369,65 @@ export default function TasbihPage() {
             <button
               onClick={decrement}
               disabled={count === 0}
-              aria-label="Tolak satu"
-              className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-30"
+              aria-label={t.tolakSatu}
+              className="flex items-center gap-2 rounded-full bg-card px-5 py-2.5 text-sm shadow-sm transition-colors hover:bg-muted disabled:opacity-30"
             >
               <Minus className="size-4" />
-              Tolak
+              {t.tolak}
             </button>
             <button
               onClick={handleReset}
-              aria-label={resetArmed ? 'Tekan sekali lagi untuk sahkan' : 'Kosongkan kiraan'}
-              className={`flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm transition-colors ${
+              aria-label={resetArmed ? t.sahkan : t.kosongkanKiraan}
+              className={cn(
+                'flex items-center gap-2 rounded-full px-5 py-2.5 text-sm transition-colors',
                 resetArmed
-                  ? 'border-primary bg-accent text-accent-foreground'
-                  : 'border-border hover:bg-muted'
-              }`}
+                  ? 'bg-amaran-lembut font-semibold text-amaran'
+                  : 'bg-card shadow-sm hover:bg-muted',
+              )}
             >
               {resetArmed ? <Check className="size-4" /> : <RotateCcw className="size-4" />}
-              {resetArmed ? 'Pasti?' : 'Kosongkan'}
+              {resetArmed ? t.pasti : t.kosongkan}
             </button>
           </div>
         </motion.div>
 
+        {/* Statistik sebagai jubin berwarna lembut. */}
         <motion.dl
           variants={naikMasuk}
-          className="mx-auto mt-14 max-w-md divide-y divide-border/50 border-t border-border/60 sm:flex sm:justify-center sm:gap-x-12 sm:divide-y-0 sm:pt-5"
+          className="mx-auto mt-12 grid max-w-md grid-cols-3 gap-2.5 sm:gap-3"
         >
-          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
-            <dt className="text-sm text-muted-foreground">Sasaran</dt>
-            <dd className="angka-paparan text-2xl sm:mt-1">{hasTarget ? preset.target : '—'}</dd>
-          </div>
-          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
-            <dt className="text-sm text-muted-foreground">Baki</dt>
-            <dd className="angka-paparan text-2xl sm:mt-1">{hasTarget ? preset.target - count : '—'}</dd>
-          </div>
-          <div className="flex items-center justify-between py-3.5 sm:block sm:py-0">
-            <dt className="text-sm text-muted-foreground">Pusingan</dt>
-            <dd className="angka-paparan text-2xl sm:mt-1">{cycles}</dd>
-          </div>
+          {([
+            [t.sasaran, hasTarget ? preset.target : '—', 0],
+            [t.baki, hasTarget ? preset.target - count : '—', 2],
+            [t.pusingan, cycles, 4],
+          ] as const).map(([label, nilai, anjak]) => {
+            const wt = palet(PRESETS.indexOf(preset) + anjak);
+            return (
+              <div key={label} className={cn('rounded-3xl p-4', wt.lembut)}>
+                <dd className={cn('angka-paparan text-3xl leading-none', wt.teks)}>{nilai}</dd>
+                <dt className="mt-2 text-xs leading-snug text-foreground/70 sm:text-sm">{label}</dt>
+              </div>
+            );
+          })}
         </motion.dl>
 
         {/* Sebelum ini senarai ini tersembunyi di dalam helaian "Pilih" yang
             hanya mengulang baris tab di atas. Ia kini kekal di halaman. */}
         {tersimpan.length > 0 && (
-          <motion.section variants={naikMasuk} className="mx-auto mt-20 max-w-md">
-            <h2 className="paparan text-2xl">Kiraan tersimpan</h2>
-            <div className="mt-5 divide-y divide-border/50 border-t border-border/50">
+          <motion.section variants={naikMasuk} className="mx-auto mt-14 max-w-md">
+            <h2 className="paparan text-2xl">{t.tersimpan}</h2>
+            <div className="kad mt-5 divide-y divide-border/50 px-4">
               {tersimpan.map(p => (
                 <button
                   key={p.id}
                   onClick={() => switchPreset(p.id)}
-                  className="flex w-full items-center justify-between gap-6 py-4 text-left"
+                  className="flex w-full items-center justify-between gap-4 py-3.5 text-left"
                 >
-                  <span className={p.id === preset.id ? 'font-semibold text-primary' : 'transition-colors hover:text-foreground'}>
-                    {p.name}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className={cn('size-2.5 shrink-0 rounded-full', warnaPreset(p).pekat)} aria-hidden />
+                    <span className={p.id === preset.id ? cn('font-semibold', warnaPreset(p).teks) : 'transition-colors hover:text-foreground'}>
+                      {namaPreset(p)}
+                    </span>
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="angka-paparan text-xl">{state.counts[p.id] ?? 0}</span>
@@ -370,7 +436,7 @@ export default function TasbihPage() {
                     )}
                     {(state.cycles[p.id] ?? 0) > 0 && (
                       <span className="ml-3 text-sm text-muted-foreground">
-                        {state.cycles[p.id]} pusingan
+                        {t.bilPusingan(state.cycles[p.id] ?? 0)}
                       </span>
                     )}
                   </span>

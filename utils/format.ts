@@ -1,51 +1,28 @@
-const gregorianMonthsBM = [
-  "Januari", "Februari", "Mac", "April", "Mei", "Jun",
-  "Julai", "Ogos", "September", "Oktober", "November", "Disember"
-];
+import { BULAN, BULAN_HIJRI, BULAN_PENDEK, type Bahasa } from "@/lib/bahasa";
 
-const hijriMonthsBM = [
-  "Muharram", "Safar", "Rabiulawal", "Rabiulakhir", "Jamadilawal", "Jamadilakhir",
-  "Rejab", "Syaaban", "Ramadan", "Syawal", "Zulkaedah", "Zulhijjah"
-];
-
-
-export function formatPrayerDates(gregorian: string, hijri: string) {
-  // Gregorian: "16-Dec-2025"
-  const gDate = new Date(gregorian);
-  const gDay = gDate.getDate();
-  const gMonth = gregorianMonthsBM[gDate.getMonth()];
-  const gYear = gDate.getFullYear();
-
-  // Hijri: "1447-06-25"
-  const [hYear, hMonthStr, hDayStr] = hijri.split("-");
-  const hMonth = hijriMonthsBM[Number(hMonthStr) - 1];
-  const hDay = Number(hDayStr);
-
-  return `${gDay} ${gMonth} ${gYear} Miladi | ${hDay} ${hMonth} ${hYear} Hijri`;
+export function formatPrayerDates(gregorian: string, hijri: string, bahasa: Bahasa = "ms") {
+  const g = formatGregorianDate(gregorian, bahasa);
+  const h = formatHijriDate(hijri);
+  return bahasa === "en" ? `${g} | ${h} AH` : `${g} Miladi | ${h} Hijri`;
 }
 
-export function formatGregorianDate(gregorian: string) {
+export function formatGregorianDate(gregorian: string, bahasa: Bahasa = "ms") {
+  // Gregorian: "16-Dec-2025"
   const gDate = new Date(gregorian);
-  const gDay = gDate.getDate();
-  const gMonth = gregorianMonthsBM[gDate.getMonth()];
-  const gYear = gDate.getFullYear();
   // Akhiran "Miladi"/"Hijri" dahulunya dibakar ke dalam nilai, jadi ia
   // mengulang label yang berdiri betul-betul di atasnya. Label kini yang
   // menamakan kalendar; nilai hanya membawa tarikh.
-  return `${gDay} ${gMonth} ${gYear}`;
+  return `${gDate.getDate()} ${BULAN[bahasa][gDate.getMonth()]} ${gDate.getFullYear()}`;
 }
 
+/** Hijri: "1447-06-25". Nama bulan Hijri sama dalam kedua-dua bahasa. */
 export function formatHijriDate(hijri: string) {
   const [hYear, hMonthStr, hDayStr] = hijri.split("-");
-  const hMonth = hijriMonthsBM[Number(hMonthStr) - 1];
-  const hDay = Number(hDayStr);
-  return `${hDay} ${hMonth} ${hYear}`;
+  return `${Number(hDayStr)} ${BULAN_HIJRI[Number(hMonthStr) - 1]} ${hYear}`;
 }
 
-const shortMonthsBM = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogs","Sep","Okt","Nov","Dis"];
-
-export function formatShortDate(date: Date) {
-  return `${date.getDate()} ${shortMonthsBM[date.getMonth()]}`;
+export function formatShortDate(date: Date, bahasa: Bahasa = "ms") {
+  return `${date.getDate()} ${BULAN_PENDEK[bahasa][date.getMonth()]}`;
 }
 
 export function formatTime(time: string) {

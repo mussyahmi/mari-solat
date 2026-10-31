@@ -1,11 +1,87 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Loader2Icon, MapPinIcon } from 'lucide-react';
+import { Compass, Globe2, Infinity as Lapan, Landmark, Loader2Icon, Magnet, Smartphone, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import QiblaCard from '@/components/QiblaCard';
 import PageShell from '@/components/PageShell';
+import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { namaArah } from '@/lib/kiblat';
+import { palet } from '@/lib/aksen';
+import { cn } from '@/lib/utils';
+
+type RalatLokasi = 'tiadaSokongan' | 'ditolak';
+
+const ms = {
+  tajuk: 'Arah Kiblat',
+  lede: 'Pusingkan peranti anda sehingga jarum bertemu penanda Kaabah.',
+  aktifkanKompas: 'Aktifkan kompas',
+  mengesan: 'Mengesan lokasi anda…',
+  tiadaSokongan: 'Geolokasi tidak disokong oleh pelayar anda.',
+  ditolak: 'Tidak dapat mengakses lokasi. Sila benarkan akses lokasi dan cuba semula.',
+  tidakDikesan: 'Lokasi tidak dikesan',
+  cubaLagi: 'Cuba lagi',
+  kiblat: 'Kiblat',
+  menghadap: 'anda menghadapnya',
+  dariUtara: (arah: string) => `${arah} dari arah utara`,
+  arahAnda: 'Arah anda',
+  bezaSudut: 'Beza sudut',
+  kompas: 'Kompas',
+  aktif: 'Aktif',
+  tiadaSensor: 'Tiada sensor',
+  belumAktif: 'Belum diaktifkan',
+  caraDikira: 'Cara arah ini dikira',
+  penerangan: 'Arah ini dikira sebagai laluan terpendek di atas permukaan bumi dari kedudukan anda ke Kaabah di Makkah (21.4225° U, 39.8262° T). Kerana bumi sfera, laluan terpendek itu bukan garis lurus di atas peta rata.',
+  nomborTajuk: 'Nombor boleh dipercayai, kompas bergantung telefon',
+  nomborTeks: (darjah: number) =>
+    `Bacaan ${darjah}° dikira daripada koordinat anda dan tidak berubah melainkan anda berpindah tempat. Kompas yang berputar di atas pula bergantung pada sensor magnet telefon, dan sensor itu mudah terganggu.`,
+  petua: [
+    'Sarung telefon bermagnet, meja besi, kereta dan peralatan elektrik boleh menyimpangkan bacaan berpuluh darjah.',
+    'Lambaikan telefon dalam bentuk angka lapan beberapa kali sebelum membaca — itu membetulkan semula bacaan sensor.',
+    'Berdiri jauh sedikit daripada struktur besi, dan pegang telefon rata.',
+  ],
+  ragu: 'Jika ragu',
+  raguTeks: 'Bandingkan dengan arah saf di masjid atau surau berdekatan — itu rujukan yang sudah disemak. Aplikasi ini membantu anda menganggar, bukan menggantikan pengesahan di tempat solat.',
+};
+const en: typeof ms = {
+  tajuk: 'Qibla Direction',
+  lede: 'Turn your device until the needle meets the Kaabah marker.',
+  aktifkanKompas: 'Enable compass',
+  mengesan: 'Finding your location…',
+  tiadaSokongan: "Your browser doesn't support geolocation.",
+  ditolak: "Couldn't access your location. Please allow location access and try again.",
+  tidakDikesan: 'Location not found',
+  cubaLagi: 'Try again',
+  kiblat: 'Qibla',
+  menghadap: "you're facing it",
+  dariUtara: arah => `${arah} from north`,
+  arahAnda: 'Your heading',
+  bezaSudut: 'Angle off',
+  kompas: 'Compass',
+  aktif: 'Active',
+  tiadaSensor: 'No sensor',
+  belumAktif: 'Not enabled yet',
+  caraDikira: 'How this direction is calculated',
+  penerangan: 'The direction is the shortest path over the surface of the earth from where you are to the Kaabah in Makkah (21.4225° N, 39.8262° E). Because the earth is a sphere, that shortest path is not a straight line on a flat map.',
+  nomborTajuk: 'Trust the number; the compass depends on your phone',
+  nomborTeks: darjah =>
+    `The ${darjah}° reading is calculated from your coordinates and stays the same unless you move. The spinning compass above relies on your phone's magnetic sensor, which is easily disturbed.`,
+  petua: [
+    'Magnetic phone cases, metal tables, cars and electrical appliances can throw the reading off by tens of degrees.',
+    'Wave your phone in a figure-eight a few times before reading — that recalibrates the sensor.',
+    'Stand a little away from metal structures, and hold your phone flat.',
+  ],
+  ragu: 'If in doubt',
+  raguTeks: 'Compare with the saf direction at a nearby masjid or surau — that is a checked reference. This app helps you estimate; it does not replace confirming at a place of prayer.',
+};
+const TEKS = { ms, en };
+
+// Ikon dan warna bagi setiap petua, mengikut susunan dalam `petua`.
+const CIP_PETUA: { ikon: LucideIcon; w: number }[] = [
+  { ikon: Magnet, w: 3 },
+  { ikon: Lapan, w: 0 },
+  { ikon: Smartphone, w: 1 },
+];
 
 function getQiblaBearing(lat: number, lng: number) {
   const kLat = 21.422487, kLng = 39.826206;
@@ -19,8 +95,10 @@ function getQiblaBearing(lat: number, lng: number) {
 }
 
 export default function ArahKiblatPage() {
+  const t = useTeks(TEKS);
+  const { bahasa } = useBahasa();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [locError, setLocError] = useState<string | null>(null);
+  const [locError, setLocError] = useState<RalatLokasi | null>(null);
   const [locLoading, setLocLoading] = useState(true);
 
   const [heading, setHeading] = useState<number | null>(null);
@@ -31,7 +109,7 @@ export default function ArahKiblatPage() {
   // Location
   useEffect(() => {
     if (!navigator.geolocation) {
-      setLocError('Geolokasi tidak disokong oleh pelayar anda.');
+      setLocError('tiadaSokongan');
       setLocLoading(false);
       return;
     }
@@ -41,7 +119,7 @@ export default function ArahKiblatPage() {
         setLocLoading(false);
       },
       () => {
-        setLocError('Tidak dapat mengakses lokasi. Sila benarkan akses lokasi dan cuba semula.');
+        setLocError('ditolak');
         setLocLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -131,55 +209,63 @@ export default function ArahKiblatPage() {
 
   return (
     <PageShell
-      tajuk="Arah Kiblat"
-      lede="Pusingkan peranti anda sehingga jarum bertemu penanda Kaabah."
+      tajuk={t.tajuk}
+      lede={t.lede}
       aksi={
         needsPermissionButton ? (
-          <Button size="sm" variant="outline" onClick={requestPermission}>
-            Aktifkan kompas
+          <Button size="sm" variant="outline" className="rounded-full" onClick={requestPermission}>
+            {t.aktifkanKompas}
           </Button>
         ) : undefined
       }
     >
       {locLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="kad flex items-center gap-2 p-5 text-muted-foreground">
           <Loader2Icon className="size-4 animate-spin" />
-          <span>Mengesan lokasi anda…</span>
+          <span>{t.mengesan}</span>
         </div>
       ) : locError ? (
-        <div className="max-w-md">
-          <p className="paparan text-2xl">Lokasi tidak dikesan</p>
-          <p className="mt-2 leading-relaxed text-muted-foreground">{locError}</p>
+        <div className="kad max-w-md p-6">
+          <p className="paparan text-2xl">{t.tidakDikesan}</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">{t[locError]}</p>
           <button
             onClick={() => location.reload()}
             className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90"
           >
-            Cuba lagi
+            {t.cubaLagi}
           </button>
         </div>
       ) : coords ? (
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-5">
           {/* Bearing ialah fakta halaman ini — ia mendapat layanan yang sama
               seperti kiraan detik di halaman utama. Kompas duduk di sebelahnya
               sebagai alat, bukan sebagai hero. */}
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
-            <div className="flex min-w-0 flex-col items-start gap-2">
-              <p className="paparan text-2xl leading-none lg:text-3xl">
-                Kiblat
+          <div
+            className={cn(
+              'kad flex flex-col gap-6 p-5 transition-colors sm:p-7 lg:flex-row lg:items-center lg:justify-between lg:gap-16',
+              isAligned && 'bg-accent'
+            )}
+          >
+            <div className="flex min-w-0 flex-col items-start gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-w3-lembut text-w3">
+                  <Compass className="size-5" strokeWidth={2} />
+                </span>
+                <p className="paparan text-2xl leading-none lg:text-3xl">{t.kiblat}</p>
                 {isAligned && (
-                  <span className="ml-3 align-middle font-sans text-sm font-semibold text-primary">
-                    anda menghadapnya
+                  <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                    {t.menghadap}
                   </span>
                 )}
-              </p>
+              </div>
               <p
                 className={`angka-paparan text-[22vw] leading-none sm:text-[16vw] lg:text-[9vw] ${
-                  isAligned ? 'text-primary' : ''
+                  isAligned ? 'text-primary' : 'text-w3'
                 }`}
               >
                 {Math.round(qibla)}°
               </p>
-              <p className="text-muted-foreground">{namaArah(qibla)} dari arah utara</p>
+              <p className="text-muted-foreground">{t.dariUtara(namaArah(qibla, bahasa))}</p>
             </div>
 
             <div className="shrink-0 self-center">
@@ -187,62 +273,71 @@ export default function ArahKiblatPage() {
             </div>
           </div>
 
-          <dl className="flex flex-wrap gap-x-12 gap-y-4 border-t border-border/60 pt-5">
-            <div>
-              <dt className="text-sm text-muted-foreground">Arah anda</dt>
-              <dd className={`angka-paparan mt-1 text-2xl ${isAligned ? 'text-primary' : ''}`}>
-                {normalizedHeading !== null ? `${Math.round(normalizedHeading)}°` : '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-muted-foreground">Beza sudut</dt>
-              <dd className={`angka-paparan mt-1 text-2xl ${isAligned ? 'text-primary' : ''}`}>
-                {alignmentError !== null ? `${Math.round(alignmentError)}°` : '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-muted-foreground">Kompas</dt>
-              <dd className="mt-1 text-lg">
-                {heading !== null ? 'Aktif' : motionGranted ? 'Tiada sensor' : 'Belum diaktifkan'}
-              </dd>
-            </div>
+          <dl className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            {(
+              [
+                [t.arahAnda, normalizedHeading !== null ? `${Math.round(normalizedHeading)}°` : '—', 5, true],
+                [t.bezaSudut, alignmentError !== null ? `${Math.round(alignmentError)}°` : '—', 4, true],
+                [t.kompas, heading !== null ? t.aktif : motionGranted ? t.tiadaSensor : t.belumAktif, 1, false],
+              ] as const
+            ).map(([label, nilai, w, angka]) => (
+              <div key={label} className={cn('rounded-3xl p-4 sm:p-5', palet(w).lembut)}>
+                <dd
+                  className={cn(
+                    angka ? 'angka-paparan text-2xl sm:text-3xl' : 'text-base font-semibold sm:text-lg',
+                    'leading-tight',
+                    isAligned && angka ? 'text-primary' : palet(w).teks
+                  )}
+                >
+                  {nilai}
+                </dd>
+                <dt className="mt-2 text-xs leading-snug text-foreground/70 sm:text-sm">{label}</dt>
+              </div>
+            ))}
           </dl>
 
-          <section className="max-w-[68ch]">
-            <h2 className="paparan text-2xl">Cara arah ini dikira</h2>
+          <section className="kad max-w-3xl p-5 sm:p-6">
+            <span className="flex size-10 items-center justify-center rounded-2xl bg-w6-lembut text-w6">
+              <Globe2 className="size-5" strokeWidth={2} />
+            </span>
+            <h2 className="paparan mt-4 text-2xl">{t.caraDikira}</h2>
+            <p className="mt-2 leading-relaxed text-muted-foreground">
+              {t.penerangan}
+            </p>
+          </section>
 
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Arah ini dikira sebagai laluan terpendek di atas permukaan bumi dari kedudukan anda ke
-              Kaabah di Makkah (21.4225° U, 39.8262° T). Kerana bumi sfera, laluan terpendek itu
-              bukan garis lurus di atas peta rata.
+          <section className="kad max-w-3xl p-5 sm:p-6">
+            <h3 className="paparan text-lg">{t.nomborTajuk}</h3>
+            <p className="mt-2 leading-relaxed text-muted-foreground">
+              {t.nomborTeks(Math.round(qibla))}
             </p>
 
-            <h3 className="paparan mt-8 text-lg">Nombor boleh dipercayai, kompas bergantung telefon</h3>
-            <p className="mt-3 leading-relaxed text-muted-foreground">
-              Bacaan {Math.round(qibla)}° dikira daripada koordinat anda dan tidak berubah melainkan
-              anda berpindah tempat. Kompas yang berputar di atas pula bergantung pada sensor magnet
-              telefon, dan sensor itu mudah terganggu.
-            </p>
-
-            <ul className="mt-4 space-y-3 text-muted-foreground">
-              {[
-                'Sarung telefon bermagnet, meja besi, kereta dan peralatan elektrik boleh menyimpangkan bacaan berpuluh darjah.',
-                'Lambaikan telefon dalam bentuk angka lapan beberapa kali sebelum membaca — itu membetulkan semula bacaan sensor.',
-                'Berdiri jauh sedikit daripada struktur besi, dan pegang telefon rata.',
-              ].map(t => (
-                <li key={t} className="flex gap-3">
-                  <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                  <span className="leading-relaxed">{t}</span>
-                </li>
-              ))}
+            {/* Setiap petua mendapat cip ikon dan warnanya sendiri. */}
+            <ul className="mt-3 divide-y divide-border/50">
+              {t.petua.map((p, i) => {
+                const { ikon: Ikon, w } = CIP_PETUA[i % CIP_PETUA.length];
+                return (
+                  <li key={p} className="flex gap-4 py-4 last:pb-0">
+                    <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl', palet(w).lembut, palet(w).teks)}>
+                      <Ikon className="size-5" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 self-center leading-relaxed text-muted-foreground">{p}</span>
+                  </li>
+                );
+              })}
             </ul>
+          </section>
 
-            <h3 className="paparan mt-8 text-lg">Jika ragu</h3>
-            <p className="mt-3 leading-relaxed text-muted-foreground">
-              Bandingkan dengan arah saf di masjid atau surau berdekatan — itu rujukan yang sudah
-              disemak. Aplikasi ini membantu anda menganggar, bukan menggantikan pengesahan di
-              tempat solat.
-            </p>
+          <section className="flex max-w-3xl gap-4 rounded-3xl bg-amaran-lembut p-5 sm:p-6">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-card text-amaran">
+              <Landmark className="size-5" strokeWidth={2} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="paparan text-lg">{t.ragu}</h3>
+              <p className="mt-1 leading-relaxed text-foreground/75">
+                {t.raguTeks}
+              </p>
+            </div>
           </section>
         </div>
       ) : null}

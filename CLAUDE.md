@@ -41,15 +41,18 @@ No global state library. State lives in:
 `firebase.ts` initialises the client SDK (Auth + Firestore). Server-side routes use Firebase Admin via `lib/fcm-admin.ts`. Firestore security rules are in `firestore.rules` — user data is strictly UID-scoped.
 
 ### UI
-shadcn/ui components in `components/ui/`. TailwindCSS v4 with CSS variables. Theme via `next-themes`. Design is minimalist: `divide-y divide-border/50` lists, no outer-border cards, green primary accent (`oklch(0.42 0.13 162)` light / `oklch(0.70 0.14 158)` dark).
+shadcn/ui components in `components/ui/`. TailwindCSS v4 with CSS variables. Theme via `next-themes` (light is the default). Design is **colourful and friendly** (Istiqamah-inspired): soft tinted background, white `kad` cards (rounded-3xl), a six-colour palette (`bg-w1…w6`, `text-wN`, `bg-wN-lembut`) used to give each habit/prayer/section its own colour, icon chips, pill-shaped controls, and a bottom tab bar on phones (`components/BarBawah.tsx`). Every UI colour derives from a user-selectable hue `--rona` (Tetapan → Rupa; `lib/aksen.ts`), green by default. Prayers always use `WARNA_WAKTU` from `lib/aksen.ts`. Reference page: `app/amalan/page.tsx`.
+
+### Language
+UI is Malay (default) and English. No i18n library: each file colocates `const ms = {…}; const en: typeof ms = {…}` and reads it with `useTeks()` from `components/BahasaProvider.tsx`; shared month/day names live in `lib/bahasa.ts`. Push notifications are sent in the language stored on the FCM token (`bahasa` field).
 
 ### Analytics
 `lib/track.ts` writes visitor zone + lat/lng to the Firestore `visits` collection (public read/write). Tracked once per session via a localStorage flag. Historical data was seeded via `scripts/seed-visits.mjs`.
 
 ## App Identity
 - App name: **MariSolat** (no space)
-- All UI text is in **Malay (BM)**
-- Design principle: minimalist — prefer whitespace and plain lists over cards/borders
+- UI text is in **Malay (BM)** by default, with English as an option — every string needs both
+- Design principle: colourful and friendly — cards, per-item colours, pill controls (see UI above)
 
 ## Deployment Workflow
 See the memory file for the "okay commit it" workflow which bumps version, commits, pushes, and deploys to Firebase Hosting automatically.

@@ -1,4 +1,17 @@
 import { toast } from 'sonner';
+import { teksSemasa } from '@/lib/bahasa';
+
+const ms = {
+  tajuk: (p: string) => `Waktu ${p}`,
+  huraian: (p: string) => `Sudah masuk waktu ${p}.`,
+  berhenti: 'Berhenti',
+};
+const en: typeof ms = {
+  tajuk: p => `${p} time`,
+  huraian: p => `It is now time for ${p}.`,
+  berhenti: 'Stop',
+};
+const TEKS = { ms, en };
 
 export const AZAN_PRAYERS = ['subuh', 'zohor', 'asar', 'maghrib', 'isyak'] as const;
 
@@ -72,9 +85,10 @@ export function triggerAzan(prayer: string): void {
   playAzan(prayer === 'subuh');
   // Kekal sehingga ditolak: azan berbunyi lebih lama daripada mana-mana
   // toast, jadi butang berhenti mesti kekal selagi bunyinya berjalan.
-  idToast = toast.info(`Waktu ${label}`, {
-    description: `Sudah masuk waktu ${label}.`,
+  const t = teksSemasa(TEKS);
+  idToast = toast.info(t.tajuk(label), {
+    description: t.huraian(label),
     duration: Infinity,
-    action: { label: 'Berhenti', onClick: stopAzan },
+    action: { label: t.berhenti, onClick: stopAzan },
   });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, sendPushNotification } from '@/lib/fcm-admin';
+import { TEKS_NOTIFIKASI, type Bahasa } from '@/lib/bahasa';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const AZAN_PRAYERS = ['subuh', 'zohor', 'asar', 'maghrib', 'isyak'] as const;
@@ -30,12 +31,17 @@ export async function GET(req: NextRequest) {
   if (snapshot.empty) return NextResponse.json({ sent: 0, time: hhmm });
 
   // Group by zone
-  const zoneMap: Record<string, { token: string; prayers: string[] }[]> = {};
+  const zoneMap: Record<string, { token: string; prayers: string[]; bahasa: Bahasa }[]> = {};
   snapshot.forEach(doc => {
     const d = doc.data();
     if (!d.zone) return;
     if (!zoneMap[d.zone]) zoneMap[d.zone] = [];
-    zoneMap[d.zone].push({ token: doc.id, prayers: d.azanPrayers ?? [...AZAN_PRAYERS] });
+    zoneMap[d.zone].push({
+      token: doc.id,
+      prayers: d.azanPrayers ?? [...AZAN_PRAYERS],
+      // Token lama tiada medan bahasa — ia didaftarkan ketika aplikasi BM sahaja.
+      bahasa: d.bahasa === 'en' ? 'en' : 'ms',
+    });
   });
 
   let totalSent = 0;
@@ -49,24 +55,28 @@ export async function GET(req: NextRequest) {
       for (const prayer of AZAN_PRAYERS) {
         if (times[prayer] !== hhmm) continue;
 
-        const targets = subscribers.filter(s => s.prayers.includes(prayer)).map(s => s.token);
-        if (targets.length === 0) continue;
+        const penerima = subscribers.filter(s => s.prayers.includes(prayer));
+        for (const bahasa of ['ms', 'en'] as const) {
+          const targets = penerima.filter(s => s.bahasa === bahasa).map(s => s.token);
+          if (targets.length === 0) continue;
+          const t = TEKS_NOTIFIKASI[bahasa];
 
-        const invalid = await sendPushNotification(
-          targets,
-          `Waktu ${PRAYER_LABELS[prayer]}`,
-          `Sudah masuk waktu ${PRAYER_LABELS[prayer]}. (${zone})`,
-          { type: 'azan', prayer, tag: `azan-${prayer}` },
-        );
+          const invalid = await sendPushNotification(
+            targets,
+            t.azanTajuk(PRAYER_LABELS[prayer]),
+            t.azanBadan(PRAYER_LABELS[prayer], zone),
+            { type: 'azan', prayer, tag: `azan-${prayer}` },
+          );
 
-        // Remove stale tokens
-        if (invalid.length > 0) {
-          const batch = db.batch();
-          invalid.forEach(t => batch.delete(db.collection('fcm_tokens').doc(t)));
-          await batch.commit();
+          // Remove stale tokens
+          if (invalid.length > 0) {
+            const batch = db.batch();
+            invalid.forEach(tk => batch.delete(db.collection('fcm_tokens').doc(tk)));
+            await batch.commit();
+          }
+
+          totalSent += targets.length;
         }
-
-        totalSent += targets.length;
       }
     } catch {
       // Continue with other zones

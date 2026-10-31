@@ -1,4 +1,5 @@
 import { parseTime, type WaktuSolat } from '@/lib/solat';
+import type { Kamus } from '@/lib/bahasa';
 
 /**
  * Lima kategori dalam setiap waktu solat fardu, dari yang paling afdal hingga
@@ -6,14 +7,32 @@ import { parseTime, type WaktuSolat } from '@/lib/solat';
  * halaman utama boleh menunjukkan kategori semasa tanpa menyalin logiknya.
  */
 export const KATEGORI = [
-  { id: 'fadhilat', title: 'Fadhilat', description: 'Waktu paling awal selepas azan. Paling banyak pahala.' },
-  { id: 'ikhtiar', title: 'Ikhtiar', description: 'Kira-kira 15 minit selepas azan. Waktu yang diutamakan.' },
-  { id: 'jawaz', title: 'Jawaz', description: 'Waktu yang harus. Boleh sembahyang tapi bukan waktu terbaik.' },
-  { id: 'karahah', title: 'Karahah', description: 'Kira-kira 20 minit sebelum masuk waktu solat seterusnya. Makruh.' },
-  { id: 'tahrim', title: 'Tahrim', description: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.' },
+  { id: 'fadhilat', title: 'Fadhilat' },
+  { id: 'ikhtiar', title: 'Ikhtiar' },
+  { id: 'jawaz', title: 'Jawaz' },
+  { id: 'karahah', title: 'Karahah' },
+  { id: 'tahrim', title: 'Tahrim' },
 ] as const;
 
 export type KategoriId = (typeof KATEGORI)[number]['id'];
+
+export const HURAIAN_KATEGORI: Kamus<Record<KategoriId, string>> = {
+  ms: {
+    fadhilat: 'Waktu paling awal selepas azan. Paling banyak pahala.',
+    ikhtiar: 'Kira-kira 15 minit selepas azan. Waktu yang diutamakan.',
+    jawaz: 'Waktu yang harus. Boleh sembahyang tapi bukan waktu terbaik.',
+    karahah: 'Kira-kira 20 minit sebelum masuk waktu solat seterusnya. Makruh.',
+    tahrim: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.',
+  },
+  en: {
+    fadhilat: 'Virtue — the earliest time, right after the azan. The greatest reward.',
+    ikhtiar: 'Preferred — about 15 minutes after the azan. The time to aim for.',
+    jawaz: 'Permissible — you may pray now, but it is not the best time.',
+    karahah: 'Disliked (makruh) — about 20 minutes before the next prayer time begins.',
+    tahrim: 'Forbidden — the next prayer is about to begin. Deliberately delaying until now is haram, though the prayer is still valid.',
+  },
+};
+
 export type Julat = { dari: Date; ke: Date };
 
 // Sempadan tetap bagi setiap julat: 15 | 15 | baki | 20 | 5 minit.

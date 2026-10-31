@@ -22,14 +22,42 @@ import CariMasjid from '@/components/CariMasjid';
 import NavLinks from '@/components/NavLinks';
 import ScrollableNav from '@/components/ScrollableNav';
 import ButangAkaun from '@/components/ButangAkaun';
+import { PERISTIWA_BUKA_MENU } from '@/components/BarBawah';
 import { APP_VERSION } from '@/lib/version';
+import { useBahasa, useTeks } from '@/components/BahasaProvider';
+import { KOD_BAHASA } from '@/lib/bahasa';
+
+const ms = {
+  bukaMenu: 'Buka menu',
+  huraian: 'MariSolat — waktu solat Malaysia',
+  keCerah: 'Tukar ke tema cerah',
+  keGelap: 'Tukar ke tema gelap',
+  tukarBahasa: 'Switch to English',
+};
+const en: typeof ms = {
+  bukaMenu: 'Open menu',
+  huraian: 'MariSolat — Malaysian prayer times',
+  keCerah: 'Switch to light theme',
+  keGelap: 'Switch to dark theme',
+  tukarBahasa: 'Tukar ke Bahasa Melayu',
+};
+const TEKS = { ms, en };
 
 export default function Header() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [laciBuka, setLaciBuka] = useState(false);
+  const { bahasa, tukar } = useBahasa();
+  const t = useTeks(TEKS);
 
   useEffect(() => setMounted(true), []);
+
+  // Tab "Lagi" di bar bawah membuka laci yang sama.
+  useEffect(() => {
+    const buka = () => setLaciBuka(true);
+    window.addEventListener(PERISTIWA_BUKA_MENU, buka);
+    return () => window.removeEventListener(PERISTIWA_BUKA_MENU, buka);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full shrink-0 py-4">
@@ -41,7 +69,8 @@ export default function Header() {
       <div className="flex items-center gap-1">
       <Sheet open={laciBuka} onOpenChange={setLaciBuka}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="sm" aria-label="Buka menu">
+          {/* Pada telefon, tab "Lagi" di bawah menggantikan butang ini. */}
+          <Button variant="ghost" size="sm" aria-label={t.bukaMenu} className="max-lg:hidden">
             <MenuIcon />
           </Button>
         </SheetTrigger>
@@ -52,7 +81,7 @@ export default function Header() {
                 <Logo tagline />
               </Link>
             </SheetTitle>
-            <SheetDescription className="sr-only">MariSolat — waktu solat Malaysia</SheetDescription>
+            <SheetDescription className="sr-only">{t.huraian}</SheetDescription>
           </SheetHeader>
           <ScrollableNav>
             <div className="px-4">
@@ -71,6 +100,18 @@ export default function Header() {
         </SheetContent>
       </Sheet>
 
+      {/* Menunjukkan bahasa yang akan ditukar ke, bukan yang aktif — label
+          ialah tindakan, sama seperti ikon tema di sebelahnya. */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => tukar(bahasa === 'ms' ? 'en' : 'ms')}
+        aria-label={t.tukarBahasa}
+        className="text-xs font-semibold tracking-wide"
+      >
+        {KOD_BAHASA[bahasa === 'ms' ? 'en' : 'ms']}
+      </Button>
+
       {!mounted ? (
         <Button variant="ghost" size="sm" aria-hidden>
           <Loader2Icon className="animate-spin" />
@@ -80,7 +121,7 @@ export default function Header() {
           variant="ghost"
           size="sm"
           onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-          aria-label={resolvedTheme === 'dark' ? 'Tukar ke tema cerah' : 'Tukar ke tema gelap'}
+          aria-label={resolvedTheme === 'dark' ? t.keCerah : t.keGelap}
         >
           {resolvedTheme === 'dark' ? <Sun /> : <Moon />}
         </Button>

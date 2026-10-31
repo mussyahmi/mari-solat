@@ -1,4 +1,5 @@
 import { adjustRawTime, formatTime } from '@/utils/format';
+import { teksSemasa, type Bahasa } from '@/lib/bahasa';
 
 /**
  * Logik waktu solat yang dikongsi.
@@ -31,13 +32,27 @@ export type WaktuSolat = Record<Waktu, string> & {
 
 const API = 'https://api.waktusolat.app';
 
+const ms = {
+  gagalAmbil: (zon: string) => `Waktu solat untuk zon ${zon} tidak dapat diambil.`,
+  jam: (n: number) => `${n} jam`,
+  minit: (n: number) => `${n} minit`,
+  saat: (n: number) => `${n} saat`,
+};
+const en: typeof ms = {
+  gagalAmbil: zon => `Prayer times for zone ${zon} could not be fetched.`,
+  jam: n => `${n} ${n === 1 ? 'hour' : 'hours'}`,
+  minit: n => `${n} ${n === 1 ? 'minute' : 'minutes'}`,
+  saat: n => `${n} ${n === 1 ? 'second' : 'seconds'}`,
+};
+const TEKS = { ms, en };
+
 export async function fetchSolat(zon: string, tarikh: Date) {
   const res = await fetch(
     `${API}/solat/${zon}/${tarikh.getDate()}?year=${tarikh.getFullYear()}&month=${tarikh.getMonth() + 1}`
   );
   const data = await res.json();
   if (!res.ok || data.status !== 'OK!') {
-    throw new Error(`Waktu solat untuk zon ${zon} tidak dapat diambil.`);
+    throw new Error(teksSemasa(TEKS).gagalAmbil(zon));
   }
   return data;
 }
@@ -97,12 +112,13 @@ export function bakiMasa(sasaran: Date, dari: Date): BakiMasa {
 }
 
 /** "1 jam 4 minit 22 saat", melangkau unit yang kosong. */
-export function bakiMasaTeks(ms: number) {
+export function bakiMasaTeks(ms: number, bahasa: Bahasa = 'ms') {
+  const t = TEKS[bahasa];
   const { jam, minit, saat } = pecahMs(ms);
   const bahagian: string[] = [];
-  if (jam > 0) bahagian.push(`${jam} jam`);
-  if (minit > 0) bahagian.push(`${minit} minit`);
-  bahagian.push(`${saat} saat`);
+  if (jam > 0) bahagian.push(t.jam(jam));
+  if (minit > 0) bahagian.push(t.minit(minit));
+  bahagian.push(t.saat(saat));
   return bahagian.join(' ');
 }
 

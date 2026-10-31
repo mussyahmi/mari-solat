@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     // Sepadan dengan --background dan --primary dalam globals.css.
-    background_color: '#0b1310',
-    theme_color: '#0b1310',
+    background_color: '#f1f8f4',
+    theme_color: '#f1f8f4',
     orientation: 'portrait',
     icons: [
       {

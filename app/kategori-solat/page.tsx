@@ -2,16 +2,73 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Ban, CircleCheck, Hourglass, Sparkles, Star, type LucideIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageShell from '@/components/PageShell';
 import { bakiMasaTeks, binaWaktu, fetchSolat, type WaktuSolat } from '@/lib/solat';
+import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import {
+  HURAIAN_KATEGORI,
   KATEGORI,
   julatKategori,
   kategoriPada,
   senaraiJulat,
   type KategoriId,
 } from '@/lib/kategori';
+import { palet, WARNA_WAKTU } from '@/lib/aksen';
+import { cn } from '@/lib/utils';
+
+const ms = {
+  tajuk: 'Kategori Waktu',
+  lede: 'Setiap waktu solat fardu terbahagi kepada lima kategori, dari yang paling afdal hingga yang hampir terlepas.',
+  tiadaZonTajuk: 'Pilih zon anda dahulu',
+  tiadaZonTeks: 'Kategori waktu dikira daripada waktu solat zon anda.',
+  keTetapan: 'Pergi ke Tetapan',
+  ralatTajuk: 'Data tidak dapat dimuatkan',
+  ralatTeks: 'Sambungan ke pangkalan data waktu solat gagal. Semak sambungan internet anda, kemudian muat semula halaman.',
+  sekarangDalam: (n: string) => `Sekarang dalam waktu ${n}`,
+  bertukarKepada: (k: string) => `Bertukar kepada ${k} dalam`,
+  tamatDalam: (n: string) => `Waktu ${n} tamat dalam`,
+  sekarang: 'Sekarang',
+  diLuar: 'Di luar waktu solat',
+  bermulaPada: (n: string) => `Waktu ${n} bermula`,
+  waktu: 'Waktu',
+  bermula: 'Bermula',
+  berakhir: 'Berakhir',
+  kategoriIni: 'Kategori ini',
+};
+const en: typeof ms = {
+  tajuk: 'Prayer Time Categories',
+  lede: 'Every obligatory prayer time is divided into five categories, from the most virtuous to the one about to be missed.',
+  tiadaZonTajuk: 'Choose your zone first',
+  tiadaZonTeks: "The categories are calculated from your zone's prayer times.",
+  keTetapan: 'Go to Settings',
+  ralatTajuk: "Data couldn't be loaded",
+  ralatTeks: "We couldn't reach the prayer times database. Check your internet connection, then reload the page.",
+  sekarangDalam: n => `Now in ${n} time`,
+  bertukarKepada: k => `Changes to ${k} in`,
+  tamatDalam: n => `${n} time ends in`,
+  sekarang: 'Now',
+  diLuar: 'Outside prayer time',
+  bermulaPada: n => `${n} time begins at`,
+  waktu: 'Prayer',
+  bermula: 'Begins',
+  berakhir: 'Ends',
+  kategoriIni: 'This category',
+};
+const TEKS = { ms, en };
+
+// Warna tetap setiap kategori: hijau yang paling afdal hingga merah jambu
+// yang hampir terlepas. Indeks ke dalam PALET.
+const WARNA_KATEGORI: Record<KategoriId, number> = {
+  fadhilat: 2, ikhtiar: 1, jawaz: 5, karahah: 4, tahrim: 3,
+};
+
+const IKON_KATEGORI: Record<KategoriId, LucideIcon> = {
+  fadhilat: Sparkles, ikhtiar: Star, jawaz: CircleCheck, karahah: Hourglass, tahrim: Ban,
+};
+
+const warnaWaktu = (nama: string) => WARNA_WAKTU[nama.toLowerCase() as keyof typeof WARNA_WAKTU] ?? 0;
 
 function fmt12(d: Date) {
   const h = d.getHours() % 12 || 12;
@@ -20,6 +77,9 @@ function fmt12(d: Date) {
 }
 
 export default function KategoriSolatPage() {
+  const t = useTeks(TEKS);
+  const huraian = useTeks(HURAIAN_KATEGORI);
+  const { bahasa } = useBahasa();
   const [memuat, setMemuat] = useState(true);
   const [tiadaZon, setTiadaZon] = useState(false);
   const [ralat, setRalat] = useState(false);
@@ -91,8 +151,8 @@ export default function KategoriSolatPage() {
 
   return (
     <PageShell
-      tajuk="Kategori Waktu"
-      lede="Setiap waktu solat fardu terbahagi kepada lima kategori, dari yang paling afdal hingga yang hampir terlepas."
+      tajuk={t.tajuk}
+      lede={t.lede}
     >
       {memuat ? (
         <div className="space-y-10">
@@ -101,136 +161,159 @@ export default function KategoriSolatPage() {
             <Skeleton className="h-10 w-56" />
             <Skeleton className="h-4 w-44" />
           </div>
-          <Skeleton className="h-3 w-full rounded-full" />
+          <Skeleton className="h-4 w-full rounded-full" />
           <div className="space-y-6">
             {[0, 1, 2].map(i => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-16 w-full rounded-3xl" />
             ))}
           </div>
         </div>
       ) : tiadaZon ? (
         <Panduan
-          tajuk="Pilih zon anda dahulu"
-          teks="Kategori waktu dikira daripada waktu solat zon anda."
-          pautan="Pergi ke Tetapan"
+          tajuk={t.tiadaZonTajuk}
+          teks={t.tiadaZonTeks}
+          pautan={t.keTetapan}
         />
       ) : ralat ? (
         <Panduan
-          tajuk="Data tidak dapat dimuatkan"
-          teks="Sambungan ke pangkalan data waktu solat gagal. Semak sambungan internet anda, kemudian muat semula halaman."
+          tajuk={t.ralatTajuk}
+          teks={t.ralatTeks}
         />
       ) : (
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-5">
           {/* Jawapan halaman ini ialah nama kategori — itu yang dicari orang.
               Kiraan detik memberitahu bila ia bertukar. */}
-          <div className="flex flex-col items-start gap-2">
-            {semasa && kategoriSemasa ? (
-              <>
-                <p className="text-muted-foreground">Sekarang dalam waktu {semasa.nama}</p>
-                <p className="paparan text-[16vw] leading-none text-primary lg:text-[8vw]">
-                  {KATEGORI.find(k => k.id === kategoriSemasa)!.title}
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  {kategoriSeterusnya ? (
-                    <>
-                      Bertukar kepada {kategoriSeterusnya.title} dalam{' '}
-                      <span className="tabular font-semibold text-foreground">{bakiMasaTeks(bakiMs)}</span>
-                    </>
-                  ) : (
-                    <>
-                      Waktu {semasa.nama} tamat dalam{' '}
-                      <span className="tabular font-semibold text-foreground">{bakiMasaTeks(bakiMs)}</span>
-                    </>
-                  )}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground">Sekarang</p>
-                <p className="paparan text-[12vw] leading-none text-muted-foreground lg:text-[6vw]">
-                  Di luar waktu solat
-                </p>
-                {julatSeterusnya && (
-                  <p className="mt-1 text-muted-foreground">
-                    Waktu {julatSeterusnya.nama} bermula{' '}
-                    <span className="tabular font-semibold text-foreground">{fmt12(julatSeterusnya.mula)}</span>
+          {semasa && kategoriSemasa ? (
+            (() => {
+              const p = palet(WARNA_KATEGORI[kategoriSemasa]);
+              const pw = palet(warnaWaktu(semasa.nama));
+              const Ikon = IKON_KATEGORI[kategoriSemasa];
+              return (
+                <div className={cn('flex flex-col items-start gap-3 rounded-3xl p-5 sm:p-6', p.lembut)}>
+                  <p className="flex items-center gap-2 text-sm text-foreground/70">
+                    <span className={cn('size-2 rounded-full', pw.pekat)} />
+                    {t.sekarangDalam(semasa.nama)}
                   </p>
-                )}
-              </>
-            )}
-          </div>
+                  <div className="flex items-center gap-4">
+                    <span className={cn('flex size-14 shrink-0 items-center justify-center rounded-2xl text-primary-foreground sm:size-16', p.pekat)}>
+                      <Ikon className="size-7" strokeWidth={2} />
+                    </span>
+                    <p className={cn('paparan text-[14vw] leading-none sm:text-6xl lg:text-7xl', p.teks)}>
+                      {KATEGORI.find(k => k.id === kategoriSemasa)!.title}
+                    </p>
+                  </div>
+                  <p className="text-foreground/70">
+                    {kategoriSeterusnya ? t.bertukarKepada(kategoriSeterusnya.title) : t.tamatDalam(semasa.nama)}{' '}
+                    <span className="tabular font-semibold text-foreground">{bakiMasaTeks(bakiMs, bahasa)}</span>
+                  </p>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="kad flex flex-col items-start gap-2 p-5 sm:p-6">
+              <p className="text-sm text-muted-foreground">{t.sekarang}</p>
+              <p className="paparan text-4xl leading-tight text-muted-foreground lg:text-5xl">
+                {t.diLuar}
+              </p>
+              {julatSeterusnya && (
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
+                  {t.bermulaPada(julatSeterusnya.nama)}{' '}
+                  <span
+                    className={cn(
+                      'tabular rounded-full px-3 py-0.5 text-sm font-semibold',
+                      palet(warnaWaktu(julatSeterusnya.nama)).lembut,
+                      palet(warnaWaktu(julatSeterusnya.nama)).teks
+                    )}
+                  >
+                    {fmt12(julatSeterusnya.mula)}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
 
           {semasa && julat && (
-            <dl className="flex flex-wrap gap-x-12 gap-y-4 border-t border-border/60 pt-5">
-              <div>
-                <dt className="text-sm text-muted-foreground">Waktu</dt>
-                <dd className="paparan mt-1 text-2xl">{semasa.nama}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Bermula</dt>
-                <dd className="angka-paparan mt-1 text-2xl">{fmt12(semasa.mula)}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Berakhir</dt>
-                <dd className="angka-paparan mt-1 text-2xl">{fmt12(semasa.tamat)}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Kategori ini</dt>
-                <dd className="angka-paparan mt-1 text-2xl">
-                  {fmt12(julat[kategoriSemasa!].dari)} – {fmt12(julat[kategoriSemasa!].ke)}
-                </dd>
-              </div>
+            <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+              {(
+                [
+                  [t.waktu, semasa.nama, warnaWaktu(semasa.nama), 'paparan'],
+                  [t.bermula, fmt12(semasa.mula), 4, 'angka-paparan'],
+                  [t.berakhir, fmt12(semasa.tamat), 0, 'angka-paparan'],
+                  [
+                    t.kategoriIni,
+                    `${fmt12(julat[kategoriSemasa!].dari)} – ${fmt12(julat[kategoriSemasa!].ke)}`,
+                    WARNA_KATEGORI[kategoriSemasa!],
+                    'angka-paparan',
+                  ],
+                ] as const
+              ).map(([label, nilai, w, fon]) => (
+                <div key={label} className="kad p-4">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className={cn(fon, 'mt-1.5 text-xl leading-tight sm:text-2xl', palet(w).teks)}>{nilai}</dd>
+                </div>
+              ))}
             </dl>
           )}
 
           {/* Kategori ialah julat masa yang berturutan, jadi lebarnya
               menunjukkan tempoh sebenar masing-masing. */}
           {semasa && julat && (
-            <section>
-              <div className="relative flex h-3 overflow-hidden rounded-full bg-muted">
+            <section className="kad p-5">
+              <div className="relative flex h-4 gap-1">
                 {KATEGORI.map(k => {
                   const w = julat[k.id];
                   const lebar = ((w.ke.getTime() - w.dari.getTime()) / jumlahMs) * 100;
                   const aktif = k.id === kategoriSemasa;
+                  const css = palet(WARNA_KATEGORI[k.id]).css;
                   return (
                     <div
                       key={k.id}
-                      style={{ width: `${lebar}%` }}
-                      className={`h-full border-r border-background/70 last:border-r-0 ${
-                        aktif ? 'bg-primary' : 'bg-primary/25'
-                      }`}
+                      style={{
+                        width: `${lebar}%`,
+                        background: aktif ? css : `oklch(from ${css} l c h / 0.35)`,
+                      }}
+                      className="h-full min-w-1.5 rounded-full"
                     />
                   );
                 })}
                 <div
-                  className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-background"
+                  className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-card shadow-sm ring-[3px] ring-foreground"
                   style={{ left: `${Math.min(Math.max(kadarKini, 0), 100)}%` }}
                 />
               </div>
-              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                 <span className="tabular">{fmt12(semasa.mula)}</span>
                 <span className="tabular">{fmt12(semasa.tamat)}</span>
               </div>
             </section>
           )}
 
-          <ol className="divide-y divide-border/50">
+          <ol className="kad divide-y divide-border/50 px-4 sm:px-5">
             {KATEGORI.map(item => {
               const aktif = item.id === kategoriSemasa;
               const w = julat?.[item.id];
+              const p = palet(WARNA_KATEGORI[item.id]);
+              const Ikon = IKON_KATEGORI[item.id];
               return (
-                <li key={item.id} className="flex gap-4 py-6">
-                  <span className={`mt-1.5 size-2 shrink-0 rounded-full ${aktif ? 'bg-primary' : 'bg-border'}`} />
+                <li key={item.id} className="flex gap-4 py-5">
+                  <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-2xl', p.lembut, p.teks)}>
+                    <Ikon className="size-5" strokeWidth={2} />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-3">
-                      <p className={`paparan text-lg ${aktif ? 'text-primary' : ''}`}>{item.title}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className={cn('paparan text-lg', aktif && p.teks)}>{item.title}</p>
+                      {aktif && (
+                        <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold text-primary-foreground', p.pekat)}>
+                          {t.sekarang}
+                        </span>
+                      )}
                       {w && (
                         <p className="angka-paparan text-sm text-muted-foreground">
                           {fmt12(w.dari)} – {fmt12(w.ke)}
                         </p>
                       )}
                     </div>
-                    <p className="mt-1 max-w-[52ch] leading-relaxed text-muted-foreground">{item.description}</p>
+                    <p className="mt-1 max-w-[52ch] leading-relaxed text-muted-foreground">{huraian[item.id]}</p>
                   </div>
                 </li>
               );
@@ -244,8 +327,8 @@ export default function KategoriSolatPage() {
 
 function Panduan({ tajuk, teks, pautan }: { tajuk: string; teks: string; pautan?: string }) {
   return (
-    <div className="max-w-md">
-      <p className="paparan text-2xl ">{tajuk}</p>
+    <div className="kad max-w-md p-6">
+      <p className="paparan text-2xl">{tajuk}</p>
       <p className="mt-2 leading-relaxed text-muted-foreground">{teks}</p>
       {pautan && (
         <Link

@@ -14,6 +14,6 @@
  * tema.
  */
 export const WARNA_TEMA = {
-  cerah: '#f8fcf9',
+  cerah: '#f1f8f4',
   gelap: '#02100a',
 };

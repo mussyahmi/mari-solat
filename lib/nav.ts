@@ -6,47 +6,53 @@
  * pasti akan terpesong. Kedua-dua permukaan kini membaca dari sini.
  */
 
+import type { Kamus } from '@/lib/bahasa';
+
 export type NavLink = {
   href: string;
-  label: string;
+  label: Kamus<string>;
 };
 
 export type NavGroup = {
-  label: string;
+  label: Kamus<string>;
   links: NavLink[];
 };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Waktu',
+    label: { ms: 'Waktu', en: 'Times' },
     // Susunan mengikut jenis, bukan rawak: tiga yang pertama semuanya
     // diterbitkan daripada waktu solat hari ini, jadi ia berkumpul di bawah
     // Waktu Solat. Arah Kiblat menjawab soalan yang berbeza sama sekali —
     // kedudukan, bukan masa — jadi ia datang selepas kumpulan itu.
     links: [
-      { href: '/', label: 'Waktu Solat' },
-      { href: '/kategori-solat', label: 'Kategori Waktu' },
-      { href: '/satu-pertiga-malam', label: 'Satu Pertiga Malam' },
-      { href: '/arah-kiblat', label: 'Arah Kiblat' },
-      { href: '/qada-solat', label: 'Qada Solat' },
+      { href: '/', label: { ms: 'Waktu Solat', en: 'Prayer Times' } },
+      { href: '/kategori-solat', label: { ms: 'Kategori Waktu', en: 'Time Categories' } },
+      { href: '/satu-pertiga-malam', label: { ms: 'Satu Pertiga Malam', en: 'Last Third of the Night' } },
+      { href: '/arah-kiblat', label: { ms: 'Arah Kiblat', en: 'Qibla Direction' } },
+      { href: '/qada-solat', label: { ms: 'Qada Solat', en: 'Qada Prayers' } },
     ],
   },
   {
-    label: 'Amalan',
-    links: [{ href: '/tasbih', label: 'Tasbih' }],
-  },
-  {
-    label: 'Ilmu Solat',
+    label: { ms: 'Amalan', en: 'Practices' },
     links: [
-      { href: '/rukun-solat', label: 'Rukun Solat' },
-      { href: '/syarat-wajib-solat', label: 'Syarat Wajib Solat' },
-      { href: '/syarat-sah-solat', label: 'Syarat Sah Solat' },
-      { href: '/pembatal-solat', label: 'Pembatal Solat' },
+      { href: '/amalan', label: { ms: 'Jejak Amalan', en: 'Ibadah Tracker' } },
+      { href: '/peringatan', label: { ms: 'Peringatan', en: 'Reminders' } },
+      { href: '/tasbih', label: { ms: 'Tasbih', en: 'Tasbih' } },
     ],
   },
   {
-    label: 'Lain-lain',
-    links: [{ href: '/tetapan', label: 'Tetapan' }],
+    label: { ms: 'Ilmu Solat', en: 'Prayer Knowledge' },
+    links: [
+      { href: '/rukun-solat', label: { ms: 'Rukun Solat', en: 'Pillars of Prayer' } },
+      { href: '/syarat-wajib-solat', label: { ms: 'Syarat Wajib Solat', en: 'Obligation Conditions' } },
+      { href: '/syarat-sah-solat', label: { ms: 'Syarat Sah Solat', en: 'Validity Conditions' } },
+      { href: '/pembatal-solat', label: { ms: 'Pembatal Solat', en: 'Prayer Invalidators' } },
+    ],
+  },
+  {
+    label: { ms: 'Lain-lain', en: 'Other' },
+    links: [{ href: '/tetapan', label: { ms: 'Tetapan', en: 'Settings' } }],
   },
 ];
 

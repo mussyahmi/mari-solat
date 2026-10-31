@@ -1,3 +1,5 @@
+import { teksSemasa } from '@/lib/bahasa';
+
 /**
  * Mesej ralat lokasi yang dikongsi.
  *
@@ -10,13 +12,33 @@
  * mengikut tempat, jadi ia diberi sebagai hujah dan bukan dibakar ke dalam
  * ayat.
  */
-export const RALAT_LOKASI = {
+const ms = {
   tidakDisokong: (susulan?: string) =>
     `Pelayar ini tidak menyokong geolokasi.${susulan ? ` ${susulan}` : ''}`,
   tidakDibaca: (susulan?: string) =>
     `Lokasi anda tidak dapat dibaca.${susulan ? ` ${susulan}` : ''}`,
   tiadaZon: 'Tiada zon waktu solat ditemui untuk lokasi ini.',
-} as const;
+  pilihZon: 'Pilih zon anda di Tetapan.',
+};
+const en: typeof ms = {
+  tidakDisokong: susulan =>
+    `This browser doesn't support geolocation.${susulan ? ` ${susulan}` : ''}`,
+  tidakDibaca: susulan =>
+    `Your location couldn't be read.${susulan ? ` ${susulan}` : ''}`,
+  tiadaZon: 'No prayer time zone was found for this location.',
+  pilihZon: 'Choose your zone in Settings.',
+};
+export const TEKS_LOKASI = { ms, en };
 
-/** Susulan yang paling kerap: pilih zon secara manual. */
-export const PILIH_ZON = 'Pilih zon anda di Tetapan.';
+export const RALAT_LOKASI = {
+  tidakDisokong: (susulan?: string) => teksSemasa(TEKS_LOKASI).tidakDisokong(susulan),
+  tidakDibaca: (susulan?: string) => teksSemasa(TEKS_LOKASI).tidakDibaca(susulan),
+  get tiadaZon() { return teksSemasa(TEKS_LOKASI).tiadaZon; },
+};
+
+/**
+ * Susulan yang paling kerap: pilih zon secara manual. Malar BM sahaja;
+ * gunakan `susulanPilihZon()` untuk teks mengikut bahasa semasa.
+ */
+export const PILIH_ZON = ms.pilihZon;
+export const susulanPilihZon = () => teksSemasa(TEKS_LOKASI).pilihZon;

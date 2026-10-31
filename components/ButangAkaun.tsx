@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { UserRoundIcon } from 'lucide-react';
+import { ChevronRightIcon, LogOutIcon, RotateCcwIcon, UserRoundIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,6 +12,27 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAkaun } from '@/components/AkaunProvider';
+import { useTeks } from '@/components/BahasaProvider';
+
+const ms = {
+  logMasuk: 'Log masuk',
+  akaunAnda: 'Akaun anda',
+  privasi: 'Nama sebenar anda tidak pernah dipaparkan kepada pengguna lain.',
+  qada: 'Qada solat',
+  belumBermula: 'Belum bermula',
+  baki: (n: number) => `${n} baki`,
+  logKeluar: 'Log keluar',
+};
+const en: typeof ms = {
+  logMasuk: 'Sign in',
+  akaunAnda: 'Your account',
+  privasi: 'Your real name is never shown to other users.',
+  qada: 'Qada prayers',
+  belumBermula: 'Not started',
+  baki: n => `${n} left`,
+  logKeluar: 'Sign out',
+};
+const TEKS = { ms, en };
 
 /**
  * Akaun dalam kepala, bukan terkubur di dalam /qada-solat.
@@ -23,6 +44,7 @@ import { useAkaun } from '@/components/AkaunProvider';
 export default function ButangAkaun() {
   const { user, alias, bakiQada, memuat, masuk, keluar } = useAkaun();
   const [buka, setBuka] = useState(false);
+  const t = useTeks(TEKS);
 
   if (memuat) {
     return (
@@ -34,7 +56,7 @@ export default function ButangAkaun() {
 
   if (!user) {
     return (
-      <Button variant="ghost" size="sm" onClick={masuk} aria-label="Log masuk">
+      <Button variant="ghost" size="sm" onClick={masuk} aria-label={t.logMasuk}>
         <UserRoundIcon />
       </Button>
     );
@@ -42,7 +64,7 @@ export default function ButangAkaun() {
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setBuka(true)} aria-label="Akaun anda">
+      <Button variant="ghost" size="sm" onClick={() => setBuka(true)} aria-label={t.akaunAnda}>
         {user.photoURL ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.photoURL} alt="" className="size-5 rounded-full" referrerPolicy="no-referrer" />
@@ -52,30 +74,37 @@ export default function ButangAkaun() {
       </Button>
 
       <Dialog open={buka} onOpenChange={setBuka}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="paparan text-2xl">{alias || 'Akaun anda'}</DialogTitle>
+            <DialogTitle className="paparan text-2xl">{alias || t.akaunAnda}</DialogTitle>
             <DialogDescription>
-              Nama sebenar anda tidak pernah dipaparkan kepada pengguna lain.
+              {t.privasi}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="divide-y divide-border/50 border-t border-border/50">
+          <div className="flex flex-col gap-2">
             <Link
               href="/qada-solat"
               onClick={() => setBuka(false)}
-              className="flex items-baseline justify-between gap-6 py-4 transition-colors hover:text-primary"
+              className="flex items-center gap-3 rounded-2xl bg-muted/60 p-3 transition-colors hover:bg-muted"
             >
-              <span>Qada solat</span>
-              <span className="shrink-0 text-sm text-muted-foreground">
-                {bakiQada === null ? 'Belum bermula' : `${bakiQada} baki`}
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-w3-lembut text-w3">
+                <RotateCcwIcon className="size-5" />
               </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{t.qada}</span>
+                <span className="block text-sm text-muted-foreground">
+                  {bakiQada === null ? t.belumBermula : t.baki(bakiQada)}
+                </span>
+              </span>
+              <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
             </Link>
             <button
               onClick={() => { setBuka(false); keluar(); }}
-              className="w-full py-4 text-left text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-muted px-5 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
-              Log keluar
+              <LogOutIcon className="size-4" />
+              {t.logKeluar}
             </button>
           </div>
         </DialogContent>
