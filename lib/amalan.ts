@@ -293,11 +293,11 @@ export const idBaru = () => Math.random().toString(36).slice(2, 10);
 const TEKS_CADANGAN = {
   ms: {
     quran: 'Membaca Al-Quran', unit: 'muka surat', zikir: 'Zikir selepas solat', solat: 'Solat 5 waktu',
-    item: ['Subhanallah 33x', 'Alhamdulillah 33x', 'Allahu Akbar 33x', 'Ayatul Kursi', 'Doa untuk anak', 'Doa Surah At-Taubah'],
+    item: ['Subhanallah 33x', 'Alhamdulillah 33x', 'Allahu Akbar 33x', 'Ayatul Kursi'],
   },
   en: {
     quran: 'Reading the Quran', unit: 'pages', zikir: 'Zikir after prayer', solat: 'Five daily prayers',
-    item: ['Subhanallah 33x', 'Alhamdulillah 33x', 'Allahu Akbar 33x', 'Ayatul Kursi', 'Doa for children', 'Doa Surah At-Taubah'],
+    item: ['Subhanallah 33x', 'Alhamdulillah 33x', 'Allahu Akbar 33x', 'Ayatul Kursi'],
   },
 };
 
