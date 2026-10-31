@@ -6,7 +6,7 @@ import {
   collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, BookOpen, Clock3, Check, ChevronDown, ChevronLeft, ChevronRight, Minus, MoonStar, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Clock3, Check, ChevronDown, ChevronLeft, ChevronRight, Minus, MoonStar, Pencil, Pin, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { GRADIEN_PELANGI, GRADIEN_PELANGI_PEKAT, gradienPastel, palet, PALET_UTAMA } from '@/lib/aksen';
 import { db } from '@/firebase';
 import { useAkaun } from '@/components/AkaunProvider';
@@ -135,6 +135,7 @@ const ms = {
   zikirBaru: 'Tambah zikir, cth. Selawat 10x',
   tambahZikir: 'Tambah zikir',
   lalai: 'Lalai',
+  disematNota: 'Sentiasa di atas — Solat dahulu, Zikir selepas solat di bawahnya',
   lalaiNota: 'Amalan lalai — tidak boleh dipadam',
   buangZikir: (n: string) => `Buang ${n}`,
   tandaWaktu: (w: string) => `Tandakan semua zikir ${w}`,
@@ -225,6 +226,7 @@ const en: typeof ms = {
   zikirBaru: 'Add a zikir, e.g. Selawat 10x',
   tambahZikir: 'Add zikir',
   lalai: 'Default',
+  disematNota: 'Always on top — Solat first, Zikir after solat right below',
   lalaiNota: 'Default practice — cannot be deleted',
   buangZikir: n => `Remove ${n}`,
   tandaWaktu: w => `Mark all zikir for ${w}`,
@@ -780,9 +782,10 @@ export default function AmalanPage() {
               {senarai.map((a, i) => (
                 <li key={a.id} className="flex items-center gap-3 py-3">
                   <CipAmalan a={a} kecil />
+                  {/* Nama dibalut, bukan dipotong — mesti terbaca penuh pada skrin sempit. */}
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2">
-                      <span className="truncate">{a.nama}</span>
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="break-words">{a.nama}</span>
                       {adalahLalai(a) && <LencanaLalai />}
                     </p>
                     <p className="text-sm text-muted-foreground">
@@ -792,14 +795,23 @@ export default function AmalanPage() {
                       {a.jenis === 'jadual' && teksJadual(a.jadual, bahasa)}
                     </p>
                   </div>
-                  <button aria-label={t.naik} disabled={i === 0} onClick={() => alihAmalan(i, -1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowUp className="size-4" /></button>
-                  <button aria-label={t.turun} disabled={i === senarai.length - 1} onClick={() => alihAmalan(i, 1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowDown className="size-4" /></button>
-                  <button aria-label={t.ubah(a.nama)} onClick={() => setBorang({ asal: a })} className="rounded p-1.5 text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button>
-                  {adalahLalai(a) ? (
-                    <span className="w-7" aria-hidden />
-                  ) : (
-                    <button aria-label={t.padamAmalan(a.nama)} onClick={() => setSahPadam(a)} className="rounded p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
-                  )}
+                  <div className="flex shrink-0 items-center">
+                    {/* Solat dan Zikir sentiasa di atas, jadi tiada anak panah untuknya. */}
+                    {a.jenis === 'solat' || a.jenis === 'zikir' ? (
+                      <span title={t.disematNota} aria-label={t.disematNota} className="p-1.5 text-muted-foreground/60">
+                        <Pin className="size-4" />
+                      </span>
+                    ) : (
+                      <>
+                        <button aria-label={t.naik} disabled={i <= 2} onClick={() => alihAmalan(i, -1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowUp className="size-4" /></button>
+                        <button aria-label={t.turun} disabled={i === senarai.length - 1} onClick={() => alihAmalan(i, 1)} className="rounded p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowDown className="size-4" /></button>
+                      </>
+                    )}
+                    <button aria-label={t.ubah(a.nama)} onClick={() => setBorang({ asal: a })} className="rounded p-1.5 text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button>
+                    {!adalahLalai(a) && (
+                      <button aria-label={t.padamAmalan(a.nama)} onClick={() => setSahPadam(a)} className="rounded p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

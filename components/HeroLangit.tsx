@@ -13,6 +13,7 @@ const ms = {
   dalam: (w: string, baki: string) => `${w} dalam ${baki}`,
   jam: 'j',
   minit: 'm',
+  saat: 's',
   sekejap: 'sebentar lagi',
   pada: (masa: string) => `pada ${masa}`,
   tukar: 'tukar',
@@ -30,6 +31,7 @@ const en: typeof ms = {
   dalam: (w, baki) => `${w} in ${baki}`,
   jam: 'h',
   minit: 'm',
+  saat: 's',
   sekejap: 'any moment',
   pada: masa => `at ${masa}`,
   tukar: 'change',
@@ -122,7 +124,14 @@ export default function HeroLangit({
     return m === 60 ? `${j + 1}${t.jam}` : `${j ? `${j}${t.jam} ` : ''}${m}${t.minit}`;
   };
   const bakiMs = masa ? Math.max(masa.getTime() - kini.getTime(), 0) : 0;
-  const bakiTeks = bakiMs < 60_000 ? t.sekejap : jamMinit(bakiMs);
+  // Tajuk berdetik setiap saat; cip kategori kekal jam dan minit sahaja.
+  const jamMinitSaat = (ms: number) => {
+    const j = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    const sa = Math.floor((ms % 60_000) / 1000);
+    return `${j ? `${j}${t.jam} ` : ''}${j || m ? `${m}${t.minit} ` : ''}${String(sa).padStart(j || m ? 2 : 1, '0')}${t.saat}`;
+  };
+  const bakiTeks = bakiMs < 1000 ? t.sekejap : jamMinitSaat(bakiMs);
   const fmt = (d: Date) => `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
   const namaSeterusnya = seterusnya ? seterusnya[0].toUpperCase() + seterusnya.slice(1) : '';
 
@@ -160,7 +169,7 @@ export default function HeroLangit({
 
   return (
     <section className="relative overflow-hidden rounded-3xl p-4 text-white shadow-[var(--bayang-kad)] sm:p-6" style={{ background: LANGIT[fasa] }}>
-      <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-4xl">
+      <h1 className="tabular text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-4xl">
         {paparan ? paparan.tajuk : t.dalam(namaSeterusnya, bakiTeks)}
       </h1>
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-white/90 sm:text-base">
