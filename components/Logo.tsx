@@ -6,9 +6,8 @@
  *
  * Tanda lama ialah huruf "M:" — tepat, tetapi tidak berkata apa-apa tentang
  * solat. Pemilik memilih mihrab daripada beberapa lakaran: ia membaca sebagai
- * tempat solat, bukan sekadar simbol umum. Jubin mengikut warna tema pilihan
- * pengguna (--rona) dengan kecerahan tetap, supaya putih dan emas kekal jelas
- * dalam mod gelap. Ikon aplikasi statik dalam public/ menggunakan kecerunan
+ * tempat solat, bukan sekadar simbol umum. Jubin kekal dalam kecerunan biru lembut
+ * yang sama seperti ikon aplikasi, apa jua warna tema yang dipilih. Ikon aplikasi statik dalam public/ menggunakan kecerunan
  * "Sky" (biru → ungu muda → merah jambu) yang dipilih pemilik.
  */
 
@@ -30,11 +29,11 @@ export function LogoMark({ className = '', title }: { className?: string; title?
     >
       <defs>
         <linearGradient id={`${id}a`} x1="0" y1="0" x2="1" y2="1">
-          {/* Tiga rona di sekitar warna tema — cerah dan ceria, bukan satu
-              warna gelap. Pada tema lalai ia hijau limau → teal → biru langit. */}
-          <stop offset="0" style={{ stopColor: 'oklch(0.80 0.13 calc(var(--rona) - 30))' }} />
-          <stop offset=".55" style={{ stopColor: 'oklch(0.70 0.14 calc(var(--rona) + 15))' }} />
-          <stop offset="1" style={{ stopColor: 'oklch(0.68 0.17 calc(var(--rona) + 60))' }} />
+          {/* Kecerunan "Sky" tetap — sama seperti ikon aplikasi, tidak
+              berubah mengikut warna tema. */}
+          <stop offset="0" stopColor="#38bdf8" />
+          <stop offset=".55" stopColor="#818cf8" />
+          <stop offset="1" stopColor="#e879f9" />
         </linearGradient>
         <linearGradient id={`${id}e`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#fff3c4" />
@@ -52,7 +51,7 @@ export function LogoMark({ className = '', title }: { className?: string; title?
       <path d="M37.6 15.6 l1 2.3 2.3 1 -2.3 1 -1 2.3 -1 -2.3 -2.3 -1 2.3 -1z" fill={`url(#${id}e)`} />
       <path d="M32 36 C27 39 24 41.5 24 45.5 C24 47.5 25 48.6 26 49 H38 C39 48.6 40 47.5 40 45.5 C40 41.5 37 39 32 36Z" fill="#fff" />
       <rect x="23.5" y="49" width="17" height="7" rx="1.2" fill="#fff" fillOpacity=".9" />
-      <path d="M30 56 V52.6 a2 2 0 0 1 4 0 V56Z" style={{ fill: 'oklch(0.70 0.14 calc(var(--rona) + 15))' }} />
+      <path d="M30 56 V52.6 a2 2 0 0 1 4 0 V56Z" fill="#818cf8" />
     </svg>
   );
 }
