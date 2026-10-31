@@ -142,11 +142,6 @@ export default function TasbihPage() {
   const warnaPreset = (p: Preset) => palet(PRESETS.indexOf(p));
   const w = warnaPreset(preset);
 
-  const vibrate = (ms: number | number[]) => {
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try { navigator.vibrate(ms); } catch {}
-    }
-  };
 
   const increment = useCallback(() => {
     setState(prev => {
@@ -158,7 +153,6 @@ export default function TasbihPage() {
       if (target > 0 && next >= target) {
         // Cycle complete
         setCompleteKey(k => k + 1);
-        vibrate([20, 40, 80]);
         const teks = teksSemasa(TEKS);
         toast.success(teks.lengkap, {
           description: teks.lengkapHuraian(PRESETS.find(p => p.id === id)?.name ?? '', (prev.cycles[id] ?? 0) + 1),
@@ -170,8 +164,6 @@ export default function TasbihPage() {
           cycles: { ...prev.cycles, [id]: (prev.cycles[id] ?? 0) + 1 },
         };
       }
-
-      vibrate(12);
       setPulseKey(k => k + 1);
       return { ...prev, counts: { ...prev.counts, [id]: next } };
     });
@@ -182,7 +174,6 @@ export default function TasbihPage() {
       const id = prev.active;
       const current = prev.counts[id] ?? 0;
       if (current <= 0) return prev;
-      vibrate(8);
       return { ...prev, counts: { ...prev.counts, [id]: current - 1 } };
     });
   }, []);
@@ -198,7 +189,6 @@ export default function TasbihPage() {
       cycles: { ...prev.cycles, [prev.active]: 0 },
     }));
     setResetArmed(false);
-    vibrate([10, 30, 10]);
     toast.success(t.dikosongkan);
   };
 

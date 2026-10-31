@@ -5,7 +5,6 @@ import { Pause, Play, RotateCcw, Square } from 'lucide-react';
 import PageShell from '@/components/PageShell';
 import { useTeks } from '@/components/BahasaProvider';
 import { cn } from '@/lib/utils';
-import { getar } from '@/lib/getar';
 
 const ms = {
   tajuk: 'Nafas Istighfar',
@@ -25,7 +24,6 @@ const ms = {
   siap: 'Selesai. Alhamdulillah.',
   siapNota: (n: number) => `${n} kali istighfar dengan nafas yang tenang.`,
   sedia: 'Tekan Mula, kemudian ikut bulatan.',
-  getar: 'Telefon bergetar lembut setiap kali bertukar antara tarik dan hembus, supaya mata boleh dipejam.',
 };
 const en: typeof ms = {
   tajuk: 'Istighfar Breathing',
@@ -45,7 +43,6 @@ const en: typeof ms = {
   siap: 'Done. Alhamdulillah.',
   siapNota: n => `${n} istighfar with calm breathing.`,
   sedia: 'Tap Start, then follow the circle.',
-  getar: 'Your phone vibrates gently at each switch between in and out, so you can keep your eyes closed.',
 };
 const TEKS = { ms, en };
 
@@ -74,12 +71,10 @@ export default function IstighfarPage() {
   // irama tidak hanyut apabila tab perlahan atau bingkai tercicir.
   const mulaRef = useRef(0);
   const asasRef = useRef(0);
-  const fasaRef = useRef<'masuk' | 'keluar' | null>(null);
 
   const henti = useCallback(() => {
     setKeadaan('sedia');
     setBerlalu(0);
-    fasaRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -91,14 +86,7 @@ export default function IstighfarPage() {
       if (e >= tempoh) {
         setBerlalu(tempoh);
         setKeadaan('siap');
-        getar([60, 90, 60]);
         return;
-      }
-      const fasa = e % NAFAS < MASUK ? 'masuk' : 'keluar';
-      if (fasa !== fasaRef.current) {
-        // Satu ketukan untuk tarik, dua ketukan lembut untuk hembus.
-        getar(fasa === 'masuk' ? 35 : [15, 70, 15]);
-        fasaRef.current = fasa;
       }
       setBerlalu(e);
       id = requestAnimationFrame(detik);
@@ -112,7 +100,6 @@ export default function IstighfarPage() {
 
   const mula = () => {
     asasRef.current = 0;
-    fasaRef.current = null;
     setBerlalu(0);
     setKeadaan('jalan');
   };
@@ -228,7 +215,6 @@ export default function IstighfarPage() {
           )}
         </div>
 
-        {keadaan === 'sedia' && <p className="mt-6 max-w-xs text-center text-xs text-muted-foreground">{t.getar}</p>}
       </div>
     </PageShell>
   );

@@ -191,7 +191,6 @@ export default function ArahKiblatPage() {
   useEffect(() => {
     if (isAligned && !alignedRef.current) {
       alignedRef.current = true;
-      if ('vibrate' in navigator) navigator.vibrate(40);
     }
     if (!isAligned) alignedRef.current = false;
   }, [isAligned]);

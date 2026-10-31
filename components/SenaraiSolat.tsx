@@ -8,7 +8,6 @@ import { GRADIEN_UTAMA, palet, PALET_UTAMA, WARNA_WAKTU } from '@/lib/aksen';
 import { LABEL_SLOT, SLOT, type Amalan, type LogHari, type Slot } from '@/lib/amalan';
 import { parseTime, type WaktuSolat } from '@/lib/solat';
 import { cn } from '@/lib/utils';
-import { useGetarSiap } from '@/components/KesanSiap';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 const ms = {
@@ -55,9 +54,8 @@ function slotSemasa(waktu: WaktuSolat, kini: Date): Slot | null {
   return null;
 }
 
-/** ✓ bagi tanda, dengan getaran "selesai" apabila baru ditanda. */
+/** ✓ bagi tanda yang sudah ditunaikan. */
 function IsiTanda({ siap, kecil }: { siap: boolean; warna?: string; kecil?: boolean }) {
-  useGetarSiap(siap);
   return siap ? <Check className={kecil ? 'size-3.5' : 'size-6'} strokeWidth={3} /> : null;
 }
 

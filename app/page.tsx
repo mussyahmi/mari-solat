@@ -455,6 +455,9 @@ export default function HalamanUtama() {
           {/* Kategori waktu dan satu pertiga malam kini dalam kad langit; kiblat
               dan qada dibuang dari halaman utama — kedua-duanya di bar bawah. */}
 
+          {/* Semalam dan esok berhenti di grid waktu — Al-Quran, Nafas Istighfar
+              dan peringatan hanya untuk hari ini. */}
+          {hariIni && (<>
           <div className="mt-10">
             <QuranHariIni />
           </div>
@@ -472,6 +475,7 @@ export default function HalamanUtama() {
           <div className="mt-10">
             <PeringatanHariIni />
           </div>
+          </>)}
         </>
       )}
     </main>

@@ -26,7 +26,6 @@ import {
 import GridAmalan, { gayaPetak, julat, kelasPetak, MatriksAmalan, type Paparan } from './GridAmalan';
 import BorangAmalan from './BorangAmalan';
 import { adalahLalai, pastikanLalai } from '@/lib/amalan-lalai';
-import { useGetarSiap } from '@/components/KesanSiap';
 import KadQuran from '@/components/KadQuran';
 import SenaraiSolat from '@/components/SenaraiSolat';
 import { useWaktuTarikh } from '@/components/useWaktuTarikh';
@@ -751,7 +750,7 @@ export default function AmalanPage() {
                           </h3>
                           <p className="text-sm text-muted-foreground tabular-nums">{ringkasan(baris)}</p>
                         </div>
-                        <GridAmalan paparan={paparan} dari={dari} hingga={hingga} petak={baris.petak} hariIni={hariIni} dipilih={dipilih} onPilih={pilih} warna={baris.warna} />
+                        <GridAmalan paparan={paparan} dari={dari} hingga={hingga} petak={baris.petak} hariIni={hariIni} dipilih={dipilih} onPilih={pilih} />
                       </div>
                     ))}
                   </div>
@@ -919,7 +918,6 @@ function KepalaAmalan({
 }) {
   const p = paletKad(a);
   const Ikon = IKON_JENIS[a.jenis];
-  useGetarSiap(siap);
   const isi = (
     <>
       {siap ? <Check className="size-7" strokeWidth={3} /> : <Ikon className="size-6" />}
@@ -1288,7 +1286,6 @@ function BarisZikir({
 }
 
 function TandaBulat({ aktif, separa, besar, warna = 'var(--primary)' }: { aktif: boolean; separa?: boolean; besar?: boolean; warna?: string }) {
-  useGetarSiap(aktif);
   return (
     <span
       className={cn(
@@ -1305,7 +1302,6 @@ function TandaBulat({ aktif, separa, besar, warna = 'var(--primary)' }: { aktif:
 }
 
 function TandaKotak({ aktif, warna = 'var(--primary)' }: { aktif: boolean; warna?: string }) {
-  useGetarSiap(aktif);
   return (
     <span
       className={cn('relative flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors', aktif ? 'border-transparent text-white' : 'border-border')}

@@ -41,7 +41,7 @@ export function kelasPetak(p: Petak | undefined) {
   }
 }
 
-/** Lengkap dan separa diwarnakan mengikut warna amalan itu sendiri. */
+/** Warna keadaan seragam untuk semua amalan, sepadan dengan legenda. */
 export function gayaPetak(p: Petak | undefined, warna = 'var(--primary)'): React.CSSProperties | undefined {
   if (p?.k === 'penuh') return { background: warna };
   if (p?.k !== 'separa') return undefined;
@@ -190,7 +190,7 @@ export function MatriksAmalan({
                       'block size-7 rounded-md transition-transform enabled:hover:scale-110',
                       kelasPetak(p),
                     )}
-                    style={gayaPetak(p, b.warna)}
+                    style={gayaPetak(p)}
                   />
                 </div>
               );
@@ -210,7 +210,6 @@ export default function GridAmalan({
   hariIni,
   dipilih,
   onPilih,
-  warna,
 }: {
   paparan: Paparan;
   dari: string;
@@ -219,7 +218,6 @@ export default function GridAmalan({
   hariIni: string;
   dipilih?: string;
   onPilih?: (s: string) => void;
-  warna?: string;
 }) {
   const { bahasa } = useBahasa();
   const hariPendek = HARI_PENDEK[bahasa];
@@ -256,7 +254,7 @@ export default function GridAmalan({
           besar && (p?.k === 'penuh' || p?.k === 'qada') && 'text-primary-foreground',
           besar && s === hariIni && 'font-semibold',
         )}
-        style={gayaPetak(p, warna)}
+        style={gayaPetak(p)}
       >
         {besar && tarikhKe(s).getDate()}
       </button>

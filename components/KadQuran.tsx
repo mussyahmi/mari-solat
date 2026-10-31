@@ -8,7 +8,6 @@ import { GRADIEN_UTAMA, palet, PALET_UTAMA } from '@/lib/aksen';
 import { bakiSebelum, unitPapar, warnaAmalan, type Amalan, type LogHari, type LogTahun } from '@/lib/amalan';
 import { namaSurah, pautanAyat, SURAH } from '@/lib/surah';
 import { cn } from '@/lib/utils';
-import { useGetarSiap } from '@/components/KesanSiap';
 
 const ms = {
   dibaca: 'Dibaca hari ini',
@@ -88,7 +87,6 @@ export default function KadQuran({
   const set = (n: number) => onTulis({ jumlah: Math.max(0, n) });
   const unit = unitPapar(a.unit, bahasa, perlu);
   const hariIniDipilih = s === hariIni;
-  useGetarSiap(siap);
   const status = siap
     ? (hariIniDipilih ? t.dibaca : t.dibacaSemalam)
     : (hariIniDipilih ? t.belum : t.belumLepas);
