@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, writeBatch,
@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { berperingkat, naikMasuk, spring } from '@/lib/motion';
 import { isInAppBrowser, cn } from '@/lib/utils';
 import { todayStr } from '@/lib/qada';
-import { BULAN, BULAN_PENDEK, HARI, bahasaSemasa, teksSemasa, type Bahasa } from '@/lib/bahasa';
+import { BULAN, BULAN_PENDEK, HARI, HARI_PENDEK, bahasaSemasa, teksSemasa, type Bahasa } from '@/lib/bahasa';
 import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { bacaCacheWaktu, parseTime } from '@/lib/solat';
 import {
@@ -295,6 +295,7 @@ export default function AmalanPage() {
   const [anjakan, setAnjakan] = useState(0);
   const [borang, setBorang] = useState<{ asal: Amalan | null } | null>(null);
   const [sahPadam, setSahPadam] = useState<Amalan | null>(null);
+  const sentuhRef = useRef<{ x: number; y: number } | null>(null);
   /** Dua paparan: tanda harian, atau ringkasan pencapaian dan urus amalan. */
   const [tab, setTab] = useState<'hariIni' | 'ringkasan'>('hariIni');
   const waktuDipilih = useWaktuTarikh(dipilih);
@@ -562,7 +563,22 @@ export default function AmalanPage() {
 
           {tab === 'hariIni' && (
           /* ── Rekod hari dipilih ─────────────────────────────────── */
-          <motion.section variants={naikMasuk}>
+          <motion.section
+            variants={naikMasuk}
+            // Leret ke kanan untuk hari sebelum, ke kiri untuk hari selepas —
+            // untuk mengemas kini hari yang terlupa ditanda.
+            onTouchStart={e => { sentuhRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
+            onTouchEnd={e => {
+              const mula = sentuhRef.current;
+              sentuhRef.current = null;
+              if (!mula) return;
+              const dx = e.changedTouches[0].clientX - mula.x;
+              const dy = e.changedTouches[0].clientY - mula.y;
+              if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+              if (dx > 0 && dipilih > awalRekod) setDipilih(tambahHari(dipilih, -1));
+              if (dx < 0 && dipilih < hariIni) setDipilih(tambahHari(dipilih, 1));
+            }}
+          >
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className={labelBahagian}>{teksTarikh(dipilih, hariIni, bahasa, t).label}</p>
@@ -583,6 +599,19 @@ export default function AmalanPage() {
                 ><ChevronRight className="size-4" /></button>
               </div>
             </div>
+            <JaluranHari
+              hariIni={hariIni}
+              awal={awalRekod}
+              dipilih={dipilih}
+              onPilih={setDipilih}
+              status={s => {
+                const perlu = senarai.filter(a => dijadualkan(a, s));
+                if (perlu.length === 0) return null;
+                const siap = perlu.filter(a => lengkap(nilai(a, log[a.id] ?? {}, s, s, hariIni).petak[s])).length;
+                return siap / perlu.length;
+              }}
+            />
+
             {dipilih !== hariIni && (
               <button onClick={() => setDipilih(hariIni)} className="mt-2 text-sm text-primary hover:underline">
                 {t.kembali}
@@ -866,6 +895,63 @@ function Legenda() {
 }
 
 /** Tajuk bahagian bagi setiap amalan dalam senarai Hari ini. */
+/**
+ * Jalur 30 hari terakhir yang boleh dileret. Setiap hari ada titik status
+ * (penuh / separa / tiada) supaya hari yang terlupa ditanda mudah dikesan,
+ * dan menekannya membuka hari itu untuk dikemas kini.
+ */
+function JaluranHari({
+  hariIni, awal, dipilih, onPilih, status,
+}: {
+  hariIni: string;
+  awal: string;
+  dipilih: string;
+  onPilih: (s: string) => void;
+  status: (s: string) => number | null;
+}) {
+  const { bahasa } = useBahasa();
+  const bekas = useRef<HTMLDivElement>(null);
+  const mula = tambahHari(hariIni, -29) > awal ? tambahHari(hariIni, -29) : awal;
+  const hari: string[] = [];
+  for (let s = mula; s <= hariIni; s = tambahHari(s, 1)) hari.push(s);
+
+  // Pastikan hari dipilih kelihatan (mula-mula: hari ini di hujung kanan).
+  useEffect(() => {
+    bekas.current?.querySelector<HTMLElement>('[data-dipilih]')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [dipilih]);
+
+  return (
+    <div ref={bekas} className="-mx-5 mt-4 flex gap-1.5 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0" style={{ scrollbarWidth: 'none' }}>
+      {hari.map(s => {
+        const d = tarikhKe(s);
+        const k = status(s);
+        const pilih = s === dipilih;
+        return (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onPilih(s)}
+            {...(pilih ? { 'data-dipilih': '' } : {})}
+            aria-pressed={pilih}
+            aria-label={`${HARI[bahasa][d.getDay()]} ${d.getDate()} ${BULAN[bahasa][d.getMonth()]}`}
+            className={cn(
+              'flex w-12 shrink-0 flex-col items-center gap-1 rounded-2xl py-2 transition-colors',
+              pilih ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card text-foreground/80 hover:bg-muted'
+            )}
+          >
+            <span className={cn('text-[10px] uppercase', pilih ? 'opacity-90' : 'text-muted-foreground')}>{HARI_PENDEK[bahasa][d.getDay()]}</span>
+            <span className="text-base font-bold leading-none tabular-nums">{d.getDate()}</span>
+            <span
+              className={cn('size-1.5 rounded-full', k === null && 'opacity-0')}
+              style={{ background: pilih ? 'currentColor' : k === 1 ? 'var(--primary)' : k && k > 0 ? 'oklch(from var(--primary) l c h / 0.4)' : 'oklch(from var(--muted-foreground) l c h / 0.3)' }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Pil kecil menandakan amalan lalai (Solat, Zikir, Al-Quran) — sebab ia tiada butang buang. */
 function LencanaLalai() {
   const t = useTeks(TEKS);

@@ -56,7 +56,7 @@ function slotSemasa(waktu: WaktuSolat, kini: Date): Slot | null {
 
 /** ✓ bagi tanda yang sudah ditunaikan. */
 function IsiTanda({ siap, kecil }: { siap: boolean; warna?: string; kecil?: boolean }) {
-  return siap ? <Check className={kecil ? 'size-3.5' : 'size-6'} strokeWidth={3} /> : null;
+  return siap ? <Check className={kecil ? 'size-3.5' : 'size-5'} strokeWidth={3} /> : null;
 }
 
 /** Cincin kemajuan kecil untuk pil zikir. */
@@ -64,7 +64,7 @@ function Cincin({ kadar, warna }: { kadar: number; warna: string }) {
   const r = 7;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 18 18" className="size-[18px] -rotate-90" aria-hidden>
+    <svg viewBox="0 0 18 18" className="size-[15px] -rotate-90" aria-hidden>
       <circle cx="9" cy="9" r={r} fill="none" stroke="currentColor" strokeOpacity=".2" strokeWidth="3" />
       <circle cx="9" cy="9" r={r} fill="none" stroke={warna} strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - kadar)} />
     </svg>
@@ -127,7 +127,7 @@ export default function SenaraiSolat({
   // kad tidak tersepit apabila diletakkan dalam lajur yang sempit.
   return (
     <div className="@container">
-    <div className="grid gap-3 @xl:grid-cols-3 @4xl:grid-cols-5">
+    <div className="grid gap-2 @md:grid-cols-2 @xl:grid-cols-3 @4xl:grid-cols-5">
       {SLOT.map(sl => {
         const w = seragam ? PALET_UTAMA : palet(WARNA_WAKTU[sl]);
         const kini_ = semasa === sl;
@@ -140,7 +140,7 @@ export default function SenaraiSolat({
           <div
             key={sl}
             className={cn(
-              'relative flex flex-col rounded-3xl border p-4 shadow-[var(--bayang-kad)] transition-colors',
+              'relative flex flex-col rounded-2xl border p-3 shadow-[var(--bayang-kad)] transition-colors',
               kini_ || (seragam && sudah) ? w.lembut : 'bg-card'
             )}
             style={{ borderColor: kini_ ? `oklch(from ${w.css} l c h / 0.45)` : undefined }}
@@ -149,13 +149,13 @@ export default function SenaraiSolat({
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2">
-                  <span className="text-xl font-bold leading-tight">{LABEL_SLOT[sl]}</span>
+                  <span className="text-base font-bold leading-tight">{LABEL_SLOT[sl]}</span>
                   {kini_ && (
-                    <span className={cn('rounded-full bg-card/70 px-2 py-0.5 text-xs font-semibold', w.teks)}>{t.sekarang}</span>
+                    <span className={cn('rounded-full bg-card/70 px-1.5 py-px text-[10px] font-semibold', w.teks)}>{t.sekarang}</span>
                   )}
                 </p>
                 {waktu && (
-                  <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
+                  <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                     <span className="whitespace-nowrap">{waktu[sl]}</span>
                     {sl === 'subuh' && <> · <span className="whitespace-nowrap">{t.syuruk} {waktu.syuruk}</span></>}
                   </p>
@@ -169,8 +169,8 @@ export default function SenaraiSolat({
                   aria-label={t.tanda(LABEL_SLOT[sl])}
                   aria-pressed={sudah}
                   className={cn(
-                    'relative flex size-12 shrink-0 items-center justify-center rounded-full transition-all active:scale-90',
-                    sudah ? (seragam ? cn('shadow-sm', w.teks) : 'text-white shadow-sm') : 'border-[3px]',
+                    'relative flex size-9 shrink-0 items-center justify-center rounded-full transition-all active:scale-90',
+                    sudah ? (seragam ? cn('shadow-sm', w.teks) : 'text-white shadow-sm') : 'border-[2.5px]',
                     !sudahMasuk(sl) && !sudah && 'opacity-50'
                   )}
                   style={sudah ? { background: seragam ? GRADIEN_UTAMA : w.css } : { borderColor: `oklch(from ${w.css} l c h / 0.55)` }}
@@ -181,12 +181,12 @@ export default function SenaraiSolat({
             </div>
 
             {zikir && n > 0 && (
-              <div className="mt-auto pt-3">
+              <div className="mt-auto pt-2">
                 <button
                   type="button"
                   onClick={() => setBuka(terbuka ? null : sl)}
                   aria-expanded={terbuka}
-                  className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors', zikirPenuh ? cn(w.lembut, w.teks) : 'bg-card/80')}
+                  className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors', zikirPenuh ? cn(w.lembut, w.teks) : 'bg-card/80')}
                   style={{ borderColor: `oklch(from ${w.css} l c h / 0.4)` }}
                 >
                   <Cincin kadar={ditanda.length / n} warna={w.css} />
