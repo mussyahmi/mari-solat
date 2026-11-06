@@ -53,7 +53,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: { ms: 'Lain-lain', en: 'Other' },
-    links: [{ href: '/tetapan', label: { ms: 'Tetapan', en: 'Settings' } }],
+    links: [
+      { href: '/tetapan', label: { ms: 'Tetapan', en: 'Settings' } },
+      { href: '/apa-baru', label: { ms: 'Apa yang baru', en: "What's new" } },
+    ],
   },
 ];
 

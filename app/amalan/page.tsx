@@ -720,7 +720,7 @@ export default function AmalanPage() {
                 const k = kira(n.petak);
                 return { perlu: acc.perlu + k.perlu, siap: acc.siap + k.siap };
               }, { perlu: 0, siap: 0 });
-              const sasaran = senarai.find(a => a.jenis === 'sasaran');
+              const sasaran = senarai.find(adalahQuran);
               const baki = sasaran ? bakiSebelum(sasaran, log[sasaran.id] ?? {}, tambahHari(hariIni, 1), hariIni) : null;
               const stat: [React.ReactNode, string, number][] = [
                 [<>{semua.siap}<span className="opacity-50"> / {semua.perlu}</span></>, t.statHariLengkap, 0],

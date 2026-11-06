@@ -208,7 +208,9 @@ export function nilai(a: Amalan, log: LogTahun, dari: string, hingga: string, ha
       const lebihan = Math.max(dibuat - sasaran, 0);
       const dilunas = Math.min(lebihan, baki);
       baki -= dilunas;
-      if (lepas && dibuat < sasaran) baki += sasaran - dibuat;
+      // Hanya Al-Quran membawa kekurangan ke hari berikutnya; amalan sasaran
+      // lain (sedekah, dsb.) dinilai hari demi hari tanpa baki.
+      if (lepas && dibuat < sasaran && adalahQuran(a)) baki += sasaran - dibuat;
 
       if (!papar) continue;
       if (dilunas > 0) petak[s] = { k: 'qada', dilunas };
@@ -249,7 +251,7 @@ export function nilai(a: Amalan, log: LogTahun, dari: string, hingga: string, ha
 
 /** Baki terkumpul sehingga (tidak termasuk) tarikh ini. */
 export function bakiSebelum(a: Amalan, log: LogTahun, s: string, hariIni: string) {
-  if (a.jenis !== 'sasaran' || s < a.mula) return 0;
+  if (!adalahQuran(a) || s < a.mula) return 0;
   return nilai(a, log, s, s, hariIni).bakiMasuk[s] ?? 0;
 }
 

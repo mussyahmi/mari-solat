@@ -15,10 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import PeringatanHariIni from "@/components/PeringatanHariIni";
-import QuranHariIni from "@/components/QuranHariIni";
 import KadIstighfar from "@/components/KadIstighfar";
 import HeroLangit from "@/components/HeroLangit";
-import SolatHariIni from "@/components/SolatHariIni";
+import StatusHariIni from "@/components/StatusHariIni";
 import { useBahasa, useTeks } from "@/components/BahasaProvider";
 import { KATEGORI, kategoriPada, julatKategori, julatSemasa } from "@/lib/kategori";
 import {
@@ -153,7 +152,6 @@ export default function HalamanUtama() {
   const [seterusnya, setSeterusnya] = useState<Seterusnya>({ label: null, masa: null });
   const [tiadaZon, setTiadaZon] = useState(false);
   const [ralat, setRalat] = useState(false);
-  const [dilaraskan, setDilaraskan] = useState(false);
 
   const [kini, setKini] = useState(() => new Date());
   // Kebanyakan skrin hanya berubah setiap minit; hanya kiraan detik perlukan
@@ -293,25 +291,17 @@ export default function HalamanUtama() {
       }
     }
 
-    // Selepas isyak — sasaran seterusnya ialah subuh esok.
+    // Selepas isyak — sasaran seterusnya ialah subuh esok, tetapi tab kekal
+    // pada Hari ini sehingga tarikh benar-benar bertukar pada 12 tengah malam.
     const subuhEsok = parseTime(waktuHari.esok?.subuh ?? waktu.subuh);
     subuhEsok.setDate(subuhEsok.getDate() + 1);
-    setSeterusnya({ label: null, masa: subuhEsok });
+    setSeterusnya({ label: hari === "hariIni" ? "subuh" : null, masa: subuhEsok });
   }, [waktuHari, hari, kini]);
 
-  // Selepas isyak, tunjukkan waktu esok tanpa pengguna perlu menukarnya.
-  useEffect(() => {
-    if (!waktuHari.hariIni || !waktuHari.esok || dilaraskan || hari !== "hariIni") return;
-    if (seterusnya.label === null && seterusnya.masa !== null) {
-      setHari("esok");
-      setDilaraskan(true);
-    }
-  }, [waktuHari, hari, seterusnya, dilaraskan]);
 
   const waktuDipapar = waktuHari[hari];
   const hariIni = hari === "hariIni";
-  const esokAuto = hari === "esok" && dilaraskan;
-  const tunjukKiraan = (hariIni || esokAuto) && !!seterusnya.label;
+  const tunjukKiraan = hariIni && !!seterusnya.label;
 
   // Modul menggunakan waktu hari ini, bukan hari yang sedang dilihat — ia
   // menjawab "apa yang benar sekarang", tanpa mengira tab mana yang dipilih.
@@ -449,8 +439,8 @@ export default function HalamanUtama() {
 
           {/* Grid lapan waktu untuk setiap hari; hari ini juga mendapat kad lima
               waktu yang boleh ditanda di bawahnya. */}
-          <RelWaktu waktu={waktuDipapar} minit={minit} seterusnya={hariIni || esokAuto ? seterusnya.label : null} hariIni={hariIni} />
-          {hariIni && <SolatHariIni waktu={waktuDipapar} kini={kini} />}
+          <RelWaktu waktu={waktuDipapar} minit={minit} seterusnya={hariIni ? seterusnya.label : null} hariIni={hariIni} />
+          {hariIni && <StatusHariIni waktu={waktuDipapar} kini={kini} />}
 
           {/* Kategori waktu dan satu pertiga malam kini dalam kad langit; kiblat
               dan qada dibuang dari halaman utama — kedua-duanya di bar bawah. */}
@@ -458,9 +448,6 @@ export default function HalamanUtama() {
           {/* Semalam dan esok berhenti di grid waktu — Al-Quran, Nafas Istighfar
               dan peringatan hanya untuk hari ini. */}
           {hariIni && (<>
-          <div className="mt-10">
-            <QuranHariIni />
-          </div>
 
           <section className="mt-10">
             <h2 className="mb-4 flex items-center gap-3">

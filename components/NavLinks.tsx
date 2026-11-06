@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BanIcon, BookHeartIcon, BookOpenIcon, ClockIcon, CompassIcon, LayersIcon, ListChecksIcon,
+  BanIcon, BookHeartIcon, GiftIcon, BookOpenIcon, ClockIcon, CompassIcon, LayersIcon, ListChecksIcon,
   MoonStarIcon, RotateCcwIcon, ScrollTextIcon, SettingsIcon, ShieldCheckIcon,
   SparklesIcon, WindIcon, type LucideIcon,
 } from 'lucide-react';
@@ -32,6 +32,7 @@ const IKON: Record<string, { ikon: LucideIcon; w: number }> = {
   '/syarat-sah-solat': { ikon: ShieldCheckIcon, w: 2 },
   '/pembatal-solat': { ikon: BanIcon, w: 3 },
   '/tetapan': { ikon: SettingsIcon, w: 5 },
+  '/apa-baru': { ikon: GiftIcon, w: 3 },
 };
 
 /**

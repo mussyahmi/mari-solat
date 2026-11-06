@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  CheckIcon, ChevronDownIcon, ExternalLinkIcon, InfoIcon, LanguagesIcon, LayoutGridIcon,
+  CheckIcon, ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon, GiftIcon, InfoIcon, LanguagesIcon, LayoutGridIcon,
   Loader2Icon, LocateFixedIcon, MapPinIcon, PaletteIcon, PencilIcon, type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,8 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useBahasa, useTeks } from '@/components/BahasaProvider';
 import { BAHASA, NAMA_BAHASA } from '@/lib/bahasa';
 import PemilihAksen from '@/components/PemilihAksen';
+import { APP_VERSION } from '@/lib/version';
+import Link from 'next/link';
 import { palet } from '@/lib/aksen';
 import { cn } from '@/lib/utils';
 
@@ -79,6 +81,8 @@ const ms = {
   bahasa: 'Bahasa',
   rupa: 'Rupa',
   aplikasiLain: 'Aplikasi lain',
+  apaBaru: 'Apa yang baru',
+  versi: (v: string) => `Versi ${v} · lihat log perubahan`,
   kiraPoket: 'Jejak perbelanjaan mengikut kitaran gaji, bukan bulan kalendar.',
   semuaNegeri: '← Semua negeri',
   pilihNegeri: 'Pilih negeri dahulu.',
@@ -112,6 +116,8 @@ const en: typeof ms = {
   bahasa: 'Language',
   rupa: 'Appearance',
   aplikasiLain: 'Other apps',
+  apaBaru: "What's new",
+  versi: v => `Version ${v} · see the changelog`,
   kiraPoket: 'Track spending by pay cycle, not calendar month.',
   semuaNegeri: '← All states',
   pilihNegeri: 'Choose a state first.',
@@ -416,6 +422,17 @@ export default function TetapanPage() {
             <PemilihAksen />
           </div>
         </section>
+
+        <Link href="/apa-baru" className="kad flex items-center gap-3 p-5 transition-colors hover:bg-muted/40">
+          <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl', palet(2).lembut, palet(2).teks)}>
+            <GiftIcon className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">{t.apaBaru}</span>
+            <span className="block text-sm text-muted-foreground">{t.versi(APP_VERSION)}</span>
+          </span>
+          <ChevronRightIcon className="size-4 text-muted-foreground" />
+        </Link>
 
         {/* Satu-satunya rujukan kepada aplikasi lain dalam keseluruhan MariSolat,
             dan ia diletakkan di sini dengan sengaja: Tetapan ialah tempat orang

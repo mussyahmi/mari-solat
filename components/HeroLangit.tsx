@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { toast } from 'sonner';
-import { BookOpen, Check, Moon } from 'lucide-react';
+import { Moon } from 'lucide-react';
 import { useTeks } from '@/components/BahasaProvider';
 import { useAmalanHariIni } from '@/components/useAmalanHariIni';
-import { adalahQuran, LABEL_SLOT, SLOT, slotLengkap, type Slot } from '@/lib/amalan';
+import { LABEL_SLOT, SLOT, type Slot } from '@/lib/amalan';
 import { fasaPada, parseTime, type Fasa, type Waktu, type WaktuSolat } from '@/lib/solat';
 import { palet, WARNA_WAKTU } from '@/lib/aksen';
 
@@ -17,12 +16,6 @@ const ms = {
   sekejap: 'sebentar lagi',
   pada: (masa: string) => `pada ${masa}`,
   tukar: 'tukar',
-  solat: (n: number) => `${n}/5 solat`,
-  zikir: (n: number) => `${n}/5 zikir`,
-  quran: 'Quran',
-  tandaSolat: (w: string) => `Tandakan solat ${w}`,
-  gagal: 'Rekod tidak dapat disimpan.',
-  belumMasuk: (w: string) => `Waktu ${w} belum masuk.`,
   bertukar: (baki: string) => `bertukar dalam ${baki}`,
   sepertiga: '⅓ malam',
   sepertigaLabel: (m: string, t: string) => `Satu pertiga malam: ${m} hingga ${t}`,
@@ -35,12 +28,6 @@ const en: typeof ms = {
   sekejap: 'any moment',
   pada: masa => `at ${masa}`,
   tukar: 'change',
-  solat: n => `${n}/5 solat`,
-  zikir: n => `${n}/5 zikir`,
-  quran: 'Quran',
-  tandaSolat: w => `Mark ${w} prayed`,
-  gagal: "Couldn't save your record.",
-  belumMasuk: w => `It isn't ${w} time yet.`,
   bertukar: baki => `changes in ${baki}`,
   sepertiga: 'last ⅓',
   sepertigaLabel: (m, t) => `Last third of the night: ${m} to ${t}`,
@@ -72,8 +59,7 @@ const LIMA: Slot[] = [...SLOT];
  * Ketinggian matahari dimodelkan sebagai lengkung sinus yang naik pada
  * syuruk dan terbenam pada maghrib — cukup tepat untuk menunjukkan bahawa
  * Subuh dan Isyak berlaku dalam gelap, tanpa kiraan astronomi sebenar.
- * Menekan waktu yang sudah masuk menandanya sebagai sudah ditunaikan dalam
- * amalan "Solat 5 waktu", jika ada.
+ * Ia memaparkan status sahaja; solat ditanda di Jejak Ibadah.
  */
 export default function HeroLangit({
   waktu, seterusnya, masa, kini, zon, kategori, malam, paparan,
@@ -94,7 +80,7 @@ export default function HeroLangit({
   paparan?: { tajuk: string; keterangan: string; fasa: Fasa };
 }) {
   const t = useTeks(TEKS);
-  const { amalan, log, tulis } = useAmalanHariIni();
+  const { amalan, log } = useAmalanHariIni();
 
   const statik = !!paparan || !seterusnya || !masa;
   // Lengkung hanya memerlukan jarak relatif antara waktu, jadi tarikh asas
@@ -140,30 +126,10 @@ export default function HeroLangit({
   const nampakMatahari = !statik && kiniMs >= mula && kiniMs <= tamat && parseTime(waktu.subuh, kini).toDateString() === asas.toDateString();
   const siang = kiniMs > syuruk && kiniMs < maghrib;
 
-  // Tanda solat dan ringkasan amalan hanya untuk hari ini.
+  // Tanda solat yang sudah ditunaikan — hari ini sahaja.
   const amalanSolat = statik ? undefined : amalan.find(a => a.jenis === 'solat');
-  const amalanZikir = amalan.find(a => a.jenis === 'zikir');
-  const amalanQuran = amalan.find(adalahQuran);
   const ditunai = (amalanSolat && log[amalanSolat.id]?.solat) ?? [];
 
-  const togolSolat = (sl: Slot) => {
-    if (!amalanSolat) return;
-    if (jam(sl) > kiniMs) { toast(t.belumMasuk(LABEL_SLOT[sl])); return; }
-    const baru = ditunai.includes(sl) ? ditunai.filter(x => x !== sl) : LIMA.filter(x => x === sl || ditunai.includes(x));
-    tulis(amalanSolat, { solat: baru }).catch(() => toast.error(t.gagal));
-  };
-
-  const cip: React.ReactNode[] = [];
-  if (amalanSolat) cip.push(t.solat(ditunai.length));
-  if (amalanZikir) {
-    const n = amalanZikir.item?.length ?? 0;
-    const hari = log[amalanZikir.id];
-    cip.push(t.zikir(SLOT.filter(sl => slotLengkap(hari ? { ...hari, n } : hari, sl, n)).length));
-  }
-  if (amalanQuran) {
-    const siap = (log[amalanQuran.id]?.jumlah ?? 0) >= (amalanQuran.sasaran ?? 1);
-    cip.push(<><BookOpen className="size-3.5" /> {t.quran} {siap && <Check className="size-3.5" strokeWidth={3} />}</>);
-  }
 
   const namaZon = zon?.split(' · ').slice(1).join(' · ') || zon;
 
@@ -173,7 +139,7 @@ export default function HeroLangit({
         {paparan ? paparan.tajuk : t.dalam(namaSeterusnya, bakiTeks)}
       </h1>
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-white/90 sm:text-base">
-        <span className="tabular">{paparan ? paparan.keterangan : seterusnya ? t.pada(waktu[seterusnya]) : ''}</span>
+        <span className="tabular">{paparan ? paparan.keterangan : masa ? t.pada(fmt(masa)) : ''}</span>
         {/* Zon dan pautan tukar untuk hari ini sahaja; hari lain sudah ada kad tarikh dan zon di bawah. */}
         {!statik && (
           <>
@@ -248,13 +214,7 @@ export default function HeroLangit({
           return (
             <g
               key={sl}
-              role={amalanSolat ? 'button' : undefined}
-              aria-label={amalanSolat ? t.tandaSolat(LABEL_SLOT[sl]) : LABEL_SLOT[sl]}
-              aria-pressed={amalanSolat ? sudah : undefined}
-              tabIndex={amalanSolat ? 0 : undefined}
-              onClick={() => togolSolat(sl)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togolSolat(sl); } }}
-              style={{ cursor: amalanSolat ? 'pointer' : undefined }}
+              aria-label={LABEL_SLOT[sl]}
             >
               <circle cx={cx} cy={cy} r="16" fill="transparent" />
               <circle
@@ -272,15 +232,6 @@ export default function HeroLangit({
         })}
       </svg>
 
-      {!statik && cip.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {cip.map((c, i) => (
-            <Link key={i} href="/amalan" className="flex items-center gap-1.5 rounded-full bg-white/25 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/35">
-              {c}
-            </Link>
-          ))}
-        </div>
-      )}
     </section>
   );
 }

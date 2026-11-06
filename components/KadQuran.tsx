@@ -62,7 +62,7 @@ const TEKS = { ms, en };
  * rekod yang sama.
  */
 export default function KadQuran({
-  a, s, hariIni, log, onTulis, onUbah, tunjukNama = true, seragam = false,
+  a, s, hariIni, log, onTulis, onUbah, tunjukNama = true, seragam = false, bacaSahaja = false,
 }: {
   a: Amalan;
   s: string;
@@ -73,6 +73,8 @@ export default function KadQuran({
   tunjukNama?: boolean;
   /** Jejak Ibadah: warna tema dan kad putih, sama seperti amalan lain. */
   seragam?: boolean;
+  /** Halaman utama: status sahaja — tiada pengira atau butang kemas kini. */
+  bacaSahaja?: boolean;
 }) {
   const t = useTeks(TEKS);
   const { bahasa } = useBahasa();
@@ -124,6 +126,12 @@ export default function KadQuran({
           </p>
         </div>
 
+        {bacaSahaja ? (
+          <span className="shrink-0 text-right">
+            <span className="angka-paparan block text-2xl leading-none">{dibuat}</span>
+            <span className="text-xs text-muted-foreground">{unitPapar(a.unit, bahasa, dibuat)}</span>
+          </span>
+        ) : (
         <div className="flex shrink-0 items-center rounded-full border border-border/60 bg-card shadow-sm">
           <button type="button" aria-label={t.tolak} disabled={dibuat === 0} onClick={() => set(dibuat - 1)} className="flex size-10 items-center justify-center rounded-full disabled:opacity-30">
             <Minus className="size-4" />
@@ -133,6 +141,7 @@ export default function KadQuran({
             <Plus className="size-4" strokeWidth={2.5} />
           </button>
         </div>
+        )}
       </div>
 
       {/* Penanda bacaan — tempat untuk menyambung, bukan sebahagian rekod harian. */}
@@ -142,9 +151,11 @@ export default function KadQuran({
         <span className="min-w-0 flex-1 truncate font-semibold">
           {a.penanda ? `${namaSurah(a.penanda.surah)} ${a.penanda.surah}:${a.penanda.ayat}` : t.tiadaPenanda}
         </span>
-        <button type="button" onClick={() => setUbahPenanda(true)} className={cn('shrink-0 font-semibold', p.teks)}>
-          {t.kemasKini}
-        </button>
+        {!bacaSahaja && (
+          <button type="button" onClick={() => setUbahPenanda(true)} className={cn('shrink-0 font-semibold', p.teks)}>
+            {t.kemasKini}
+          </button>
+        )}
         {a.penanda && (
           <a
             href={pautanAyat(a.penanda.surah, a.penanda.ayat)}

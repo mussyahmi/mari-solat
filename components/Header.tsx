@@ -33,6 +33,7 @@ const ms = {
   keCerah: 'Tukar ke tema cerah',
   keGelap: 'Tukar ke tema gelap',
   tukarBahasa: 'Switch to English',
+  apaBaru: 'Apa yang baru',
 };
 const en: typeof ms = {
   bukaMenu: 'Open menu',
@@ -40,6 +41,7 @@ const en: typeof ms = {
   keCerah: 'Switch to light theme',
   keGelap: 'Switch to dark theme',
   tukarBahasa: 'Tukar ke Bahasa Melayu',
+  apaBaru: "What's new",
 };
 const TEKS = { ms, en };
 
@@ -94,7 +96,10 @@ export default function Header() {
               <CariMasjid />
               <Footer />
               <InstallButton />
-              <p className="text-xs text-muted-foreground">v{APP_VERSION}</p>
+              {/* Nombor versi membuka log perubahan. */}
+              <Link href="/apa-baru" onClick={() => setLaciBuka(false)} className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                v{APP_VERSION} · {t.apaBaru}
+              </Link>
             </div>
           </SheetFooter>
         </SheetContent>

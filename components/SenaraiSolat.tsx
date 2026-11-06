@@ -21,6 +21,7 @@ const ms = {
   tandaSemua: 'Tandakan semua',
   kosongkan: 'Kosongkan',
   ubahZikir: 'Ubah senarai zikir',
+  ditunaikan: 'Sudah ditunaikan',
   tajukZikir: (w: string) => `Zikir selepas ${w}`,
   huraianZikir: (a: number, n: number) => `${a} daripada ${n} selesai`,
   siap: 'Siap',
@@ -36,6 +37,7 @@ const en: typeof ms = {
   tandaSemua: 'Mark all',
   kosongkan: 'Clear',
   ubahZikir: 'Edit zikir list',
+  ditunaikan: 'Prayed',
   tajukZikir: w => `Zikir after ${w}`,
   huraianZikir: (a, n) => `${a} of ${n} done`,
   siap: 'Done',
@@ -77,7 +79,7 @@ function Cincin({ kadar, warna }: { kadar: number; warna: string }) {
  * (mana-mana hari) supaya kedua-duanya menulis rekod yang sama.
  */
 export default function SenaraiSolat({
-  waktu, kini, hariLepas, solat, zikir, logSolat, logZikir, onTulis, onUbahZikir, ciptaSolat, tanpaNotaWaktu, seragam,
+  waktu, kini, hariLepas, solat, zikir, logSolat, logZikir, onTulis, onUbahZikir, ciptaSolat, tanpaNotaWaktu, seragam, ringkas,
 }: {
   waktu: WaktuSolat | null;
   /** Masa sekarang jika tarikh dipaparkan ialah hari ini, selainnya null. */
@@ -96,6 +98,8 @@ export default function SenaraiSolat({
   tanpaNotaWaktu?: boolean;
   /** Satu warna tema untuk semua waktu (Jejak Ibadah), bukan warna setiap waktu. */
   seragam?: boolean;
+  /** Paparan ringkas (halaman utama): tiada butang tanda atau pil zikir — hanya titik apabila solat sudah ditunaikan. */
+  ringkas?: boolean;
 }) {
   const t = useTeks(TEKS);
   const [buka, setBuka] = useState<Slot | null>(null);
@@ -150,6 +154,7 @@ export default function SenaraiSolat({
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2">
                   <span className="text-base font-bold leading-tight">{LABEL_SLOT[sl]}</span>
+                  {ringkas && sudah && <span className="size-2 shrink-0 rounded-full" style={{ background: w.css }} aria-label={t.ditunaikan} />}
                   {kini_ && (
                     <span className={cn('rounded-full bg-card/70 px-1.5 py-px text-[10px] font-semibold', w.teks)}>{t.sekarang}</span>
                   )}
@@ -162,7 +167,7 @@ export default function SenaraiSolat({
                 )}
               </div>
 
-              {(solat || ciptaSolat) && (
+              {!ringkas && (solat || ciptaSolat) && (
                 <button
                   type="button"
                   onClick={() => togolSolat(sl)}
@@ -180,7 +185,7 @@ export default function SenaraiSolat({
               )}
             </div>
 
-            {zikir && n > 0 && (
+            {!ringkas && zikir && n > 0 && (
               <div className="mt-auto pt-2">
                 <button
                   type="button"
