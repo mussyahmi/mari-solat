@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 const ms = {
   tajuk: 'Peringatan',
-  lede: 'Ayat Al-Quran dan hadis sahih mengikut topik. Teks diambil terus daripada sumber asal — terjemahan Basmeih bagi Al-Quran, Sahih al-Bukhari dan Sahih Muslim bagi hadis.',
+  lede: 'Ayat Al-Quran dan hadis sahih mengikut topik. Teks diambil terus daripada sumber asal: terjemahan Basmeih bagi Al-Quran, Sahih al-Bukhari dan Sahih Muslim bagi hadis.',
   semua: 'Semua',
   disimpan: 'Disimpan',
   tiadaSimpan: 'Belum ada yang disimpan. Tekan ikon hati pada mana-mana peringatan untuk menyimpannya di sini.',
@@ -22,7 +22,7 @@ const ms = {
 };
 const en: typeof ms = {
   tajuk: 'Reminders',
-  lede: 'Quran verses and authentic hadith by topic. Text comes straight from the original sources — Sahih International for the Quran, Sahih al-Bukhari and Sahih Muslim for hadith.',
+  lede: 'Quran verses and authentic hadith by topic. Text comes straight from the original sources: Sahih International for the Quran, Sahih al-Bukhari and Sahih Muslim for hadith.',
   semua: 'All',
   disimpan: 'Saved',
   tiadaSimpan: 'Nothing saved yet. Tap the heart on any reminder to keep it here.',

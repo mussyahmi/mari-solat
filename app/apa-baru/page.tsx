@@ -9,12 +9,12 @@ import { cn } from '@/lib/utils';
 
 const ms = {
   tajuk: 'Apa yang baru',
-  lede: 'Perubahan dalam setiap versi MariSolat, bermula dari 2.0.',
+  lede: 'Perubahan dalam setiap versi MariSolat, dari versi pertama hingga sekarang.',
   semasa: 'Versi anda',
 };
 const en: typeof ms = {
   tajuk: "What's new",
-  lede: 'Changes in each version of MariSolat, starting from 2.0.',
+  lede: 'Changes in every version of MariSolat, from the first release to now.',
   semasa: 'Your version',
 };
 const TEKS = { ms, en };

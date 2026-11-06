@@ -387,8 +387,8 @@ export default function TasbihPage() {
           className="mx-auto mt-12 grid max-w-md grid-cols-3 gap-2.5 sm:gap-3"
         >
           {([
-            [t.sasaran, hasTarget ? preset.target : '—', 0],
-            [t.baki, hasTarget ? preset.target - count : '—', 2],
+            [t.sasaran, hasTarget ? preset.target : '-', 0],
+            [t.baki, hasTarget ? preset.target - count : '-', 2],
             [t.pusingan, cycles, 4],
           ] as const).map(([label, nilai, anjak]) => {
             const wt = palet(PRESETS.indexOf(preset) + anjak);

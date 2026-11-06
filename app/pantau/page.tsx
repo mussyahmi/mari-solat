@@ -142,8 +142,8 @@ export default function PantauPage() {
   const logDipapar = terkini.slice(0, HAD_LOG);
   const tarikhPendek = (iso: string) =>
     new Date(iso).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' });
-  const masaTerkini = terkini[0] ? tarikhPendek(terkini[0].timestamp) : '—';
-  const masaTerawal = terkini.length ? tarikhPendek(terkini[terkini.length - 1].timestamp) : '—';
+  const masaTerkini = terkini[0] ? tarikhPendek(terkini[0].timestamp) : '-';
+  const masaTerawal = terkini.length ? tarikhPendek(terkini[terkini.length - 1].timestamp) : '-';
   const zonTertinggi = topZones[0]?.[1] ?? 0;
 
   return (

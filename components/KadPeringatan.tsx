@@ -18,14 +18,14 @@ const ms = {
   semua: 'Kedua-dua',
   bacaQuran: 'Baca di Quran.com',
   bacaHadis: 'Baca di Sunnah.com',
-  indonesia: 'Terjemahan Bahasa Indonesia — tiada terjemahan Melayu rasmi',
+  indonesia: 'Terjemahan Bahasa Indonesia (tiada terjemahan Melayu rasmi)',
   bacaPenuh: 'Baca penuh',
   ringkas: 'Ringkaskan',
   simpan: 'Simpan',
   buang: 'Buang dari simpanan',
   gagal: 'Teks tidak dapat dimuatkan. Semak sambungan internet.',
   kongsi: 'Kongsi',
-  disalin: 'Disalin — tampal untuk berkongsi.',
+  disalin: 'Disalin. Tampal untuk berkongsi.',
 };
 const en: typeof ms = {
   quran: 'Quran',
@@ -33,14 +33,14 @@ const en: typeof ms = {
   semua: 'Both',
   bacaQuran: 'Read on Quran.com',
   bacaHadis: 'Read on Sunnah.com',
-  indonesia: 'Indonesian translation — no official Malay translation exists',
+  indonesia: 'Indonesian translation (no official Malay translation exists)',
   bacaPenuh: 'Read in full',
   ringkas: 'Show less',
   simpan: 'Save',
   buang: 'Remove from saved',
   gagal: "Couldn't load the text. Check your internet connection.",
   kongsi: 'Share',
-  disalin: 'Copied — paste to share.',
+  disalin: 'Copied. Paste to share.',
 };
 const TEKS = { ms, en };
 
@@ -117,7 +117,7 @@ export default function KadPeringatan({ p, kedudukan }: { p: Peringatan; keduduk
 
   const kongsi = async () => {
     if (!teks) return;
-    const isi = `${teks.arab ? `${teks.arab}\n\n` : ''}${teks[utama]}\n\n— ${rujukan}\n${pautan(p)}`;
+    const isi = `${teks.arab ? `${teks.arab}\n\n` : ''}${teks[utama]}\n\n(${rujukan})\n${pautan(p)}`;
     try {
       if (navigator.share) { await navigator.share({ text: isi }); return; }
       await navigator.clipboard.writeText(isi);

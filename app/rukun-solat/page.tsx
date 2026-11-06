@@ -54,15 +54,15 @@ const FILTERS = [
 
 const ms = {
   tajuk: 'Rukun Solat',
-  lede: 'Tiga belas perkara yang wajib dilakukan dalam solat. Tidak seperti senarai lain, rukun ini satu urutan — ia dilakukan mengikut susunan.',
+  lede: 'Tiga belas perkara yang wajib dilakukan dalam solat. Tidak seperti senarai lain, rukun ini satu urutan: ia dilakukan mengikut susunan.',
   semua: 'Semua',
-  notaTamaninah: '* tama\u2019ninah — berhenti seketika, sekadar menyebut subhanallah.',
+  notaTamaninah: '* tama\u2019ninah: berhenti seketika, sekadar menyebut subhanallah.',
 };
 const en: typeof ms = {
   tajuk: 'Pillars of Prayer',
-  lede: 'The pillars of prayer: thirteen things that must be performed in every prayer. Unlike the other lists, these pillars form a sequence — they are performed in order.',
+  lede: 'The pillars of prayer: thirteen things that must be performed in every prayer. Unlike the other lists, these pillars form a sequence: they are performed in order.',
   semua: 'All',
-  notaTamaninah: '* tama\u2019ninah — pausing briefly, for as long as it takes to say subhanallah.',
+  notaTamaninah: '* tama\u2019ninah: pausing briefly, for as long as it takes to say subhanallah.',
 };
 const TEKS = { ms, en };
 

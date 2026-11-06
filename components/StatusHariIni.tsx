@@ -18,7 +18,6 @@ const ms = {
   belumDibaca: 'Belum dibaca',
   terakhir: 'Terakhir',
   buka: 'Buka',
-  sekarang: 'sekarang',
   kemasKini: 'Kemas kini di Jejak Ibadah',
   logMasuk: 'Log masuk untuk menjejak solat, zikir dan bacaan Al-Quran anda.',
   mula: 'Buka Jejak Ibadah',
@@ -31,7 +30,6 @@ const en: typeof ms = {
   belumDibaca: 'Not read yet',
   terakhir: 'Last read',
   buka: 'Open',
-  sekarang: 'now',
   kemasKini: 'Update in Ibadah Tracker',
   logMasuk: 'Sign in to track your solat, zikir and Quran reading.',
   mula: 'Open Ibadah Tracker',
@@ -111,7 +109,8 @@ export default function StatusHariIni({ waktu, kini }: { waktu: WaktuSolat; kini
         {baris(
           t.solat,
           `${ditunai.length}/${SLOT.length}`,
-          <div className="flex flex-wrap gap-1.5">
+          // Lima lencana sebaris, sama lebar — tidak terbalut ke baris kedua.
+          <div className="grid grid-cols-5 gap-1">
             {SLOT.map(sl => {
               const w = palet(WARNA_WAKTU[sl]);
               const sudah = ditunai.includes(sl);
@@ -119,15 +118,15 @@ export default function StatusHariIni({ waktu, kini }: { waktu: WaktuSolat; kini
                 <span
                   key={sl}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
+                    'flex min-w-0 items-center justify-center gap-0.5 rounded-full px-1 py-1 text-[11px] font-medium sm:gap-1 sm:text-xs',
                     sudah ? cn(w.lembut, w.teks) : 'border border-dashed border-border text-muted-foreground',
                     kiniSlot === sl && !sudah && 'border-solid'
                   )}
                   style={kiniSlot === sl && !sudah ? { borderColor: w.css } : undefined}
                 >
-                  {sudah && <Check className="size-3" strokeWidth={3} />}
-                  {LABEL_SLOT[sl]}
-                  {kiniSlot === sl && !sudah && <span className={cn('text-[10px]', w.teks)}>· {t.sekarang}</span>}
+                  {/* Pada telefon warna isian sudah menandakan "selesai"; ✓ hanya pada skrin lebih lebar. */}
+                  {sudah && <Check className="hidden size-3 shrink-0 sm:block" strokeWidth={3} />}
+                  <span className="truncate">{LABEL_SLOT[sl]}</span>
                 </span>
               );
             })}

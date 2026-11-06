@@ -29,7 +29,7 @@ import { KOD_BAHASA } from '@/lib/bahasa';
 
 const ms = {
   bukaMenu: 'Buka menu',
-  huraian: 'MariSolat — waktu solat Malaysia',
+  huraian: 'MariSolat: waktu solat Malaysia',
   keCerah: 'Tukar ke tema cerah',
   keGelap: 'Tukar ke tema gelap',
   tukarBahasa: 'Switch to English',
@@ -37,7 +37,7 @@ const ms = {
 };
 const en: typeof ms = {
   bukaMenu: 'Open menu',
-  huraian: 'MariSolat — Malaysian prayer times',
+  huraian: 'MariSolat: Malaysian prayer times',
   keCerah: 'Switch to light theme',
   keGelap: 'Switch to dark theme',
   tukarBahasa: 'Tukar ke Bahasa Melayu',

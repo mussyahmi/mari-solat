@@ -25,11 +25,11 @@ export const HURAIAN_KATEGORI: Kamus<Record<KategoriId, string>> = {
     tahrim: 'Hampir masuk waktu lain. Haram melambatkan hingga ke sini dengan sengaja, namun solat tetap sah.',
   },
   en: {
-    fadhilat: 'Virtue — the earliest time, right after the azan. The greatest reward.',
-    ikhtiar: 'Preferred — about 15 minutes after the azan. The time to aim for.',
-    jawaz: 'Permissible — you may pray now, but it is not the best time.',
-    karahah: 'Disliked (makruh) — about 20 minutes before the next prayer time begins.',
-    tahrim: 'Forbidden — the next prayer is about to begin. Deliberately delaying until now is haram, though the prayer is still valid.',
+    fadhilat: 'Virtue: the earliest time, right after the azan. The greatest reward.',
+    ikhtiar: 'Preferred: about 15 minutes after the azan. The time to aim for.',
+    jawaz: 'Permissible: you may pray now, but it is not the best time.',
+    karahah: 'Disliked (makruh): about 20 minutes before the next prayer time begins.',
+    tahrim: 'Forbidden: the next prayer is about to begin. Deliberately delaying until now is haram, though the prayer is still valid.',
   },
 };
 

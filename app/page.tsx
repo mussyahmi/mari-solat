@@ -22,7 +22,6 @@ import { useBahasa, useTeks } from "@/components/BahasaProvider";
 import { KATEGORI, kategoriPada, julatKategori, julatSemasa } from "@/lib/kategori";
 import {
   CalendarDays,
-  MapPin,
   MoonStar,
   Wind,
   type LucideIcon,
@@ -415,24 +414,16 @@ export default function HalamanUtama() {
               />
             )}
 
-            {/* Tarikh dan zon: satu kad, setiap baris dengan cip warnanya. */}
-            <dl className="kad grid gap-4 p-5 text-sm sm:grid-cols-3">
+            {/* Tarikh Masihi dan Hijri sebagai satu baris cip padat di tengah,
+                sama untuk semalam, hari ini dan esok. Zon dipaparkan pada kad
+                langit hari ini dan di Tetapan. */}
+            <dl className="flex flex-wrap justify-center gap-2 text-sm">
               <BarisTarikh ikon={CalendarDays} warna={5} label={t.masihi}>
                 {formatGregorianDate(waktuDipapar.gregorianDate, bahasa)}
               </BarisTarikh>
               <BarisTarikh ikon={MoonStar} warna={0} label={t.hijri}>
                 {formatHijriDate(waktuDipapar.hijriDate)}
               </BarisTarikh>
-              {zon && (
-                <BarisTarikh ikon={MapPin} warna={2} label={t.zon}>
-                  <Link
-                    href="/tetapan"
-                    className="text-pretty underline-offset-4 transition-colors hover:text-primary hover:underline"
-                  >
-                    {zon}
-                  </Link>
-                </BarisTarikh>
-              )}
             </dl>
           </section>
 
@@ -482,14 +473,12 @@ function BarisTarikh({
 }) {
   const p = palet(warna);
   return (
-    <div className="flex min-w-0 items-start gap-3">
-      <span className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${p.lembut} ${p.teks}`}>
-        <Ikon className="size-5" />
+    <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-card py-1.5 pl-1.5 pr-3 shadow-[var(--bayang-kad)]">
+      <span className={`flex size-6 shrink-0 items-center justify-center rounded-full ${p.lembut} ${p.teks}`}>
+        <Ikon className="size-3.5" />
       </span>
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="mt-0.5 font-medium">{children}</dd>
-      </div>
+      <dt className="sr-only">{label}</dt>
+      <dd className="min-w-0 truncate font-medium">{children}</dd>
     </div>
   );
 }

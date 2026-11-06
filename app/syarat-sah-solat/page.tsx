@@ -25,7 +25,7 @@ const SYARAT_SAH: Kamus<Syarat[]> = {
     },
     {
       name: 'Suci badan, pakaian, dan tempat solat daripada najis',
-      desc: 'Wajib suci pakaian dan tempat solat daripada najis, kecuali najis yang dimaafkan seperti darah yang sedikit atau kotoran yang melekat pada kaki — najis yang dimaafkan tidak membatalkan solat.',
+      desc: 'Wajib suci pakaian dan tempat solat daripada najis, kecuali najis yang dimaafkan seperti darah yang sedikit atau kotoran yang melekat pada kaki. Najis yang dimaafkan tidak membatalkan solat.',
     },
     {
       name: 'Menutup aurat',
@@ -59,7 +59,7 @@ const SYARAT_SAH: Kamus<Syarat[]> = {
     },
     {
       name: 'Body, clothing and place of prayer free from najis',
-      desc: 'Clothing and the place of prayer must be free from najis, except for pardoned najis such as a small amount of blood or dirt stuck to the feet — pardoned najis does not invalidate the prayer.',
+      desc: 'Clothing and the place of prayer must be free from najis, except for pardoned najis such as a small amount of blood or dirt stuck to the feet. Pardoned najis does not invalidate the prayer.',
     },
     {
       name: 'Covering the aurat',
@@ -98,8 +98,8 @@ const en: typeof ms = {
   lede: 'The conditions of validity: five conditions that determine whether a prayer is valid. If any one is not met, the prayer must be repeated.',
   selepasTajuk: 'If you realise after praying',
   selepasIsi:
-    'If you realise after finishing a prayer that one of these conditions was not met — ' +
-    'for example, there was najis on the prayer mat — the prayer must be repeated, because ' +
+    'If you realise after finishing a prayer that one of these conditions was not met ' +
+    '(for example, there was najis on the prayer mat), the prayer must be repeated, because ' +
     'it did not meet the conditions of validity.',
 };
 const TEKS = { ms, en };

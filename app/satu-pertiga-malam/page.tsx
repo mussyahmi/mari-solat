@@ -18,7 +18,7 @@ type Nilai = { maghrib: string; subuh: string; malamJ: number; malamM: number; p
 
 const ms = {
   tajuk: 'Satu Pertiga Malam',
-  lede: 'Satu pertiga malam terakhir — waktu qiamullail dan doa mustajab. Ia dikira daripada maghrib hingga subuh, bukan daripada tengah malam.',
+  lede: 'Satu pertiga malam terakhir: waktu qiamullail dan doa mustajab. Ia dikira daripada maghrib hingga subuh, bukan daripada tengah malam.',
   tiadaZonTajuk: 'Pilih zon anda dahulu',
   tiadaZonTeks: 'Waktu satu pertiga malam dikira daripada waktu maghrib dan subuh zon anda.',
   ralatTajuk: 'Data tidak dapat dimuatkan',
@@ -38,7 +38,7 @@ const ms = {
   pengenalan: (maghrib: React.ReactNode, subuh: React.ReactNode) => (
     <>
       Malam dalam kiraan ini bermula pada {maghrib} dan
-      berakhir pada {subuh} — bukan dari tengah malam.
+      berakhir pada {subuh}, bukan dari tengah malam.
       Sebab itu waktu satu pertiga terakhir berubah sedikit setiap hari, mengikut peredaran
       matahari di zon anda.
     </>
@@ -83,7 +83,7 @@ const ms = {
 };
 const en: typeof ms = {
   tajuk: 'Last Third of the Night',
-  lede: 'The last third of the night — the time for qiamullail and answered doa. It is counted from Maghrib to Subuh, not from midnight.',
+  lede: 'The last third of the night: the time for qiamullail and answered doa. It is counted from Maghrib to Subuh, not from midnight.',
   tiadaZonTajuk: 'Choose your zone first',
   tiadaZonTeks: "The last third of the night is calculated from your zone's Maghrib and Subuh times.",
   ralatTajuk: "Data couldn't be loaded",
@@ -102,7 +102,7 @@ const en: typeof ms = {
   caraDikira: 'How it is calculated',
   pengenalan: (maghrib, subuh) => (
     <>
-      In this calculation the night begins at {maghrib} and ends at {subuh} — not at
+      In this calculation the night begins at {maghrib} and ends at {subuh}, not at
       midnight. That is why the last third shifts slightly every day, following the sun&apos;s
       path over your zone.
     </>

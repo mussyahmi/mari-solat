@@ -37,11 +37,11 @@ const ms = {
     `Bacaan ${darjah}° dikira daripada koordinat anda dan tidak berubah melainkan anda berpindah tempat. Kompas yang berputar di atas pula bergantung pada sensor magnet telefon, dan sensor itu mudah terganggu.`,
   petua: [
     'Sarung telefon bermagnet, meja besi, kereta dan peralatan elektrik boleh menyimpangkan bacaan berpuluh darjah.',
-    'Lambaikan telefon dalam bentuk angka lapan beberapa kali sebelum membaca — itu membetulkan semula bacaan sensor.',
+    'Lambaikan telefon dalam bentuk angka lapan beberapa kali sebelum membaca. Ini membetulkan semula bacaan sensor.',
     'Berdiri jauh sedikit daripada struktur besi, dan pegang telefon rata.',
   ],
   ragu: 'Jika ragu',
-  raguTeks: 'Bandingkan dengan arah saf di masjid atau surau berdekatan — itu rujukan yang sudah disemak. Aplikasi ini membantu anda menganggar, bukan menggantikan pengesahan di tempat solat.',
+  raguTeks: 'Bandingkan dengan arah saf di masjid atau surau berdekatan. Itu rujukan yang sudah disemak. Aplikasi ini membantu anda menganggar, bukan menggantikan pengesahan di tempat solat.',
 };
 const en: typeof ms = {
   tajuk: 'Qibla Direction',
@@ -68,11 +68,11 @@ const en: typeof ms = {
     `The ${darjah}° reading is calculated from your coordinates and stays the same unless you move. The spinning compass above relies on your phone's magnetic sensor, which is easily disturbed.`,
   petua: [
     'Magnetic phone cases, metal tables, cars and electrical appliances can throw the reading off by tens of degrees.',
-    'Wave your phone in a figure-eight a few times before reading — that recalibrates the sensor.',
+    'Wave your phone in a figure-eight a few times before reading. That recalibrates the sensor.',
     'Stand a little away from metal structures, and hold your phone flat.',
   ],
   ragu: 'If in doubt',
-  raguTeks: 'Compare with the saf direction at a nearby masjid or surau — that is a checked reference. This app helps you estimate; it does not replace confirming at a place of prayer.',
+  raguTeks: 'Compare with the saf direction at a nearby masjid or surau. That is a checked reference. This app helps you estimate; it does not replace confirming at a place of prayer.',
 };
 const TEKS = { ms, en };
 
@@ -275,8 +275,8 @@ export default function ArahKiblatPage() {
           <dl className="grid grid-cols-3 gap-2.5 sm:gap-3">
             {(
               [
-                [t.arahAnda, normalizedHeading !== null ? `${Math.round(normalizedHeading)}°` : '—', 5, true],
-                [t.bezaSudut, alignmentError !== null ? `${Math.round(alignmentError)}°` : '—', 4, true],
+                [t.arahAnda, normalizedHeading !== null ? `${Math.round(normalizedHeading)}°` : '-', 5, true],
+                [t.bezaSudut, alignmentError !== null ? `${Math.round(alignmentError)}°` : '-', 4, true],
                 [t.kompas, heading !== null ? t.aktif : motionGranted ? t.tiadaSensor : t.belumAktif, 1, false],
               ] as const
             ).map(([label, nilai, w, angka]) => (

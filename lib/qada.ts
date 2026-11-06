@@ -138,7 +138,10 @@ export function estimateCompletion(total: number, rate: number, bahasa: Bahasa =
   } else {
     // Pada skala tahun, baki hari ialah ketepatan palsu — kadar harian itu
     // sendiri berubah jauh lebih kerap daripada itu. Dua unit sudah memadai.
-    const yr = Math.floor(days / 365), mo = Math.floor((days % 365) / 30);
+    // Dikira daripada jumlah bulan supaya baki tidak pernah menjadi "12 bulan"
+    // (365 hari ÷ 30 boleh memberi 12); 12 bulan digulung ke tahun berikutnya.
+    const bulan = Math.round(days / 30.44);
+    const yr = Math.floor(bulan / 12), mo = bulan % 12;
     label = mo > 0 ? t.tahunBulan(yr, mo) : t.tahun(yr);
   }
   return { label, date: formatMalayDate(date, bahasa) };

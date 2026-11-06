@@ -118,7 +118,7 @@ function ofset() {
   ofsetHijri = 0;
   const cache = typeof window !== 'undefined' ? bacaCacheWaktu() : null;
   if (cache?.hijriDate) {
-    const [, , hari] = cache.hijriDate.split('-').map(Number);
+    const [,, hari] = cache.hijriDate.split('-').map(Number);
     for (const cuba of [0, -1, 1]) {
       const d = new Date();
       d.setDate(d.getDate() + cuba);

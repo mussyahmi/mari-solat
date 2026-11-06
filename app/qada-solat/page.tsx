@@ -72,6 +72,18 @@ const ms = {
   streak: 'Streak',
   hari: (() => 'hari') as (n: number) => string,
   solatTertinggal: 'Solat yang tertinggal',
+  qadaHariIni: 'Qada hari ini',
+  qadaHariIniNota: 'Tekan "+1" setiap kali anda selesai satu solat qada.',
+  sasaranHari: (n: number, k: number) => `${n} / ${k} hari ini`,
+  sasaranCapai: 'Sasaran hari ini tercapai, alhamdulillah!',
+  satuSelesai: (p: string) => `Tandakan satu qada ${p} selesai`,
+  kurangSatu: (p: string) => `Kurangkan satu qada ${p} hari ini`,
+  baki: (n: number) => `baki ${n}`,
+  bakiMengikutWaktu: 'Baki mengikut waktu',
+  ubahBaki: 'Ubah baki',
+  ubahBakiNota: 'Untuk menetapkan atau membetulkan jumlah solat yang perlu diqada. Untuk merekod qada yang sudah dibuat, guna "Qada hari ini" di atas.',
+  siapUbah: 'Siap',
+  mulaBaki: 'Mula dengan memasukkan berapa solat yang perlu diqada.',
   ketikNombor: 'Ketik nombor untuk menaip terus.',
   kurang: (p: string) => `Kurangkan ${p}`,
   tambah: (p: string) => `Tambah ${p}`,
@@ -100,7 +112,7 @@ const ms = {
   qadaSelesaiLencana: 'qada selesai',
   kenapaTajuk: 'Kenapa ada cabaran ini',
   kenapa1: 'Bila kita nampak ada orang lain yang turut serta, kita pun jadi lebih bersemangat. Log sahaja, in shaa Allah mereka pun akan ikut sama.',
-  kenapa2: 'Betulkan semula niat — buat kerana Allah, bukan kerana nak naik tangga. Streak dan kedudukan ialah pemangkin semangat, bukan matlamat.',
+  kenapa2: 'Betulkan semula niat: buat kerana Allah, bukan kerana nak naik tangga. Streak dan kedudukan ialah pemangkin semangat, bukan matlamat.',
   caraDikira: 'Cara ia dikira',
   notaKiraan: [
     'Satu log sehari sudah memadai untuk streak. Log yang sama masih boleh diedit pada hari itu.',
@@ -170,6 +182,18 @@ const en: typeof ms = {
   streak: 'Streak',
   hari: n => (n === 1 ? 'day' : 'days'),
   solatTertinggal: 'Missed prayers',
+  qadaHariIni: "Today's qada",
+  qadaHariIniNota: 'Tap "+1" each time you finish one qada prayer.',
+  sasaranHari: (n, k) => `${n} / ${k} today`,
+  sasaranCapai: "Today's target reached, alhamdulillah!",
+  satuSelesai: p => `Mark one ${p} qada done`,
+  kurangSatu: p => `Remove one ${p} qada from today`,
+  baki: n => `${n} left`,
+  bakiMengikutWaktu: 'Balance by prayer',
+  ubahBaki: 'Edit balance',
+  ubahBakiNota: 'To set or correct how many prayers you need to make up. To record qada you have done, use "Today\'s qada" above.',
+  siapUbah: 'Done',
+  mulaBaki: 'Start by entering how many prayers you need to make up.',
   ketikNombor: 'Tap a number to type it in directly.',
   kurang: p => `Decrease ${p}`,
   tambah: p => `Increase ${p}`,
@@ -197,8 +221,8 @@ const en: typeof ms = {
   belumAdaPeserta: 'No participants yet. Be the first.',
   qadaSelesaiLencana: 'qada complete',
   kenapaTajuk: 'Why this challenge',
-  kenapa1: 'When we see others taking part, we feel more motivated too. Just log — in shaa Allah, they will follow along.',
-  kenapa2: 'Renew your intention — do it for Allah, not to climb the leaderboard. Streaks and rankings are there to spur you on, not the goal itself.',
+  kenapa1: 'When we see others taking part, we feel more motivated too. Just log, in shaa Allah, they will follow along.',
+  kenapa2: 'Renew your intention: do it for Allah, not to climb the leaderboard. Streaks and rankings are there to spur you on, not the goal itself.',
   caraDikira: 'How it’s counted',
   notaKiraan: [
     'One log a day is enough for your streak. You can still edit that log on the same day.',
@@ -305,8 +329,8 @@ export default function QadaSolatPage() {
   const [saving, setSaving] = useState(false);
   const [editingPrayer, setEditingPrayer] = useState<Prayer | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [showLogForm, setShowLogForm] = useState(false);
-  const [logInputs, setLogInputs] = useState<QadaCounts>(DEFAULT);
+  /** Senarai baki boleh diubah hanya selepas butang "Ubah baki" ditekan. */
+  const [ubahBaki, setUbahBaki] = useState(false);
 
   // Tab
   const [tab, setTab] = useState<Tab>('rekod');
@@ -595,28 +619,7 @@ export default function QadaSolatPage() {
   const total = PRAYERS.reduce((sum, p) => sum + counts[p], 0);
   const doneToday = lastLogDate === today;
 
-  const openLogForm = async () => {
-    if (total === 0) {
-      if (saving) return;
-      setSaving(true);
-      const diff = lastLogDate ? daysBetween(lastLogDate, today) : 999;
-      const sameMonth = lastLogDate.startsWith(monthKey());
-      const newStreak = sameMonth && diff <= 2 ? streak + 1 : 1;
-      setPreLogCounts(counts);
-      setPreChallenge(myChallenge);
-      setTodayLog(DEFAULT);
-      setStreak(newStreak);
-      setLastLogDate(today);
-      await saveQada(counts, dailyRate, initialTotal, newStreak, today, undefined, undefined, DEFAULT, counts);
-      await updateChallengeOnLog(0, counts, initialTotal);
-      setSaving(false);
-      return;
-    }
-    setLogInputs(DEFAULT);
-    setShowLogForm(true);
-  };
-
-  const confirmLog = async () => {
+  const confirmLog = async (logInputs: QadaCounts) => {
     if (saving) return;
     setSaving(true);
     const alreadyLoggedToday = lastLogDate === today;
@@ -651,7 +654,6 @@ export default function QadaSolatPage() {
     setCounts(nextCounts);
     setStreak(newStreak);
     setLastLogDate(nextLastLog);
-    setShowLogForm(false);
     if (loggedPrayer) {
       setLastUpdatedPrayer(loggedPrayer);
       setLastUpdatedAt(now);
@@ -662,6 +664,19 @@ export default function QadaSolatPage() {
       if (totalSubtracted > 0) toast.success(t.qadaDikurang(totalSubtracted));
     }
     setSaving(false);
+  };
+
+  /**
+   * Satu ketikan = satu qada selesai (atau dibatalkan). Ia melalui laluan log
+   * yang sama seperti borang lama, jadi baki, log hari ini, streak dan cabaran
+   * kekal tepat — tanpa borang dan butang Sahkan.
+   */
+  const qadaSatu = (prayer: Prayer, delta: 1 | -1) => {
+    const asas = doneToday ? todayLog : DEFAULT;
+    const maks = counts[prayer] + (doneToday ? todayLog[prayer] : 0);
+    const nilai = Math.min(maks, Math.max(0, asas[prayer] + delta));
+    if (nilai === asas[prayer]) return;
+    confirmLog({ ...asas, [prayer]: nilai });
   };
 
   const undoToday = async () => {
@@ -970,64 +985,51 @@ export default function QadaSolatPage() {
           {/* Baki qada ialah satu-satunya fakta halaman ini. Ia mendapat
               jubin terbesar; jubin lain di sebelahnya hanyalah cara untuk
               menurunkan nombor ini. */}
-          <motion.dl variants={naikMasuk} className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-            <div className="col-span-2 flex flex-col justify-between rounded-3xl bg-accent p-5 sm:p-6 lg:row-span-2">
-              <dt className="paparan text-xl leading-none text-accent-foreground lg:text-2xl">{t.bakiQada}</dt>
-              <dd className="mt-4">
-                <p className="angka-paparan text-[22vw] leading-none text-primary sm:text-[16vw] lg:text-[8vw]">
-                  {total}
-                </p>
-                <p className="mt-2 text-sm text-accent-foreground/80">
-                  {total === 0 ? t.tiadaBaki : t.solatLagi}
-                </p>
-              </dd>
+          {/* Satu kad padat: baki sebagai nombor utama, tiga statistik kecil
+              sebaris di bawahnya, bukan empat jubin besar. */}
+          <motion.dl variants={naikMasuk} className="rounded-3xl bg-accent p-4 sm:p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <dt className="text-sm font-medium text-accent-foreground/80">{t.bakiQada}</dt>
+                <dd className="angka-paparan mt-1 text-5xl leading-none text-primary sm:text-6xl">{total}</dd>
+              </div>
+              <p className="pb-1 text-right text-sm text-accent-foreground/80">{total === 0 ? t.tiadaBaki : t.solatLagi}</p>
             </div>
-            {total > 0 && (
-              <div className={cn('rounded-3xl bg-w6-lembut p-4 sm:p-5', !myChallenge && 'col-span-2 lg:col-span-1')}>
-                <dt className="flex items-center gap-1.5 text-xs leading-snug text-foreground/70 sm:text-sm">
-                  <CalendarCheck className="size-3.5 text-w6" />
-                  {t.kadarHarian}
-                </dt>
-                <dd className="mt-3 flex items-center gap-2.5">
-                  <button
-                    onClick={() => updateRate(-1)}
-                    disabled={dailyRate <= 1}
-                    aria-label={t.kurangKadar}
-                    className={cn(btnBulat, 'size-8 bg-card/70 text-w6 hover:bg-card')}
-                  >−</button>
-                  <span className="angka-paparan min-w-8 text-center text-3xl leading-none text-w6 sm:text-4xl">{dailyRate}</span>
-                  <button
-                    onClick={() => updateRate(1)}
-                    aria-label={t.tambahKadar}
-                    className={cn(btnBulat, 'size-8 bg-card/70 text-w6 hover:bg-card')}
-                  >+</button>
-                </dd>
-              </div>
-            )}
-            {myChallenge && (
-              <div className={cn('rounded-3xl bg-w5-lembut p-4 sm:p-5', total === 0 && 'col-span-2 lg:col-span-1')}>
-                <dt className="flex items-center gap-1.5 text-xs leading-snug text-foreground/70 sm:text-sm">
-                  <Flame className="size-3.5 text-w5" />
-                  {t.streak}
-                </dt>
-                <dd className="mt-3 flex items-baseline gap-1.5">
-                  <span className="angka-paparan text-3xl leading-none text-w5 sm:text-4xl">{myChallenge.streak}</span>
-                  <span className="text-sm text-foreground/70">{t.hari(myChallenge.streak)}</span>
-                </dd>
-              </div>
-            )}
-            {/* Satu-satunya jubin yang membawa frasa dan bukan nombor, jadi
-                ia mengambil dua lajur supaya tidak membalut senget. */}
-            {estimation && (
-              <div className="col-span-2 rounded-3xl bg-w1-lembut p-4 sm:p-5">
-                <dt className="flex items-center gap-1.5 text-xs leading-snug text-foreground/70 sm:text-sm">
-                  <CalendarDays className="size-3.5 text-w1" />
-                  {t.anggaranSelesai}
-                </dt>
-                <dd className="mt-3">
-                  <span className="angka-paparan text-2xl leading-tight text-w1 sm:text-3xl">{estimation.label}</span>
-                  <span className="mt-1 block text-sm text-foreground/70">{estimation.date}</span>
-                </dd>
+
+            {(total > 0 || myChallenge || estimation) && (
+              <div className="mt-4 grid grid-cols-3 divide-x divide-accent-foreground/15 rounded-2xl bg-card/60 py-3 text-center">
+                <div className="px-2">
+                  <dt className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground sm:text-xs">
+                    <CalendarCheck className="size-3 text-w6" />{t.kadarHarian}
+                  </dt>
+                  <dd className="mt-1.5 flex items-center justify-center gap-1.5">
+                    <button onClick={() => updateRate(-1)} disabled={dailyRate <= 1} aria-label={t.kurangKadar} className={cn(btnBulat, 'size-6 text-sm bg-muted text-w6')}>−</button>
+                    <span className="angka-paparan min-w-5 text-xl leading-none text-w6">{dailyRate}</span>
+                    <button onClick={() => updateRate(1)} aria-label={t.tambahKadar} className={cn(btnBulat, 'size-6 text-sm bg-muted text-w6')}>+</button>
+                  </dd>
+                </div>
+                <div className="px-2">
+                  <dt className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground sm:text-xs">
+                    <Flame className="size-3 text-w5" />{t.streak}
+                  </dt>
+                  <dd className="mt-1.5 flex items-baseline justify-center gap-1">
+                    <span className="angka-paparan text-xl leading-none text-w5">{myChallenge?.streak ?? streak}</span>
+                    <span className="text-xs text-muted-foreground">{t.hari(myChallenge?.streak ?? streak)}</span>
+                  </dd>
+                </div>
+                <div className="px-2">
+                  <dt className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground sm:text-xs">
+                    <CalendarDays className="size-3 text-w1" />{t.anggaranSelesai}
+                  </dt>
+                  <dd className="mt-1.5">
+                    {estimation ? (
+                      <>
+                        <span className="block text-sm font-semibold leading-tight text-w1">{estimation.label}</span>
+                        <span className="block text-[11px] text-muted-foreground">{estimation.date}</span>
+                      </>
+                    ) : <span className="text-sm text-muted-foreground">-</span>}
+                  </dd>
+                </div>
               </div>
             )}
           </motion.dl>
@@ -1059,137 +1061,133 @@ export default function QadaSolatPage() {
 
             {/* ── Rekod ──────────────────────────────────────────────────── */}
             {tab === 'rekod' ? (
-              <div className="max-w-xl pt-8">
-                <h2 className="paparan text-2xl">{t.solatTertinggal}</h2>
-                <p className="mt-2 text-muted-foreground">
-                  {t.ketikNombor}
-                </p>
-
-                <div className="kad mt-5 divide-y divide-border/50 px-4 sm:px-5">
-                  {PRAYERS.map(prayer => {
-                    const w = palet(WARNA_WAKTU[prayer]);
-                    return (
-                      <div key={prayer} className="flex items-center gap-3 py-3.5">
-                        <CipWaktu prayer={prayer} />
-                        <span className="flex-1 font-medium capitalize">{prayer}</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateCount(prayer, -1)}
-                            disabled={counts[prayer] === 0}
-                            aria-label={t.kurang(prayer)}
-                            className={cn(btnBulat, 'bg-muted text-muted-foreground hover:text-foreground')}
-                          >−</button>
-                          {editingPrayer === prayer ? (
-                            <input
-                              type="number"
-                              value={editValue}
-                              onChange={e => setEditValue(e.target.value)}
-                              onBlur={() => commitPrayerEdit(prayer)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') commitPrayerEdit(prayer);
-                                if (e.key === 'Escape') setEditingPrayer(null);
-                              }}
-                              className={cn('angka-paparan w-14 rounded-xl bg-muted py-1 text-center text-xl focus:outline-none', w.teks)}
-                              autoFocus min={0}
-                            />
-                          ) : (
-                            <button
-                              onClick={() => { setEditingPrayer(prayer); setEditValue(String(counts[prayer])); }}
-                              className={cn('angka-paparan min-w-12 rounded-xl py-1 text-center text-xl transition-colors hover:bg-muted', counts[prayer] === 0 ? 'text-muted-foreground' : w.teks)}
-                            >{counts[prayer]}</button>
-                          )}
-                          <button
-                            onClick={() => updateCount(prayer, 1)}
-                            aria-label={t.tambah(prayer)}
-                            className={cn(btnBulat, w.lembut, w.teks, 'hover:opacity-80')}
-                          >+</button>
-                        </div>
+              <div className="max-w-xl space-y-8 pt-8">
+                {/* ── Qada hari ini: tindakan utama, satu ketikan setiap solat ── */}
+                {(total > 0 || doneToday) && (() => {
+                  const hariIniJumlah = doneToday ? PRAYERS.reduce((sum, p) => sum + todayLog[p], 0) : 0;
+                  const capai = hariIniJumlah >= dailyRate;
+                  return (
+                    <section className="kad p-5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h2 className="paparan text-2xl">{t.qadaHariIni}</h2>
+                        <span className={cn('text-sm font-semibold tabular-nums', capai ? 'text-primary' : 'text-muted-foreground')}>
+                          {t.sasaranHari(hariIniJumlah, dailyRate)}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(hariIniJumlah / dailyRate, 1) * 100}%` }} />
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{capai ? t.sasaranCapai : t.qadaHariIniNota}</p>
 
-                {total === 0 && !doneToday && (
-                  <p className="mt-5 text-muted-foreground">
-                    {t.masukkanBaki}
-                  </p>
-                )}
-
-                {/* Log harian */}
-                <div className="mt-8">
-                  {!doneToday && !showLogForm && total > 0 && (
-                    <button
-                      onClick={openLogForm}
-                      disabled={saving}
-                      className="inline-flex rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90 disabled:opacity-40"
-                    >{t.selesaiHariIni}</button>
-                  )}
-
-                  {showLogForm && (
-                    <div className="kad p-5">
-                      <h3 className="paparan text-xl">
-                        {doneToday ? t.editLogHariIni : t.berapaQada}
-                      </h3>
-                      <div className="mt-3 divide-y divide-border/50">
-                        {(() => {
-                          const formMax = doneToday
-                            ? PRAYERS.reduce((acc, p) => ({ ...acc, [p]: counts[p] + todayLog[p] }), {} as QadaCounts)
-                            : counts;
-                          return PRAYERS.filter(p => formMax[p] > 0).map(prayer => {
-                            const w = palet(WARNA_WAKTU[prayer]);
-                            return (
-                              <div key={prayer} className="flex items-center gap-3 py-3">
-                                <CipWaktu prayer={prayer} kecil />
-                                <span className="flex-1 font-medium capitalize">{prayer}</span>
-                                <div className="flex items-center gap-2">
+                      <div className="mt-4 divide-y divide-border/50">
+                        {PRAYERS.filter(p => counts[p] > 0 || (doneToday && todayLog[p] > 0)).map(prayer => {
+                          const w = palet(WARNA_WAKTU[prayer]);
+                          const kini = doneToday ? todayLog[prayer] : 0;
+                          return (
+                            <div key={prayer} className="flex items-center gap-3 py-3">
+                              <CipWaktu prayer={prayer} kecil />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium capitalize">{prayer}</p>
+                                <p className="text-xs text-muted-foreground tabular-nums">{t.baki(counts[prayer])}</p>
+                              </div>
+                              {kini > 0 && (
+                                <>
                                   <button
-                                    onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.max(0, p[prayer] - 1) }))}
-                                    disabled={logInputs[prayer] === 0}
-                                    aria-label={t.kurangLog(prayer)}
+                                    type="button"
+                                    onClick={() => qadaSatu(prayer, -1)}
+                                    disabled={saving}
+                                    aria-label={t.kurangSatu(prayer)}
                                     className={cn(btnBulat, 'bg-muted text-muted-foreground hover:text-foreground')}
                                   >−</button>
-                                  <span className={cn('angka-paparan min-w-10 text-center text-xl', logInputs[prayer] === 0 ? 'text-muted-foreground' : w.teks)}>{logInputs[prayer]}</span>
-                                  <button
-                                    onClick={() => setLogInputs(p => ({ ...p, [prayer]: Math.min(formMax[prayer], p[prayer] + 1) }))}
-                                    disabled={logInputs[prayer] >= formMax[prayer]}
-                                    aria-label={t.tambahLog(prayer)}
-                                    className={cn(btnBulat, w.lembut, w.teks, 'hover:opacity-80')}
-                                  >+</button>
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
+                                  <span className={cn('angka-paparan min-w-6 text-center text-xl', w.teks)}>{kini}</span>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => qadaSatu(prayer, 1)}
+                                disabled={saving || counts[prayer] === 0}
+                                aria-label={t.satuSelesai(prayer)}
+                                className={cn('rounded-full px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-40', w.lembut, w.teks)}
+                              >+1</button>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="mt-5 flex gap-3">
-                        <button
-                          onClick={confirmLog}
-                          disabled={saving || PRAYERS.every(p => logInputs[p] === 0)}
-                          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik transition-colors hover:bg-primary/90 disabled:opacity-40"
-                        >{t.sahkan}</button>
-                        <button
-                          onClick={() => { setShowLogForm(false); setLogInputs(todayLog); }}
-                          className={btnSekunder}
-                        >{t.batal}</button>
-                      </div>
-                    </div>
+
+                      {doneToday && preLogCounts !== null && (
+                        <button type="button" onClick={undoToday} className="mt-3 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                          {t.batalLog}
+                        </button>
+                      )}
+                    </section>
+                  );
+                })()}
+
+                {/* ── Baki: dipaparkan sahaja; diubah melalui "Ubah baki" ── */}
+                <section>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="paparan text-2xl">{t.bakiMengikutWaktu}</h2>
+                    {!ubahBaki && (
+                      <button type="button" onClick={() => setUbahBaki(true)} className={btnSekunder}>{t.ubahBaki}</button>
+                    )}
+                  </div>
+                  {(ubahBaki || (total === 0 && !doneToday)) && (
+                    <p className="mt-2 text-sm text-muted-foreground">{total === 0 && !doneToday ? t.mulaBaki : t.ubahBakiNota}</p>
                   )}
 
-                  {doneToday && !showLogForm && (total > 0 || preLogCounts !== null) && (
-                    <div className="flex flex-wrap gap-3">
-                      {total > 0 && (
-                        <button
-                          onClick={() => { setLogInputs(todayLog); setShowLogForm(true); }}
-                          className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/70"
-                        >{t.editLogHariIni}</button>
-                      )}
-                      {preLogCounts !== null && (
-                        <button
-                          onClick={undoToday}
-                          className={btnSekunder}
-                        >{t.batalLog}</button>
-                      )}
-                    </div>
+                  <div className="kad mt-4 divide-y divide-border/50 px-4 sm:px-5">
+                    {PRAYERS.map(prayer => {
+                      const w = palet(WARNA_WAKTU[prayer]);
+                      const boleh = ubahBaki || (total === 0 && !doneToday);
+                      return (
+                        <div key={prayer} className="flex items-center gap-3 py-3">
+                          <CipWaktu prayer={prayer} kecil />
+                          <span className="flex-1 font-medium capitalize">{prayer}</span>
+                          {boleh ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateCount(prayer, -1)}
+                                disabled={counts[prayer] === 0}
+                                aria-label={t.kurang(prayer)}
+                                className={cn(btnBulat, 'bg-muted text-muted-foreground hover:text-foreground')}
+                              >−</button>
+                              {editingPrayer === prayer ? (
+                                <input
+                                  type="number"
+                                  value={editValue}
+                                  onChange={e => setEditValue(e.target.value)}
+                                  onBlur={() => commitPrayerEdit(prayer)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') commitPrayerEdit(prayer);
+                                    if (e.key === 'Escape') setEditingPrayer(null);
+                                  }}
+                                  className={cn('angka-paparan w-14 rounded-xl bg-muted py-1 text-center text-xl focus:outline-none', w.teks)}
+                                  autoFocus min={0}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => { setEditingPrayer(prayer); setEditValue(String(counts[prayer])); }}
+                                  className={cn('angka-paparan min-w-12 rounded-xl py-1 text-center text-xl transition-colors hover:bg-muted', counts[prayer] === 0 ? 'text-muted-foreground' : w.teks)}
+                                >{counts[prayer]}</button>
+                              )}
+                              <button
+                                onClick={() => updateCount(prayer, 1)}
+                                aria-label={t.tambah(prayer)}
+                                className={cn(btnBulat, w.lembut, w.teks, 'hover:opacity-80')}
+                              >+</button>
+                            </div>
+                          ) : (
+                            <span className={cn('angka-paparan text-xl tabular-nums', counts[prayer] === 0 ? 'text-muted-foreground' : w.teks)}>{counts[prayer]}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {ubahBaki && (
+                    <button type="button" onClick={() => { setUbahBaki(false); setEditingPrayer(null); }} className="mt-4 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-naik hover:bg-primary/90">
+                      {t.siapUbah}
+                    </button>
                   )}
 
                   {total > 0 && lastUpdatedPrayer && lastUpdatedAt && (
@@ -1197,7 +1195,7 @@ export default function QadaSolatPage() {
                       {t.dikemasKiniPada} <span className="capitalize">{lastUpdatedPrayer}</span>, {formatMalayDateTime(lastUpdatedAt, bahasa)}
                     </p>
                   )}
-                </div>
+                </section>
               </div>
 
             /* ── Cabaran ────────────────────────────────────────────────── */
@@ -1294,7 +1292,7 @@ export default function QadaSolatPage() {
                           })}
                           {!rankedLb.find(p => p.uid === user.uid) && myChallenge && lbMonth === monthKey() && (
                             <div className="flex items-center gap-3 rounded-2xl bg-accent px-2 py-2.5">
-                              <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-card/70 text-muted-foreground">—</span>
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-card/70 text-muted-foreground">-</span>
                               <span className="min-w-0 flex-1 truncate font-semibold text-accent-foreground">{alias}</span>
                               <span className={cn('angka-paparan pr-1 text-2xl', palet(WARNA_LB[lbView]).teks)}>{getLbValue(myChallenge, lbView)}</span>
                             </div>
